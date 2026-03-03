@@ -3,8 +3,34 @@ import { prisma } from '../database';
 import { validateBody, createDealSchema, updateDealSchema } from '../middleware/validation';
 import { authorize, AuthenticatedRequest } from '../middleware/authorize';
 import { sendNotification } from '../services/notification.service';
+import { logAuditEvent } from '../utils/security';
 
 const router = Router();
+const dealStatusTransitions: Record<string, string[]> = {
+  DRAFT: ['PUBLISHED', 'CANCELLED'],
+  PUBLISHED: ['NEGOTIATION', 'DUE_DILIGENCE', 'CANCELLED'],
+  NEGOTIATION: ['DUE_DILIGENCE', 'FUNDED', 'CANCELLED'],
+  DUE_DILIGENCE: ['NEGOTIATION', 'FUNDED', 'CANCELLED'],
+  FUNDED: ['CLOSED'],
+  CLOSED: [],
+  CANCELLED: []
+};
+const immutableDealTermsAfterPublish = ['amount', 'equity', 'successFee', 'terms', 'smeId'] as const;
+
+function canTransitionDealStatus(current: string, next: string): boolean {
+  return (dealStatusTransitions[current] || []).includes(next);
+}
+
+function canUserSetDealStatus(role: string | undefined, current: string, next: string): boolean {
+  if (!role) return false;
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN') return true;
+  if (role === 'ADVISOR') return ['NEGOTIATION', 'DUE_DILIGENCE', 'FUNDED', 'CLOSED', 'CANCELLED'].includes(next);
+  if (role === 'SME') {
+    if (current === 'DRAFT' && (next === 'PUBLISHED' || next === 'CANCELLED')) return true;
+    if ((current === 'PUBLISHED' || current === 'NEGOTIATION' || current === 'DUE_DILIGENCE') && next === 'CANCELLED') return true;
+  }
+  return false;
+}
 
 // Get all deals
 router.get('/', authorize('deal.list'), async (req: AuthenticatedRequest, res: Response) => {
@@ -140,6 +166,9 @@ router.post('/', authorize('deal.create'), validateBody(createDealSchema), async
     if (userRole === 'SME' && sme.userId !== userId) {
       return res.status(403).json({ error: 'Access denied: You can only create deals for your own SME profile' });
     }
+    if (sme.status !== 'CERTIFIED') {
+      return res.status(409).json({ error: 'SME must be CERTIFIED before creating a deal' });
+    }
 
     const deal = await prisma.deal.create({
       data: {
@@ -201,6 +230,35 @@ router.put('/:id', authorize('deal.update', {
     if (userRole === 'SME' && existingDeal.sme.userId !== userId) {
       return res.status(403).json({ error: 'Access denied: You can only update your own deals' });
     }
+    if (existingDeal.status !== 'DRAFT') {
+      for (const field of immutableDealTermsAfterPublish) {
+        if (Object.prototype.hasOwnProperty.call(updateData, field) && (updateData as any)[field] !== (existingDeal as any)[field]) {
+          return res.status(409).json({
+            error: `Field "${field}" is immutable after deal publication. Create a deal amendment instead.`
+          });
+        }
+      }
+    }
+
+    if (updateData.status && updateData.status !== existingDeal.status) {
+      const currentStatus = String(existingDeal.status);
+      const nextStatus = String(updateData.status);
+      if (!canTransitionDealStatus(currentStatus, nextStatus)) {
+        return res.status(409).json({
+          error: `Invalid deal status transition: ${currentStatus} -> ${nextStatus}`
+        });
+      }
+      if (!canUserSetDealStatus(userRole, currentStatus, nextStatus)) {
+        return res.status(403).json({
+          error: `Role ${userRole} is not allowed to move deal status to ${nextStatus}`
+        });
+      }
+      if (nextStatus === 'PUBLISHED' && existingDeal.sme.status !== 'CERTIFIED') {
+        return res.status(409).json({
+          error: 'Cannot publish deal while SME is not CERTIFIED'
+        });
+      }
+    }
 
     const deal = await prisma.deal.update({
       where: { id, tenantId }, // Explicitly include tenantId in where clause
@@ -214,6 +272,20 @@ router.put('/:id', authorize('deal.update', {
     if (updateData.status && updateData.status !== existingDeal.status) {
       const status = updateData.status;
       const smeUserId = deal.sme.userId;
+      await logAuditEvent({
+        userId: req.user?.id || 'unknown',
+        tenantId,
+        action: 'DEAL_STATUS_TRANSITION',
+        resource: 'deal',
+        resourceId: deal.id,
+        details: {
+          fromStatus: existingDeal.status,
+          toStatus: status
+        },
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'] as string | undefined,
+        success: true
+      });
 
       // 1. Notify SME Owner
       if (status === 'PUBLISHED') {
@@ -270,4 +342,3 @@ router.put('/:id', authorize('deal.update', {
 });
 
 export default router;
-

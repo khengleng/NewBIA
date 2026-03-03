@@ -2,8 +2,35 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../database';
 import { validateBody, updateSMESchema, idParamSchema, validateParams } from '../middleware/validation';
 import { authorize, AuthenticatedRequest } from '../middleware/authorize';
+import { logAuditEvent } from '../utils/security';
 
 const router = Router();
+const smeStatusTransitions: Record<string, string[]> = {
+  DRAFT: ['SUBMITTED', 'DELETED'],
+  SUBMITTED: ['UNDER_REVIEW', 'DRAFT', 'DELETED'],
+  UNDER_REVIEW: ['CERTIFIED', 'REJECTED', 'DELETED'],
+  REJECTED: ['DRAFT', 'DELETED'],
+  CERTIFIED: ['DELETED'],
+  DELETED: []
+};
+
+function canTransitionSmeStatus(current: string, next: string): boolean {
+  return (smeStatusTransitions[current] || []).includes(next);
+}
+
+function canUserSetSmeStatus(role: string | undefined, current: string, next: string): boolean {
+  if (!role) return false;
+  if (role === 'ADMIN' || role === 'SUPER_ADMIN') return true;
+  if (role === 'ADVISOR') {
+    return ['UNDER_REVIEW', 'CERTIFIED', 'REJECTED'].includes(next);
+  }
+  if (role === 'SME') {
+    return (current === 'DRAFT' && next === 'SUBMITTED')
+      || (current === 'SUBMITTED' && next === 'DRAFT')
+      || (current === 'REJECTED' && next === 'DRAFT');
+  }
+  return false;
+}
 
 // Get all SMEs
 router.get('/', authorize('sme.list'), async (req: AuthenticatedRequest, res: Response) => {
@@ -112,6 +139,33 @@ router.put('/:id', authorize('sme.update', {
       return res.status(403).json({ error: 'Access denied: You can only update your own SME profile' });
     }
 
+    if (updateData.status && updateData.status !== existingSme.status) {
+      const nextStatus = String(updateData.status);
+      const currentStatus = String(existingSme.status);
+      if (!canTransitionSmeStatus(currentStatus, nextStatus)) {
+        return res.status(409).json({
+          error: `Invalid SME status transition: ${currentStatus} -> ${nextStatus}`
+        });
+      }
+      if (!canUserSetSmeStatus(userRole, currentStatus, nextStatus)) {
+        return res.status(403).json({
+          error: `Role ${userRole} is not allowed to move SME status to ${nextStatus}`
+        });
+      }
+
+      if (nextStatus === 'SUBMITTED') {
+        const requiredForSubmission = ['name', 'sector', 'stage', 'fundingRequired'] as const;
+        for (const field of requiredForSubmission) {
+          const newValue = updateData[field] ?? (existingSme as any)[field];
+          if (newValue === null || newValue === undefined || newValue === '' || (field === 'fundingRequired' && Number(newValue) <= 0)) {
+            return res.status(400).json({
+              error: `SME is missing required field for submission: ${field}`
+            });
+          }
+        }
+      }
+    }
+
     const sme = await prisma.sME.update({
       where: { id },
       data: updateData,
@@ -119,6 +173,23 @@ router.put('/:id', authorize('sme.update', {
         user: true
       }
     });
+
+    if (updateData.status && updateData.status !== existingSme.status) {
+      await logAuditEvent({
+        userId: req.user?.id || 'unknown',
+        tenantId: req.user?.tenantId,
+        action: 'SME_STATUS_TRANSITION',
+        resource: 'sme',
+        resourceId: sme.id,
+        details: {
+          fromStatus: existingSme.status,
+          toStatus: sme.status
+        },
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'] as string | undefined,
+        success: true
+      });
+    }
 
     return res.json(sme);
   } catch (error) {
