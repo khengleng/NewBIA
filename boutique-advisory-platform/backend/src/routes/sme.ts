@@ -3,6 +3,8 @@ import { prisma } from '../database';
 import { validateBody, updateSMESchema, idParamSchema, validateParams } from '../middleware/validation';
 import { authorize, AuthenticatedRequest } from '../middleware/authorize';
 import { logAuditEvent } from '../utils/security';
+import bcrypt from 'bcryptjs';
+import { generateSecureToken, sanitizeEmail } from '../utils/security';
 
 const router = Router();
 const smeStatusTransitions: Record<string, string[]> = {
@@ -31,6 +33,164 @@ function canUserSetSmeStatus(role: string | undefined, current: string, next: st
   }
   return false;
 }
+
+router.post('/', authorize('sme.create'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const actorUserId = req.user?.id;
+    const actorRole = req.user?.role;
+    const tenantId = req.user?.tenantId;
+    if (!actorUserId || !tenantId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const {
+      ownerFirstName,
+      ownerLastName,
+      ownerEmail,
+      ownerPassword,
+      name,
+      sector,
+      stage,
+      fundingRequired,
+      description,
+      website,
+      location,
+      onboardingMode,
+      mandateDocumentUrl,
+      mandateDocumentName
+    } = req.body || {};
+
+    const sanitizedOwnerEmail = sanitizeEmail(ownerEmail || '');
+    if (!ownerFirstName || !ownerLastName || !sanitizedOwnerEmail || !name || !sector || !stage || !fundingRequired) {
+      return res.status(400).json({
+        error: 'Missing required fields: ownerFirstName, ownerLastName, ownerEmail, name, sector, stage, fundingRequired'
+      });
+    }
+
+    const isOnBehalfMode = String(onboardingMode || '').toUpperCase() === 'ON_BEHALF';
+    if (isOnBehalfMode) {
+      const canOnboardOnBehalf = actorRole === 'ADVISOR' || actorRole === 'ADMIN' || actorRole === 'SUPER_ADMIN';
+      if (!canOnboardOnBehalf) {
+        return res.status(403).json({ error: 'Only advisors/admins can onboard SMEs on behalf of owners' });
+      }
+      if (!mandateDocumentUrl) {
+        return res.status(400).json({ error: 'Mandate document URL is required for on-behalf onboarding' });
+      }
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      let existingSmeIdToRevive: string | null = null;
+      let ownerUser = await tx.user.findFirst({
+        where: {
+          tenantId,
+          email: { equals: sanitizedOwnerEmail, mode: 'insensitive' },
+          status: { not: 'DELETED' }
+        }
+      });
+
+      if (ownerUser) {
+        const existingSme = await tx.sME.findUnique({ where: { userId: ownerUser.id } });
+        if (existingSme && existingSme.status !== 'DELETED') {
+          throw new Error('SME_PROFILE_ALREADY_EXISTS');
+        }
+        if (existingSme && existingSme.status === 'DELETED') {
+          existingSmeIdToRevive = existingSme.id;
+        }
+      } else {
+        const passwordToUse = ownerPassword || `${generateSecureToken(16)}Aa1!`;
+        ownerUser = await tx.user.create({
+          data: {
+            tenantId,
+            firstName: String(ownerFirstName).trim(),
+            lastName: String(ownerLastName).trim(),
+            email: sanitizedOwnerEmail,
+            password: await bcrypt.hash(passwordToUse, 12),
+            role: 'SME' as any,
+            status: 'ACTIVE' as any,
+            isEmailVerified: false,
+            language: 'EN'
+          }
+        });
+      }
+
+      const sme = existingSmeIdToRevive
+        ? await tx.sME.update({
+          where: { id: existingSmeIdToRevive },
+          data: {
+            name: String(name).trim(),
+            sector: String(sector).trim(),
+            stage: String(stage).toUpperCase() as any,
+            fundingRequired: Number(fundingRequired),
+            description: description ? String(description) : null,
+            website: website ? String(website) : null,
+            location: location ? String(location) : null,
+            status: 'DRAFT' as any
+          },
+          include: { user: true }
+        })
+        : await tx.sME.create({
+          data: {
+            tenantId,
+            userId: ownerUser.id,
+            name: String(name).trim(),
+            sector: String(sector).trim(),
+            stage: String(stage).toUpperCase() as any,
+            fundingRequired: Number(fundingRequired),
+            description: description ? String(description) : null,
+            website: website ? String(website) : null,
+            location: location ? String(location) : null,
+            status: 'DRAFT' as any
+          },
+          include: { user: true }
+        });
+
+      if (isOnBehalfMode) {
+        await tx.document.create({
+          data: {
+            tenantId,
+            name: mandateDocumentName ? String(mandateDocumentName) : `Mandate-${sme.id}.pdf`,
+            type: 'LEGAL_DOCUMENT' as any,
+            url: String(mandateDocumentUrl),
+            size: 0,
+            mimeType: 'application/pdf',
+            smeId: sme.id,
+            uploadedBy: actorUserId
+          }
+        });
+      }
+
+      return { sme, ownerUserCreated: !ownerPassword ? !ownerUser?.isEmailVerified : false };
+    });
+
+    await logAuditEvent({
+      userId: actorUserId,
+      tenantId,
+      action: isOnBehalfMode ? 'SME_ONBEHALF_ONBOARDED' : 'SME_ONBOARDED',
+      resource: 'sme',
+      resourceId: result.sme.id,
+      details: {
+        ownerEmail: sanitizedOwnerEmail,
+        onboardingMode: isOnBehalfMode ? 'ON_BEHALF' : 'DIRECT'
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string | undefined,
+      success: true
+    });
+
+    return res.status(201).json({
+      message: isOnBehalfMode
+        ? 'SME onboarded on behalf of owner successfully'
+        : 'SME onboarded successfully',
+      sme: result.sme
+    });
+  } catch (error: any) {
+    if (error?.message === 'SME_PROFILE_ALREADY_EXISTS') {
+      return res.status(409).json({ error: 'SME profile already exists for this owner email' });
+    }
+    console.error('Create SME error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // Get all SMEs
 router.get('/', authorize('sme.list'), async (req: AuthenticatedRequest, res: Response) => {

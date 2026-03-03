@@ -341,4 +341,158 @@ router.put('/:id', authorize('deal.update', {
   }
 });
 
+router.post('/:id/tokenize', authorize('deal.update', {
+  getOwnerId: async (req) => {
+    const deal = await prisma.deal.findUnique({
+      where: { id: req.params.id },
+      include: { sme: { select: { userId: true } } }
+    });
+    return deal?.sme?.userId;
+  }
+}), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const tenantId = req.user?.tenantId || 'default';
+    const userRole = req.user?.role;
+    const userId = req.user?.id;
+    const { id } = req.params;
+    const {
+      syndicateName,
+      syndicateDescription,
+      leadInvestorId,
+      targetAmount,
+      minInvestment,
+      maxInvestment,
+      managementFee,
+      carryFee,
+      tokenName,
+      tokenSymbol,
+      pricePerToken,
+      totalTokens,
+      closingDate
+    } = req.body || {};
+
+    if (!syndicateName || !leadInvestorId || !tokenName || !tokenSymbol || !pricePerToken || !totalTokens) {
+      return res.status(400).json({
+        error: 'Missing required fields: syndicateName, leadInvestorId, tokenName, tokenSymbol, pricePerToken, totalTokens'
+      });
+    }
+
+    const deal = await prisma.deal.findFirst({
+      where: { id, tenantId },
+      include: {
+        sme: true,
+        syndicates: true
+      }
+    });
+    if (!deal) {
+      return res.status(404).json({ error: 'Deal not found' });
+    }
+    if (deal.status !== 'CLOSED') {
+      return res.status(409).json({ error: 'Deal must be CLOSED before tokenization' });
+    }
+    if (deal.syndicates.some((s) => s.isTokenized)) {
+      return res.status(409).json({ error: 'This deal is already tokenized' });
+    }
+
+    const canTokenize = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'ADVISOR'
+      || (userRole === 'SME' && deal.sme.userId === userId);
+    if (!canTokenize) {
+      return res.status(403).json({ error: 'Not authorized to tokenize this deal' });
+    }
+
+    const leadInvestor = await prisma.investor.findFirst({
+      where: { id: String(leadInvestorId), tenantId }
+    });
+    if (!leadInvestor) {
+      return res.status(404).json({ error: 'Lead investor not found for tenant' });
+    }
+
+    const existingAllocations = await prisma.dealInvestor.findMany({
+      where: { dealId: id },
+      select: { investorId: true, amount: true, status: true }
+    });
+
+    const price = Number(pricePerToken);
+    if (!Number.isFinite(price) || price <= 0) {
+      return res.status(400).json({ error: 'pricePerToken must be a positive number' });
+    }
+    const tokenSupply = Number(totalTokens);
+    if (!Number.isFinite(tokenSupply) || tokenSupply <= 0) {
+      return res.status(400).json({ error: 'totalTokens must be a positive number' });
+    }
+
+    const target = targetAmount ? Number(targetAmount) : Number(deal.amount);
+    const tokenized = await prisma.$transaction(async (tx) => {
+      const syndicate = await tx.syndicate.create({
+        data: {
+          tenantId,
+          name: String(syndicateName).trim(),
+          description: syndicateDescription ? String(syndicateDescription) : `Tokenized syndicate for deal ${deal.title}`,
+          leadInvestorId: leadInvestor.id,
+          targetAmount: target,
+          minInvestment: minInvestment ? Number(minInvestment) : 1000,
+          maxInvestment: maxInvestment ? Number(maxInvestment) : null,
+          managementFee: managementFee ? Number(managementFee) : 2,
+          carryFee: carryFee ? Number(carryFee) : 20,
+          dealId: deal.id,
+          closingDate: closingDate ? new Date(closingDate) : null,
+          isTokenized: true,
+          tokenName: String(tokenName),
+          tokenSymbol: String(tokenSymbol).toUpperCase(),
+          pricePerToken: price,
+          totalTokens: tokenSupply,
+          status: 'OPEN' as any
+        }
+      });
+
+      let approvedTokenSum = 0;
+      for (const alloc of existingAllocations) {
+        const memberStatus = alloc.status === 'APPROVED' || alloc.status === 'COMPLETED' ? 'APPROVED' : 'PENDING';
+        const tokens = Number(alloc.amount) / price;
+        if (memberStatus === 'APPROVED') approvedTokenSum += tokens;
+        await tx.syndicateMember.create({
+          data: {
+            syndicateId: syndicate.id,
+            investorId: alloc.investorId,
+            amount: Number(alloc.amount),
+            tokens,
+            status: memberStatus as any
+          }
+        });
+      }
+
+      const synced = await tx.syndicate.update({
+        where: { id: syndicate.id },
+        data: { tokensSold: approvedTokenSum }
+      });
+
+      return synced;
+    });
+
+    await logAuditEvent({
+      userId: userId || 'unknown',
+      tenantId,
+      action: 'DEAL_TOKENIZED',
+      resource: 'deal',
+      resourceId: deal.id,
+      details: {
+        syndicateId: tokenized.id,
+        tokenSymbol: tokenized.tokenSymbol,
+        totalTokens: tokenized.totalTokens
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string | undefined,
+      success: true
+    });
+
+    return res.status(201).json({
+      message: 'Deal tokenized successfully',
+      syndicate: tokenized
+    });
+  } catch (error) {
+    console.error('Deal tokenization error:', error);
+    return res.status(500).json({ error: 'Failed to tokenize deal' });
+  }
+});
+
 export default router;
