@@ -574,8 +574,7 @@ app.use('/api', (req: express.Request, res: express.Response, next: express.Next
     || req.path.startsWith('/auth/resend-verification')
     || req.path.startsWith('/auth/forgot-password')
     || req.path.startsWith('/auth/reset-password');
-  const hasAuthCookie = Boolean(req.cookies?.accessToken || req.cookies?.token || req.cookies?.refreshToken);
-  if (isPreAuthRoute && !hasAuthCookie) {
+  if (isPreAuthRoute) {
     return next();
   }
   doubleCsrfProtection(req, res, next);

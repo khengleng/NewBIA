@@ -49,6 +49,16 @@ function resolveInvoiceMonth(monthParam?: string) {
     return { monthString: `${year}-${String(month).padStart(2, '0')}`, start, end };
 }
 
+function resolvePaymentReturnUrl(returnUrl?: string) {
+    if (typeof returnUrl === 'string' && returnUrl.trim()) {
+        return returnUrl.trim();
+    }
+
+    const configuredBase = (process.env.FRONTEND_URL || process.env.APP_URL || 'https://www.cambobia.com').trim();
+    const normalizedBase = configuredBase.replace(/\/+$/, '');
+    return `${normalizedBase}/payments/success`;
+}
+
 // ==================== MOCK PAYMENTS / LEGACY ====================
 
 router.post('/create-payment-intent', authorize('payment.create'), async (req: AuthenticatedRequest, res: Response) => {
@@ -150,7 +160,7 @@ router.post('/aba/create-transaction', authorize('payment.create'), async (req: 
                 phone: '012000000' // TODO: Get from user profile if available
             },
             'abapay_khqr', // Default to KHQR
-            returnUrl || 'http://localhost:3000/payments/success'
+            resolvePaymentReturnUrl(returnUrl)
         );
 
         return res.json({
