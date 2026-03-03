@@ -199,6 +199,8 @@ app.set('trust proxy', 1);
 // Safely parse port, defaulting to 8080 which is Railway's preferred default
 const PORT = parseInt(process.env.PORT || '8080', 10);
 const isProduction = process.env.NODE_ENV === 'production';
+const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
+const isTradingService = serviceMode === 'trading';
 
 
 // ============================================
@@ -222,6 +224,7 @@ app.get('/health', (req, res) => {
     status: isStartingUp ? 'starting' : (startupError ? 'degraded' : 'ok'),
     phase: startupPhase,
     error: startupError,
+    mode: serviceMode,
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV
   });
@@ -341,9 +344,10 @@ app.use((req, res, next) => {
       }
 
       const frontendUrl = process.env.FRONTEND_URL || '';
+      const tradingFrontendUrl = process.env.TRADING_FRONTEND_URL || '';
       const corsOriginsEnv = process.env.CORS_ORIGIN || '';
       const allowedOrigins = new Set<string>();
-      const allowedHostnames = new Set<string>(['cambobia.com', 'www.cambobia.com']);
+      const allowedHostnames = new Set<string>(['cambobia.com', 'www.cambobia.com', 'trade.cambobia.com']);
 
       if (frontendUrl) {
         try {
@@ -352,6 +356,16 @@ app.use((req, res, next) => {
           allowedHostnames.add(parsedFrontend.hostname);
         } catch {
           // Ignore invalid FRONTEND_URL and rely on fallback hostnames.
+        }
+      }
+
+      if (tradingFrontendUrl) {
+        try {
+          const parsedTrading = new URL(tradingFrontendUrl);
+          allowedOrigins.add(parsedTrading.origin);
+          allowedHostnames.add(parsedTrading.hostname);
+        } catch {
+          // Ignore invalid TRADING_FRONTEND_URL and rely on fallback hostnames.
         }
       }
 
@@ -587,51 +601,56 @@ app.use('/api', (req: express.Request, res: express.Response, next: express.Next
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/webhooks', webhookRoutes);
 
-// Core endpoints - NOW PROTECTED (Fix #1)
-app.use('/api/smes', authenticateToken, smeRoutes);
-app.use('/api/investors', authenticateToken, investorRoutes);
-app.use('/api/deals', authenticateToken, dealRoutes);
-app.use('/api/documents', authenticateToken, documentRoutes);
+if (isTradingService) {
+  // Trading platform service (trade.cambobia.com): isolated trading surface only.
+  app.use('/api/investors', authenticateToken, investorRoutes);
+  app.use('/api/syndicate-tokens', authenticateToken, syndicateTokenRoutes);
+  app.use('/api/secondary-trading', authenticateToken, secondaryTradingRoutes);
+} else {
+  // Core endpoints - NOW PROTECTED (Fix #1)
+  app.use('/api/smes', authenticateToken, smeRoutes);
+  app.use('/api/investors', authenticateToken, investorRoutes);
+  app.use('/api/deals', authenticateToken, dealRoutes);
+  app.use('/api/documents', authenticateToken, documentRoutes);
 
-// Feature endpoints (already protected)
-app.use('/api/syndicates', authenticateToken, syndicateRoutes);
-app.use('/api/syndicate-tokens', authenticateToken, syndicateTokenRoutes);
-app.use('/api/due-diligence', authenticateToken, dueDiligenceRoutes);
-app.use('/api/duediligence', authenticateToken, dueDiligenceRoutes);
-app.use('/api/deal-due-diligence', authenticateToken, dealDueDiligenceRoutes);
-app.use('/api/community', authenticateToken, communityRoutes);
-app.use('/api/secondary-trading', authenticateToken, secondaryTradingRoutes);
-app.use('/api/notifications', authenticateToken, notificationRoutes);
-app.use('/api/push', authenticateToken, notificationRoutes); // Alias for push subscription endpoints
-app.use('/api/dashboard', authenticateToken, dashboardRoutes);
-app.use('/api/pipeline', authenticateToken, pipelineRoutes);
-app.use('/api/matches', authenticateToken, matchesRoutes);
-app.use('/api/messages', authenticateToken, messagesRoutes);
-app.use('/api/calendar', authenticateToken, calendarRoutes);
-app.use('/api/report', authenticateToken, reportRoutes);
-app.use('/api/reports', authenticateToken, reportRoutes);
-app.use('/api/dataroom', authenticateToken, dataroomRoutes);
-app.use('/api/audit', authenticateToken, auditRoutes);
-app.use('/api/advisory', authenticateToken, advisoryRoutes);
-app.use('/api/advisory-services', authenticateToken, advisoryRoutes);
-app.use('/api/advisors', authenticateToken, advisoryRoutes);
-app.use('/api/analytics', authenticateToken, analyticsRoutes);
-app.use('/api/payments', authenticateToken, paymentRoutes);
-app.use('/api/admin', authenticateToken, adminRoutes);
-app.use('/api/ai', authenticateToken, aiRoutes);
-app.use('/api/disputes', authenticateToken, disputeRoutes);
-app.use('/api/escrow', authenticateToken, escrowRoutes);
-app.use('/api/agreements', authenticateToken, agreementRoutes);
-app.use('/api/admin/action-center', authenticateToken, adminActionCenterRoutes);
-app.use('/api/operations', authenticateToken, operationsRoutes);
-app.use('/api/admin/cases', authenticateToken, adminCasesRoutes);
-app.use('/api/admin/onboarding', authenticateToken, adminOnboardingRoutes);
-app.use('/api/admin/role-lifecycle', authenticateToken, adminRoleLifecycleRoutes);
-app.use('/api/admin/deal-ops', authenticateToken, adminDealOpsRoutes);
-app.use('/api/admin/advisor-ops', authenticateToken, adminAdvisorOpsRoutes);
-app.use('/api/admin/investor-ops', authenticateToken, adminInvestorOpsRoutes);
-app.use('/api/admin/data-governance', authenticateToken, adminDataGovernanceRoutes);
-app.use('/api/admin/reconciliation', authenticateToken, adminReconciliationRoutes);
+  // Feature endpoints (already protected)
+  app.use('/api/syndicates', authenticateToken, syndicateRoutes);
+  app.use('/api/due-diligence', authenticateToken, dueDiligenceRoutes);
+  app.use('/api/duediligence', authenticateToken, dueDiligenceRoutes);
+  app.use('/api/deal-due-diligence', authenticateToken, dealDueDiligenceRoutes);
+  app.use('/api/community', authenticateToken, communityRoutes);
+  app.use('/api/notifications', authenticateToken, notificationRoutes);
+  app.use('/api/push', authenticateToken, notificationRoutes); // Alias for push subscription endpoints
+  app.use('/api/dashboard', authenticateToken, dashboardRoutes);
+  app.use('/api/pipeline', authenticateToken, pipelineRoutes);
+  app.use('/api/matches', authenticateToken, matchesRoutes);
+  app.use('/api/messages', authenticateToken, messagesRoutes);
+  app.use('/api/calendar', authenticateToken, calendarRoutes);
+  app.use('/api/report', authenticateToken, reportRoutes);
+  app.use('/api/reports', authenticateToken, reportRoutes);
+  app.use('/api/dataroom', authenticateToken, dataroomRoutes);
+  app.use('/api/audit', authenticateToken, auditRoutes);
+  app.use('/api/advisory', authenticateToken, advisoryRoutes);
+  app.use('/api/advisory-services', authenticateToken, advisoryRoutes);
+  app.use('/api/advisors', authenticateToken, advisoryRoutes);
+  app.use('/api/analytics', authenticateToken, analyticsRoutes);
+  app.use('/api/payments', authenticateToken, paymentRoutes);
+  app.use('/api/admin', authenticateToken, adminRoutes);
+  app.use('/api/ai', authenticateToken, aiRoutes);
+  app.use('/api/disputes', authenticateToken, disputeRoutes);
+  app.use('/api/escrow', authenticateToken, escrowRoutes);
+  app.use('/api/agreements', authenticateToken, agreementRoutes);
+  app.use('/api/admin/action-center', authenticateToken, adminActionCenterRoutes);
+  app.use('/api/operations', authenticateToken, operationsRoutes);
+  app.use('/api/admin/cases', authenticateToken, adminCasesRoutes);
+  app.use('/api/admin/onboarding', authenticateToken, adminOnboardingRoutes);
+  app.use('/api/admin/role-lifecycle', authenticateToken, adminRoleLifecycleRoutes);
+  app.use('/api/admin/deal-ops', authenticateToken, adminDealOpsRoutes);
+  app.use('/api/admin/advisor-ops', authenticateToken, adminAdvisorOpsRoutes);
+  app.use('/api/admin/investor-ops', authenticateToken, adminInvestorOpsRoutes);
+  app.use('/api/admin/data-governance', authenticateToken, adminDataGovernanceRoutes);
+  app.use('/api/admin/reconciliation', authenticateToken, adminReconciliationRoutes);
+}
 
 // Migration endpoints - PROTECTED: Only available in development or with SUPER_ADMIN role (Fix #2)
 const migrationAuthMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -666,29 +685,31 @@ const migrationAuthMiddleware = (req: express.Request, res: express.Response, ne
   }
 };
 
-app.get('/api/migration/status', migrationAuthMiddleware, async (req, res) => {
-  const status = await getMigrationStatus();
-  res.json(status);
-});
+if (!isTradingService) {
+  app.get('/api/migration/status', migrationAuthMiddleware, async (req, res) => {
+    const status = await getMigrationStatus();
+    res.json(status);
+  });
 
-app.post('/api/migration/perform', migrationAuthMiddleware, async (req, res) => {
-  const result = await performMigration();
-  if (result.completed) {
-    res.json({ message: 'Migration completed successfully', result });
-  } else {
-    res.status(500).json({ error: 'Migration failed', details: result.error });
-  }
-});
+  app.post('/api/migration/perform', migrationAuthMiddleware, async (req, res) => {
+    const result = await performMigration();
+    if (result.completed) {
+      res.json({ message: 'Migration completed successfully', result });
+    } else {
+      res.status(500).json({ error: 'Migration failed', details: result.error });
+    }
+  });
 
-app.post('/api/migration/switch-to-database', migrationAuthMiddleware, (req, res) => {
-  switchToDatabase();
-  res.json({ message: 'Switched to database mode' });
-});
+  app.post('/api/migration/switch-to-database', migrationAuthMiddleware, (req, res) => {
+    switchToDatabase();
+    res.json({ message: 'Switched to database mode' });
+  });
 
-app.post('/api/migration/fallback-to-memory', migrationAuthMiddleware, (req, res) => {
-  fallbackToInMemory();
-  res.json({ message: 'Switched to in-memory mode' });
-});
+  app.post('/api/migration/fallback-to-memory', migrationAuthMiddleware, (req, res) => {
+    fallbackToInMemory();
+    res.json({ message: 'Switched to in-memory mode' });
+  });
+}
 
 // 404 handler
 app.use('*', (req, res) => {
