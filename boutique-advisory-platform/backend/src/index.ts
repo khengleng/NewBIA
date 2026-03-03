@@ -114,6 +114,7 @@ import dataroomRoutes from './routes/dataroom';
 import advisoryRoutes from './routes/advisory';
 import analyticsRoutes from './routes/analytics';
 import paymentRoutes from './routes/payments';
+import cashflowRoutes from './routes/cashflow';
 import webhookRoutes from './routes/webhooks';
 
 // Security Validation
@@ -685,6 +686,7 @@ if (isTradingService) {
   app.use('/api/advisors', authenticateToken, advisoryRoutes);
   app.use('/api/analytics', authenticateToken, analyticsRoutes);
   app.use('/api/payments', authenticateToken, paymentRoutes);
+  app.use('/api/cashflow', authenticateToken, cashflowRoutes);
   app.use('/api/admin', authenticateToken, adminRoutes);
   app.use('/api/ai', authenticateToken, aiRoutes);
   app.use('/api/disputes', authenticateToken, disputeRoutes);
