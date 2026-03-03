@@ -11,15 +11,23 @@ router.get('/', authorize('dataroom.list'), async (req: AuthenticatedRequest, re
     try {
         const userId = req.user?.id;
         const userRole = req.user?.role;
+        const tenantId = req.user?.tenantId || 'default';
+        const isSuperAdmin = userRole === 'SUPER_ADMIN';
+        const isAdmin = userRole === 'ADMIN';
 
         // Get deals with documents
         const deals = await (prisma as any).deal.findMany({
-            where: userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' ? {} : {
-                OR: [
-                    { sme: { userId } }, // User owns the SME
-                    { investors: { some: { investor: { userId } } } } // User is investor
-                ]
-            },
+            where: isSuperAdmin
+                ? {}
+                : (isAdmin
+                    ? { tenantId }
+                    : {
+                        tenantId,
+                        OR: [
+                            { sme: { userId } }, // User owns the SME
+                            { investors: { some: { investor: { userId } } } } // User is investor
+                        ]
+                    }),
             include: {
                 documents: true,
                 sme: true,
@@ -104,8 +112,9 @@ router.post('/upload', authorize('dataroom.upload', {
 
         const dealId = String(req.body?.dealId || '');
         if (!dealId) return undefined;
-        const deal = await (prisma as any).deal.findUnique({
-            where: { id: dealId },
+        const tenantId = req.user?.tenantId || 'default';
+        const deal = await (prisma as any).deal.findFirst({
+            where: { id: dealId, tenantId },
             include: { sme: { select: { userId: true } } }
         });
         return deal?.sme?.userId;
@@ -114,19 +123,24 @@ router.post('/upload', authorize('dataroom.upload', {
     try {
         const { dealId, name, type } = req.body;
         const file = req.file;
+        const userRole = req.user?.role;
+        const tenantId = req.user?.tenantId || 'default';
+        const isSuperAdmin = userRole === 'SUPER_ADMIN';
+        const isAdmin = userRole === 'ADMIN';
 
         if (!file || !dealId) {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
         // Verify access to deal
-        const deal = await (prisma as any).deal.findUnique({
-            where: { id: dealId },
+        const deal = await (prisma as any).deal.findFirst({
+            where: isSuperAdmin ? { id: dealId } : { id: dealId, tenantId },
             include: { sme: true }
         });
 
         if (!deal) return res.status(404).json({ error: 'Deal not found' });
-        if (deal.sme.userId !== req.user?.id && req.user?.role !== 'ADMIN' && req.user?.role !== 'SUPER_ADMIN') {
+        const canUpload = isSuperAdmin || isAdmin || userRole === 'ADVISOR' || deal.sme.userId === req.user?.id;
+        if (!canUpload) {
             return res.status(403).json({ error: 'Unauthorized to upload to this dataroom' });
         }
 
@@ -136,7 +150,7 @@ router.post('/upload', authorize('dataroom.upload', {
         // Create document entry
         const document = await (prisma as any).document.create({
             data: {
-                tenantId: req.user?.tenantId || 'default',
+                tenantId: deal.tenantId,
                 name: name || file.originalname,
                 type: type || 'OTHER',
                 url: uploadResult.url,
@@ -167,9 +181,12 @@ router.get('/:dealId', authorize('dataroom.read'), async (req: AuthenticatedRequ
     try {
         const { dealId } = req.params;
         const userId = req.user?.id;
+        const userRole = req.user?.role;
+        const tenantId = req.user?.tenantId || 'default';
+        const isSuperAdmin = userRole === 'SUPER_ADMIN';
 
-        const deal = await (prisma as any).deal.findUnique({
-            where: { id: dealId },
+        const deal = await (prisma as any).deal.findFirst({
+            where: isSuperAdmin ? { id: dealId } : { id: dealId, tenantId },
             include: {
                 documents: true,
                 sme: true,
@@ -186,7 +203,7 @@ router.get('/:dealId', authorize('dataroom.read'), async (req: AuthenticatedRequ
         // Verify access
         const isInvestor = deal.investors.some((inv: any) => inv.investor.userId === userId);
         const isOwner = deal.sme.userId === userId;
-        const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPER_ADMIN';
+        const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
 
         if (!isInvestor && !isOwner && !isAdmin) {
             return res.status(403).json({ error: 'Access denied to this data room' });
@@ -270,27 +287,35 @@ router.delete('/:documentId', authorize('dataroom.delete', {
 
         const documentId = String(req.params?.documentId || '');
         if (!documentId) return undefined;
+        const tenantId = req.user?.tenantId || 'default';
         const doc = await (prisma as any).document.findUnique({
             where: { id: documentId },
             include: { deal: { include: { sme: { select: { userId: true } } } } }
         });
+        if (!doc || doc.tenantId !== tenantId) return undefined;
         return doc?.deal?.sme?.userId;
     }
 }), async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { documentId } = req.params;
         const userId = req.user?.id;
+        const userRole = req.user?.role;
+        const tenantId = req.user?.tenantId || 'default';
+        const isSuperAdmin = userRole === 'SUPER_ADMIN';
 
-        const document = await (prisma as any).document.findUnique({
-            where: { id: documentId },
+        const document = await (prisma as any).document.findFirst({
+            where: isSuperAdmin
+                ? { id: documentId }
+                : { id: documentId, tenantId },
             include: { deal: { include: { sme: true } } }
         });
 
         if (!document) return res.status(404).json({ error: 'Document not found' });
+        if (!document.deal) return res.status(400).json({ error: 'Document is not part of a dataroom deal' });
 
         // Verify ownership/admin
         const isOwner = document.deal.sme.userId === userId;
-        const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPER_ADMIN';
+        const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
 
         if (!isOwner && !isAdmin) {
             return res.status(403).json({ error: 'Unauthorized to delete from this data room' });

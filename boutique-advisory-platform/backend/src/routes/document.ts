@@ -11,21 +11,108 @@ const router = Router();
 router.post(
     '/upload',
     authorize('document.create', {
-        // Owner-scoped permission for SME uploads should resolve to current user.
-        getOwnerId: async (req) => req.user?.id
+        // Resolve resource ownership from referenced SME/deal for owner-scoped checks.
+        getOwnerId: async (req) => {
+            const userRole = req.user?.role;
+            if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'ADVISOR') {
+                return req.user?.id;
+            }
+
+            const tenantId = req.user?.tenantId || 'default';
+            const body = (req.body || {}) as Record<string, unknown>;
+            const rawSmeId = typeof body.smeId === 'string' ? body.smeId.trim() : '';
+            const rawDealId = typeof body.dealId === 'string' ? body.dealId.trim() : '';
+
+            if (rawSmeId) {
+                const sme = await prisma.sME.findFirst({
+                    where: { id: rawSmeId, tenantId },
+                    select: { userId: true }
+                });
+                return sme?.userId;
+            }
+
+            if (rawDealId) {
+                const deal = await prisma.deal.findFirst({
+                    where: { id: rawDealId, tenantId },
+                    include: { sme: { select: { userId: true } } }
+                });
+                return deal?.sme?.userId;
+            }
+
+            return undefined;
+        }
     }),
     upload.single('file'),
     async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { name, type, smeId, dealId } = req.body;
         const file = req.file;
+        const userRole = req.user?.role;
+        const tenantId = req.user?.tenantId || 'default';
+        const isSuperAdmin = userRole === 'SUPER_ADMIN';
+        const isSmeRole = userRole === 'SME';
+
+        const normalizedSmeId = typeof smeId === 'string' && smeId.trim() ? smeId.trim() : null;
+        const normalizedDealId = typeof dealId === 'string' && dealId.trim() ? dealId.trim() : null;
 
         if (!file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
+        let resolvedSmeId: string | null = normalizedSmeId;
+        let resolvedDealId: string | null = normalizedDealId;
+        let effectiveTenantId = tenantId;
+
+        if (normalizedSmeId) {
+            const sme = await prisma.sME.findFirst({
+                where: isSuperAdmin ? { id: normalizedSmeId } : { id: normalizedSmeId, tenantId },
+                select: { id: true, tenantId: true, userId: true }
+            });
+
+            if (!sme) {
+                return res.status(404).json({ error: 'SME not found' });
+            }
+
+            if (isSmeRole && sme.userId !== req.user?.id) {
+                return res.status(403).json({ error: 'You can only upload documents for your own SME profile' });
+            }
+
+            resolvedSmeId = sme.id;
+            effectiveTenantId = sme.tenantId;
+        }
+
+        if (normalizedDealId) {
+            const deal = await prisma.deal.findFirst({
+                where: isSuperAdmin ? { id: normalizedDealId } : { id: normalizedDealId, tenantId },
+                include: {
+                    sme: {
+                        select: {
+                            id: true,
+                            userId: true
+                        }
+                    }
+                }
+            });
+
+            if (!deal) {
+                return res.status(404).json({ error: 'Deal not found' });
+            }
+
+            if (isSmeRole && deal.sme.userId !== req.user?.id) {
+                return res.status(403).json({ error: 'You can only upload documents for your own SME deals' });
+            }
+
+            if (resolvedSmeId && deal.smeId !== resolvedSmeId) {
+                return res.status(400).json({ error: 'smeId does not match the provided dealId' });
+            }
+
+            resolvedSmeId = resolvedSmeId || deal.smeId;
+            resolvedDealId = deal.id;
+            effectiveTenantId = deal.tenantId;
+        }
+
         // Determine folder based on document type
-        const folder = smeId ? `sme/${smeId}` : dealId ? `deal/${dealId}` : 'general';
+        const folder = resolvedSmeId ? `sme/${resolvedSmeId}` : resolvedDealId ? `deal/${resolvedDealId}` : 'general';
 
         // Upload to cloud storage (S3/R2)
         const uploadResult = await uploadFile(file, folder);
@@ -33,14 +120,14 @@ router.post(
         // Save document metadata to database
         const document = await prisma.document.create({
             data: {
-                tenantId: req.user?.tenantId || 'default',
+                tenantId: effectiveTenantId,
                 name: name || file.originalname,
                 type: type || 'OTHER',
                 url: uploadResult.url,
                 size: uploadResult.size,
                 mimeType: file.mimetype,
-                smeId: smeId || null,
-                dealId: dealId || null,
+                smeId: resolvedSmeId,
+                dealId: resolvedDealId,
                 uploadedBy: req.user!.id
             }
         });

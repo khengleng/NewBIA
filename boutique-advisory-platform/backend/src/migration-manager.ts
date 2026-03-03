@@ -257,7 +257,7 @@ export async function performMigration(): Promise<MigrationStatus> {
         url: '/uploads/identification.pdf',
         size: 1200000,
         mimeType: 'application/pdf',
-        uploadedBy: 'user_1'
+        uploadedBy: 'admin_1'
       },
       {
         id: 'doc_2',
@@ -267,7 +267,7 @@ export async function performMigration(): Promise<MigrationStatus> {
         url: '/uploads/proof-of-funds.pdf',
         size: 2100000,
         mimeType: 'application/pdf',
-        uploadedBy: 'user_1'
+        uploadedBy: 'admin_1'
       },
       {
         id: 'doc_3',
@@ -277,7 +277,7 @@ export async function performMigration(): Promise<MigrationStatus> {
         url: '/uploads/references.pdf',
         size: 800000,
         mimeType: 'application/pdf',
-        uploadedBy: 'user_1'
+        uploadedBy: 'admin_1'
       },
       {
         id: 'doc_4',
@@ -288,7 +288,7 @@ export async function performMigration(): Promise<MigrationStatus> {
         size: 1500000,
         mimeType: 'application/pdf',
         dealId: 'deal_1',
-        uploadedBy: 'user_1'
+        uploadedBy: 'admin_1'
       },
       {
         id: 'doc_5',
@@ -299,7 +299,7 @@ export async function performMigration(): Promise<MigrationStatus> {
         size: 2800000,
         mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         dealId: 'deal_1',
-        uploadedBy: 'user_1'
+        uploadedBy: 'admin_1'
       },
       {
         id: 'doc_6',
@@ -310,7 +310,7 @@ export async function performMigration(): Promise<MigrationStatus> {
         size: 3200000,
         mimeType: 'application/pdf',
         dealId: 'deal_1',
-        uploadedBy: 'user_1'
+        uploadedBy: 'admin_1'
       }
     ]
 
@@ -382,5 +382,4 @@ export function fallbackToInMemory() {
 export function shouldUseDatabase(): boolean {
   return true  // Always use database for data persistence
 }
-
 
