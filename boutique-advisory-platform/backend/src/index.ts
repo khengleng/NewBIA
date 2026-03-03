@@ -588,7 +588,9 @@ app.use('/api', (req: express.Request, res: express.Response, next: express.Next
     || req.path.startsWith('/auth/resend-verification')
     || req.path.startsWith('/auth/forgot-password')
     || req.path.startsWith('/auth/reset-password')
-    || req.path.startsWith('/auth/sso/trading/exchange');
+    || req.path.startsWith('/auth/sso/trading/exchange')
+    // Internal service-to-service exchange endpoint authenticated by x-sso-internal-key.
+    || req.path.startsWith('/auth/sso/trading/consume');
   if (isPreAuthRoute) {
     return next();
   }
