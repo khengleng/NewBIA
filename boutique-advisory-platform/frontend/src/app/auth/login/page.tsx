@@ -279,6 +279,13 @@ export default function LoginPage() {
               <p className="text-green-400 text-sm">{resendStatus}</p>
             </div>
           )}
+          {IS_TRADING_PLATFORM && (
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+              <p className="text-blue-300 text-sm">
+                If you normally sign in on cambobia.com, use SSO below. Direct password login on this trading site is for trading-local credentials only.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-4">
             <div>
@@ -370,11 +377,22 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {IS_TRADING_PLATFORM && (
+            <div>
+              <a
+                href={`${CORE_FRONTEND_URL}/auth/sso`}
+                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                Continue with CamboBia Account (SSO)
+              </a>
+            </div>
+          )}
+
           <div>
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-slate-600 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isLoading ? (
                 <div className="flex items-center">
@@ -382,21 +400,10 @@ export default function LoginPage() {
                   Signing in...
                 </div>
               ) : (
-                t('auth.login')
+                IS_TRADING_PLATFORM ? 'Sign in with trading password' : t('auth.login')
               )}
             </button>
           </div>
-
-          {IS_TRADING_PLATFORM && (
-            <div>
-              <a
-                href={`${CORE_FRONTEND_URL}/auth/sso`}
-                className="group relative w-full flex justify-center py-3 px-4 border border-gray-500 text-sm font-medium rounded-lg text-gray-200 bg-gray-800/60 hover:bg-gray-700/70 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
-              >
-                Continue with CamboBia Account (SSO)
-              </a>
-            </div>
-          )}
 
           <div className="text-center">
             <p className="text-sm text-gray-300">
