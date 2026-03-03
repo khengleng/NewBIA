@@ -35,7 +35,6 @@ export default function PWAInstallPrompt() {
 
         // Listen for the beforeinstallprompt event
         const handler = (e: Event) => {
-            e.preventDefault()
             setDeferredPrompt(e as BeforeInstallPromptEvent)
 
             // Show prompt after 30 seconds

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import {
     ArrowLeftRight,
     Plus,
@@ -143,6 +144,7 @@ interface SyndicateTokenTrade {
 export default function SecondaryTradingPage() {
     const { addToast } = useToast()
     const { isAdmin, isInvestor, user } = usePermissions()
+    const router = useRouter()
 
     const [listings, setListings] = useState<Listing[]>([])
     const [myTrades, setMyTrades] = useState<{ purchases: Trade[], sales: Trade[] }>({ purchases: [], sales: [] })
@@ -170,6 +172,12 @@ export default function SecondaryTradingPage() {
 
     const fetchData = async () => {
         try {
+            const meRes = await authorizedRequest('/api/auth/me')
+            if (meRes.status === 401) {
+                router.push('/auth/login')
+                return
+            }
+
             // Fetch current investor ID if user is an investor
             if (isInvestor) {
                 try {
@@ -187,6 +195,9 @@ export default function SecondaryTradingPage() {
             const listingsRes = await authorizedRequest('/api/secondary-trading/listings')
             if (listingsRes.ok) {
                 setListings(await listingsRes.json())
+            } else if (listingsRes.status === 401) {
+                router.push('/auth/login')
+                return
             } else {
                 console.error('Failed to fetch listings:', listingsRes.status)
                 addToast('error', 'Failed to load deal listings')
@@ -196,24 +207,36 @@ export default function SecondaryTradingPage() {
             const tradesRes = await authorizedRequest('/api/secondary-trading/trades/my')
             if (tradesRes.ok) {
                 setMyTrades(await tradesRes.json())
+            } else if (tradesRes.status === 401) {
+                router.push('/auth/login')
+                return
             }
 
             // Fetch stats
             const statsRes = await authorizedRequest('/api/secondary-trading/stats')
             if (statsRes.ok) {
                 setStats(await statsRes.json())
+            } else if (statsRes.status === 401) {
+                router.push('/auth/login')
+                return
             }
 
             // Fetch syndicate token listings
             const tokenListingsRes = await authorizedRequest('/api/syndicate-tokens/listings')
             if (tokenListingsRes.ok) {
                 setTokenListings(await tokenListingsRes.json())
+            } else if (tokenListingsRes.status === 401) {
+                router.push('/auth/login')
+                return
             }
 
             // Fetch my token trades
             const tokenTradesRes = await authorizedRequest('/api/syndicate-tokens/trades/my')
             if (tokenTradesRes.ok) {
                 setMyTokenTrades(await tokenTradesRes.json())
+            } else if (tokenTradesRes.status === 401) {
+                router.push('/auth/login')
+                return
             }
         } catch (error) {
             console.error('Error fetching data:', error)
