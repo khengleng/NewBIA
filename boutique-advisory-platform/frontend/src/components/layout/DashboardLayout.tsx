@@ -196,7 +196,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 { href: '/syndicates', label: 'Syndicates', icon: UsersRound, roles: ['ADMIN', 'ADVISOR', 'INVESTOR'] },
                 { href: '/due-diligence', label: t('advisory.assessment'), icon: Shield, roles: ['ADMIN', 'ADVISOR'] },
                 { href: '/community', label: 'Community', icon: MessagesSquare, roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'] },
-                { href: '/auth/sso', label: 'Trading', icon: ArrowLeftRight, roles: ['INVESTOR'] },
             ]
         },
         {
