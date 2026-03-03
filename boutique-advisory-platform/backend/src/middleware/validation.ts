@@ -13,6 +13,31 @@ export const updateSMESchema = z.object({
     status: z.enum(['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'CERTIFIED', 'REJECTED']).optional(),
 });
 
+export const createSMEOnboardingSchema = z.object({
+    ownerFirstName: z.string().trim().min(1).max(100),
+    ownerLastName: z.string().trim().min(1).max(100),
+    ownerEmail: z.string().email(),
+    ownerPassword: z.string().min(8).max(128).optional(),
+    name: z.string().trim().min(1).max(255),
+    sector: z.string().trim().min(1).max(100),
+    stage: z.enum(['SEED', 'GROWTH', 'EXPANSION', 'MATURE']),
+    fundingRequired: z.coerce.number().positive(),
+    description: z.string().trim().max(5000).optional(),
+    website: z.string().url().optional(),
+    location: z.string().trim().max(255).optional(),
+    onboardingMode: z.enum(['DIRECT', 'ON_BEHALF']).optional().default('DIRECT'),
+    mandateDocumentUrl: z.string().url().optional(),
+    mandateDocumentName: z.string().trim().max(255).optional(),
+}).superRefine((val, ctx) => {
+    if (val.onboardingMode === 'ON_BEHALF' && !val.mandateDocumentUrl) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['mandateDocumentUrl'],
+            message: 'Mandate document URL is required for on-behalf onboarding',
+        });
+    }
+});
+
 // ==================== Investor Schemas ====================
 export const updateInvestorSchema = z.object({
     name: z.string().min(1).max(255).optional(),
@@ -39,6 +64,30 @@ export const updateDealSchema = z.object({
     equity: z.number().min(0).max(100).optional().nullable(),
     successFee: z.number().min(0).optional().nullable(),
     status: z.enum(['DRAFT', 'PUBLISHED', 'NEGOTIATION', 'FUNDED', 'CLOSED', 'CANCELLED']).optional(),
+});
+
+export const tokenizeDealSchema = z.object({
+    syndicateName: z.string().trim().min(1).max(255),
+    syndicateDescription: z.string().trim().max(5000).optional(),
+    leadInvestorId: z.string().min(1),
+    targetAmount: z.coerce.number().positive().optional(),
+    minInvestment: z.coerce.number().positive().optional(),
+    maxInvestment: z.coerce.number().positive().optional().nullable(),
+    managementFee: z.coerce.number().min(0).max(100).optional(),
+    carryFee: z.coerce.number().min(0).max(100).optional(),
+    tokenName: z.string().trim().min(1).max(100),
+    tokenSymbol: z.string().trim().regex(/^[A-Za-z0-9]{2,12}$/),
+    pricePerToken: z.coerce.number().positive(),
+    totalTokens: z.coerce.number().positive(),
+    closingDate: z.string().datetime().optional(),
+}).superRefine((val, ctx) => {
+    if (val.maxInvestment != null && val.minInvestment != null && val.maxInvestment < val.minInvestment) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['maxInvestment'],
+            message: 'maxInvestment must be greater than or equal to minInvestment',
+        });
+    }
 });
 
 // ==================== Auth Schemas ====================

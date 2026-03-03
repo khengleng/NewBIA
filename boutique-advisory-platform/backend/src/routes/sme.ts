@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../database';
-import { validateBody, updateSMESchema, idParamSchema, validateParams } from '../middleware/validation';
+import { createSMEOnboardingSchema, validateBody, updateSMESchema, idParamSchema, validateParams } from '../middleware/validation';
 import { authorize, AuthenticatedRequest } from '../middleware/authorize';
 import { logAuditEvent } from '../utils/security';
 import bcrypt from 'bcryptjs';
@@ -34,7 +34,7 @@ function canUserSetSmeStatus(role: string | undefined, current: string, next: st
   return false;
 }
 
-router.post('/', authorize('sme.create'), async (req: AuthenticatedRequest, res: Response) => {
+router.post('/', authorize('sme.create'), validateBody(createSMEOnboardingSchema), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const actorUserId = req.user?.id;
     const actorRole = req.user?.role;
@@ -61,10 +61,8 @@ router.post('/', authorize('sme.create'), async (req: AuthenticatedRequest, res:
     } = req.body || {};
 
     const sanitizedOwnerEmail = sanitizeEmail(ownerEmail || '');
-    if (!ownerFirstName || !ownerLastName || !sanitizedOwnerEmail || !name || !sector || !stage || !fundingRequired) {
-      return res.status(400).json({
-        error: 'Missing required fields: ownerFirstName, ownerLastName, ownerEmail, name, sector, stage, fundingRequired'
-      });
+    if (!sanitizedOwnerEmail) {
+      return res.status(400).json({ error: 'Invalid owner email' });
     }
 
     const isOnBehalfMode = String(onboardingMode || '').toUpperCase() === 'ON_BEHALF';
@@ -73,8 +71,8 @@ router.post('/', authorize('sme.create'), async (req: AuthenticatedRequest, res:
       if (!canOnboardOnBehalf) {
         return res.status(403).json({ error: 'Only advisors/admins can onboard SMEs on behalf of owners' });
       }
-      if (!mandateDocumentUrl) {
-        return res.status(400).json({ error: 'Mandate document URL is required for on-behalf onboarding' });
+      if (!mandateDocumentUrl || !String(mandateDocumentUrl).startsWith('https://')) {
+        return res.status(400).json({ error: 'Mandate document URL must be a valid HTTPS URL' });
       }
     }
 
@@ -89,6 +87,9 @@ router.post('/', authorize('sme.create'), async (req: AuthenticatedRequest, res:
       });
 
       if (ownerUser) {
+        if (ownerUser.role !== 'SME') {
+          throw new Error('OWNER_EMAIL_ROLE_CONFLICT');
+        }
         const existingSme = await tx.sME.findUnique({ where: { userId: ownerUser.id } });
         if (existingSme && existingSme.status !== 'DELETED') {
           throw new Error('SME_PROFILE_ALREADY_EXISTS');
@@ -186,6 +187,9 @@ router.post('/', authorize('sme.create'), async (req: AuthenticatedRequest, res:
   } catch (error: any) {
     if (error?.message === 'SME_PROFILE_ALREADY_EXISTS') {
       return res.status(409).json({ error: 'SME profile already exists for this owner email' });
+    }
+    if (error?.message === 'OWNER_EMAIL_ROLE_CONFLICT') {
+      return res.status(409).json({ error: 'Owner email is already assigned to a non-SME account' });
     }
     console.error('Create SME error:', error);
     return res.status(500).json({ error: 'Internal server error' });

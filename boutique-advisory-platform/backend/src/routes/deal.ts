@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../database';
-import { validateBody, createDealSchema, updateDealSchema } from '../middleware/validation';
+import { validateBody, createDealSchema, tokenizeDealSchema, updateDealSchema } from '../middleware/validation';
 import { authorize, AuthenticatedRequest } from '../middleware/authorize';
 import { sendNotification } from '../services/notification.service';
 import { logAuditEvent } from '../utils/security';
@@ -349,7 +349,7 @@ router.post('/:id/tokenize', authorize('deal.update', {
     });
     return deal?.sme?.userId;
   }
-}), async (req: AuthenticatedRequest, res: Response) => {
+}), validateBody(tokenizeDealSchema), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const tenantId = req.user?.tenantId || 'default';
     const userRole = req.user?.role;
@@ -370,12 +370,6 @@ router.post('/:id/tokenize', authorize('deal.update', {
       totalTokens,
       closingDate
     } = req.body || {};
-
-    if (!syndicateName || !leadInvestorId || !tokenName || !tokenSymbol || !pricePerToken || !totalTokens) {
-      return res.status(400).json({
-        error: 'Missing required fields: syndicateName, leadInvestorId, tokenName, tokenSymbol, pricePerToken, totalTokens'
-      });
-    }
 
     const deal = await prisma.deal.findFirst({
       where: { id, tenantId },
@@ -409,7 +403,7 @@ router.post('/:id/tokenize', authorize('deal.update', {
 
     const existingAllocations = await prisma.dealInvestor.findMany({
       where: { dealId: id },
-      select: { investorId: true, amount: true, status: true }
+      select: { investorId: true, amount: true, status: true, investor: { select: { tenantId: true } } }
     });
 
     const price = Number(pricePerToken);
@@ -420,8 +414,17 @@ router.post('/:id/tokenize', authorize('deal.update', {
     if (!Number.isFinite(tokenSupply) || tokenSupply <= 0) {
       return res.status(400).json({ error: 'totalTokens must be a positive number' });
     }
+    const safeTokenSymbol = String(tokenSymbol).toUpperCase();
 
     const target = targetAmount ? Number(targetAmount) : Number(deal.amount);
+    if (!Number.isFinite(target) || target <= 0) {
+      return res.status(400).json({ error: 'targetAmount must be a positive number' });
+    }
+    const safeClosingDate = closingDate ? new Date(closingDate) : null;
+    if (safeClosingDate && Number.isNaN(safeClosingDate.getTime())) {
+      return res.status(400).json({ error: 'closingDate must be a valid ISO datetime' });
+    }
+
     const tokenized = await prisma.$transaction(async (tx) => {
       const syndicate = await tx.syndicate.create({
         data: {
@@ -435,10 +438,10 @@ router.post('/:id/tokenize', authorize('deal.update', {
           managementFee: managementFee ? Number(managementFee) : 2,
           carryFee: carryFee ? Number(carryFee) : 20,
           dealId: deal.id,
-          closingDate: closingDate ? new Date(closingDate) : null,
+          closingDate: safeClosingDate,
           isTokenized: true,
           tokenName: String(tokenName),
-          tokenSymbol: String(tokenSymbol).toUpperCase(),
+          tokenSymbol: safeTokenSymbol,
           pricePerToken: price,
           totalTokens: tokenSupply,
           status: 'OPEN' as any
@@ -447,14 +450,21 @@ router.post('/:id/tokenize', authorize('deal.update', {
 
       let approvedTokenSum = 0;
       for (const alloc of existingAllocations) {
+        if (alloc.investor?.tenantId !== tenantId) {
+          continue;
+        }
+        const allocationAmount = Number(alloc.amount);
+        if (!Number.isFinite(allocationAmount) || allocationAmount <= 0) {
+          continue;
+        }
         const memberStatus = alloc.status === 'APPROVED' || alloc.status === 'COMPLETED' ? 'APPROVED' : 'PENDING';
-        const tokens = Number(alloc.amount) / price;
+        const tokens = allocationAmount / price;
         if (memberStatus === 'APPROVED') approvedTokenSum += tokens;
         await tx.syndicateMember.create({
           data: {
             syndicateId: syndicate.id,
             investorId: alloc.investorId,
-            amount: Number(alloc.amount),
+            amount: allocationAmount,
             tokens,
             status: memberStatus as any
           }
