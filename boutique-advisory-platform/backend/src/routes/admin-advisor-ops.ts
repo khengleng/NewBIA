@@ -2,8 +2,20 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest, authorize } from '../middleware/authorize';
 import { prisma } from '../database';
 import { isMissingSchemaError } from '../utils/prisma-errors';
+import { logAuditEvent } from '../utils/security';
 
 const router = Router();
+const assignmentTransitions: Record<string, string[]> = {
+  OPEN: ['IN_PROGRESS', 'BLOCKED', 'CANCELLED'],
+  IN_PROGRESS: ['BLOCKED', 'COMPLETED', 'CANCELLED'],
+  BLOCKED: ['IN_PROGRESS', 'CANCELLED'],
+  COMPLETED: [],
+  CANCELLED: []
+};
+
+function canTransitionAssignmentStatus(current: string, next: string): boolean {
+  return (assignmentTransitions[current] || []).includes(next);
+}
 
 function tenantScope(req: AuthenticatedRequest) {
   const tenantId = req.user?.tenantId || 'default';
@@ -167,6 +179,20 @@ router.put('/capacity/:advisorId', authorize('advisor_capacity.update'), async (
     const updated = await prisma.advisorCapacity.findUnique({
       where: { tenantId_advisorId: { tenantId: advisor.tenantId, advisorId } }
     });
+    await logAuditEvent({
+      userId: req.user?.id || 'unknown',
+      tenantId: advisor.tenantId,
+      action: 'ADVISOR_CAPACITY_UPDATED',
+      resource: 'advisor_capacity',
+      resourceId: advisorId,
+      details: {
+        weeklyCapacityHours,
+        notes: notes || undefined
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string | undefined,
+      success: true
+    });
 
     return res.json({ message: 'Capacity updated', capacity: updated });
   } catch (error) {
@@ -227,6 +253,21 @@ router.post('/assignments', authorize('advisor_assignment.create'), async (req: 
     });
 
     await recomputeCapacity(tenantId, advisorId);
+    await logAuditEvent({
+      userId: createdById,
+      tenantId,
+      action: 'ADVISOR_ASSIGNMENT_CREATED',
+      resource: 'advisor_assignment',
+      resourceId: assignment.id,
+      details: {
+        advisorId,
+        priority: assignment.priority,
+        status: assignment.status
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string | undefined,
+      success: true
+    });
     return res.status(201).json({ message: 'Assignment created', assignment });
   } catch (error) {
     console.error('Create advisor assignment error:', error);
@@ -245,6 +286,14 @@ router.patch('/assignments/:id', authorize('advisor_assignment.update'), async (
 
     const normalizedStatus = status ? String(status).toUpperCase() : undefined;
     const normalizedPriority = priority ? String(priority).toUpperCase() : undefined;
+    if (normalizedStatus && !['OPEN', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED', 'CANCELLED'].includes(normalizedStatus)) {
+      return res.status(400).json({ error: 'Invalid assignment status' });
+    }
+    if (normalizedStatus && normalizedStatus !== existing.status && !canTransitionAssignmentStatus(existing.status, normalizedStatus)) {
+      return res.status(409).json({
+        error: `Invalid assignment status transition: ${existing.status} -> ${normalizedStatus}`
+      });
+    }
 
     const updated = await prisma.advisorAssignment.update({
       where: { id },
@@ -259,6 +308,22 @@ router.patch('/assignments/:id', authorize('advisor_assignment.update'), async (
     });
 
     await recomputeCapacity(tenantId, existing.advisorId);
+    if (normalizedStatus && normalizedStatus !== existing.status) {
+      await logAuditEvent({
+        userId: req.user?.id || 'unknown',
+        tenantId,
+        action: 'ADVISOR_ASSIGNMENT_STATUS_TRANSITION',
+        resource: 'advisor_assignment',
+        resourceId: id,
+        details: {
+          fromStatus: existing.status,
+          toStatus: normalizedStatus
+        },
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'] as string | undefined,
+        success: true
+      });
+    }
     return res.json({ message: 'Assignment updated', assignment: updated });
   } catch (error) {
     console.error('Update advisor assignment error:', error);
@@ -314,6 +379,20 @@ router.post('/conflicts/:id/review', authorize('advisor_conflict.review'), async
         reviewNote: reviewNote || null,
         reviewedAt: new Date()
       }
+    });
+    await logAuditEvent({
+      userId: reviewerId || 'unknown',
+      tenantId,
+      action: 'ADVISOR_CONFLICT_REVIEWED',
+      resource: 'advisor_conflict_declaration',
+      resourceId: id,
+      details: {
+        fromStatus: existing.status,
+        toStatus: status
+      },
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'] as string | undefined,
+      success: true
     });
 
     return res.json({ message: 'Conflict declaration reviewed', declaration: updated });

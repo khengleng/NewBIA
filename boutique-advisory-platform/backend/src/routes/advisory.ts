@@ -2,8 +2,19 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest, authorize, requireRole } from '../middleware/authorize';
 import { prisma } from '../database';
 import { sendNewBookingNotification, sendBookingConfirmation, sendPaymentReceiptEmail } from '../utils/email';
+import { logAuditEvent } from '../utils/security';
 
 const router = Router();
+const advisoryServiceStatusTransitions: Record<string, string[]> = {
+    ACTIVE: ['INACTIVE'],
+    INACTIVE: ['ACTIVE']
+};
+const advisoryServiceStatuses = new Set(['ACTIVE', 'INACTIVE']);
+const certificationTransitions: Record<string, string[]> = {
+    PENDING: ['APPROVED', 'REJECTED'],
+    APPROVED: [],
+    REJECTED: []
+};
 
 function requireTenantId(req: AuthenticatedRequest, res: Response): string | undefined {
     const tenantId = req.user?.tenantId;
@@ -219,16 +230,17 @@ router.post('/book', async (req: AuthenticatedRequest, res: Response) => {
             const serviceExists = await prisma.advisoryService.findFirst({
                 where: { id: serviceId, tenantId }
             });
-            if (serviceExists) {
+            if (serviceExists && serviceExists.status === 'ACTIVE') {
                 actualServiceId = serviceId;
+                actualAdvisorId = serviceExists.advisorId;
             }
         }
 
-        if (advisorId) {
+        if (advisorId && !actualAdvisorId) {
             const advisorExists = await prisma.advisor.findFirst({
                 where: { id: advisorId, tenantId }
             });
-            if (advisorExists) {
+            if (advisorExists && advisorExists.status === 'ACTIVE') {
                 actualAdvisorId = advisorId;
             }
         }
@@ -281,6 +293,21 @@ router.post('/book', async (req: AuthenticatedRequest, res: Response) => {
                 },
                 user: true
             }
+        });
+        await logAuditEvent({
+            userId: userId,
+            tenantId,
+            action: 'ADVISORY_BOOKING_CREATED',
+            resource: 'booking',
+            resourceId: booking.id,
+            details: {
+                serviceId: actualServiceId,
+                advisorId: actualAdvisorId,
+                status: booking.status
+            },
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string | undefined,
+            success: true
         });
 
         // Send emails
@@ -371,6 +398,9 @@ router.post('/services', authorize('advisory_service.create'), async (req: Authe
         if (!advisor || advisor.tenantId !== tenantId) {
             return res.status(403).json({ error: 'Only registered Advisors can create advisory services' });
         }
+        if (advisor.status !== 'ACTIVE') {
+            return res.status(409).json({ error: 'Advisor must be ACTIVE to create services' });
+        }
 
         const advisorId = advisor.id;
 
@@ -395,6 +425,20 @@ router.post('/services', authorize('advisory_service.create'), async (req: Authe
                     }
                 }
             }
+        });
+        await logAuditEvent({
+            userId: userId || 'unknown',
+            tenantId,
+            action: 'ADVISORY_SERVICE_CREATED',
+            resource: 'advisory_service',
+            resourceId: service.id,
+            details: {
+                advisorId,
+                status: service.status
+            },
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string | undefined,
+            success: true
         });
 
         return res.status(201).json({
@@ -432,6 +476,18 @@ router.put('/services/:id', authorize('advisory_service.manage'), async (req: Au
         }
 
         const { name, category, description, price, duration, features, status } = req.body;
+        let normalizedStatus: string | undefined;
+        if (status !== undefined) {
+            normalizedStatus = String(status).toUpperCase();
+            if (!advisoryServiceStatuses.has(normalizedStatus)) {
+                return res.status(400).json({ error: 'Invalid service status' });
+            }
+            if (normalizedStatus !== existingService.status && !(advisoryServiceStatusTransitions[existingService.status] || []).includes(normalizedStatus)) {
+                return res.status(409).json({
+                    error: `Invalid advisory service status transition: ${existingService.status} -> ${normalizedStatus}`
+                });
+            }
+        }
 
         const service = await prisma.advisoryService.update({
             where: { id },
@@ -442,7 +498,7 @@ router.put('/services/:id', authorize('advisory_service.manage'), async (req: Au
                 ...(price && { price: parseFloat(price) }),
                 ...(duration && { duration }),
                 ...(features && { features: Array.isArray(features) ? features : [features] }),
-                ...(status && { status })
+                ...(normalizedStatus && { status: normalizedStatus })
             },
             include: {
                 advisor: {
@@ -454,6 +510,22 @@ router.put('/services/:id', authorize('advisory_service.manage'), async (req: Au
                 }
             }
         });
+        if (normalizedStatus && normalizedStatus !== existingService.status) {
+            await logAuditEvent({
+                userId: userId || 'unknown',
+                tenantId,
+                action: 'ADVISORY_SERVICE_STATUS_TRANSITION',
+                resource: 'advisory_service',
+                resourceId: service.id,
+                details: {
+                    fromStatus: existingService.status,
+                    toStatus: normalizedStatus
+                },
+                ipAddress: req.ip,
+                userAgent: req.headers['user-agent'] as string | undefined,
+                success: true
+            });
+        }
 
         return res.json({
             message: 'Service updated successfully',
@@ -488,11 +560,34 @@ router.delete('/services/:id', authorize('advisory_service.delete'), async (req:
         if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN' && existingService.advisor.userId !== userId) {
             return res.status(403).json({ error: 'Not authorized to delete this service' });
         }
+        const futureBookings = await prisma.booking.count({
+            where: {
+                tenantId,
+                serviceId: id,
+                status: { in: ['PENDING', 'CONFIRMED'] },
+                preferredDate: { gte: new Date() }
+            }
+        });
+        if (futureBookings > 0) {
+            return res.status(409).json({
+                error: 'Cannot deactivate service with pending/confirmed future bookings'
+            });
+        }
 
         // Soft delete by setting status to INACTIVE
         await prisma.advisoryService.update({
             where: { id },
             data: { status: 'INACTIVE' }
+        });
+        await logAuditEvent({
+            userId: userId || 'unknown',
+            tenantId,
+            action: 'ADVISORY_SERVICE_DEACTIVATED',
+            resource: 'advisory_service',
+            resourceId: id,
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string | undefined,
+            success: true
         });
 
         return res.json({ message: 'Service deleted successfully' });
@@ -577,19 +672,28 @@ router.patch('/certifications/:id', authorize('certification.approve'), async (r
 
         const { id } = req.params;
         const { status, comments, score } = req.body;
+        const normalizedStatus = String(status || '').toUpperCase();
+        if (!['APPROVED', 'REJECTED'].includes(normalizedStatus)) {
+            return res.status(400).json({ error: 'status must be APPROVED or REJECTED' });
+        }
 
         const existingCertification = await prisma.certification.findFirst({
             where: { id, sme: { tenantId } },
-            select: { id: true }
+            select: { id: true, status: true }
         });
         if (!existingCertification) {
             return res.status(404).json({ error: 'Certification not found' });
+        }
+        if (!(certificationTransitions[existingCertification.status] || []).includes(normalizedStatus)) {
+            return res.status(409).json({
+                error: `Invalid certification transition: ${existingCertification.status} -> ${normalizedStatus}`
+            });
         }
 
         const certification = await prisma.certification.update({
             where: { id: existingCertification.id },
             data: {
-                status,
+                status: normalizedStatus as any,
                 ...(comments && { comments }),
                 ...(score && { score: parseFloat(score) })
             },
@@ -597,7 +701,7 @@ router.patch('/certifications/:id', authorize('certification.approve'), async (r
         });
 
         // If approved, update SME status
-        if (status === 'APPROVED') {
+        if (normalizedStatus === 'APPROVED') {
             await prisma.sME.update({
                 where: { id: certification.smeId },
                 data: {
@@ -606,7 +710,30 @@ router.patch('/certifications/:id', authorize('certification.approve'), async (r
                     status: 'CERTIFIED'
                 }
             });
+        } else if (normalizedStatus === 'REJECTED') {
+            await prisma.sME.update({
+                where: { id: certification.smeId },
+                data: {
+                    certified: false,
+                    status: 'REJECTED'
+                }
+            });
         }
+        await logAuditEvent({
+            userId: req.user?.id || 'unknown',
+            tenantId,
+            action: 'CERTIFICATION_STATUS_TRANSITION',
+            resource: 'certification',
+            resourceId: certification.id,
+            details: {
+                fromStatus: existingCertification.status,
+                toStatus: normalizedStatus,
+                smeId: certification.smeId
+            },
+            ipAddress: req.ip,
+            userAgent: req.headers['user-agent'] as string | undefined,
+            success: true
+        });
 
         return res.json({ message: 'Certification updated', certification });
     } catch (error) {
