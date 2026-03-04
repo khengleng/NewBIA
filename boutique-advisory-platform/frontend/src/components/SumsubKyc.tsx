@@ -15,6 +15,21 @@ export default function SumsubKyc({ onClose, onComplete }: SumsubKycProps) {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
+    const getFriendlyError = (status: number, apiError?: string) => {
+        switch (status) {
+            case 401:
+                return 'Your session has expired. Please sign in again and retry verification.'
+            case 403:
+                return 'This account is not allowed to start identity verification.'
+            case 404:
+                return 'Your investor profile is not ready yet. Please complete your profile first.'
+            case 503:
+                return 'Identity verification is temporarily unavailable. Please try again shortly.'
+            default:
+                return apiError || 'We could not start verification right now. Please try again.'
+        }
+    }
+
     const fetchToken = async () => {
         setIsLoading(true);
         setError(null);
@@ -24,9 +39,10 @@ export default function SumsubKyc({ onClose, onComplete }: SumsubKycProps) {
                 const data = await response.json();
                 setToken(data.token);
             } else {
-                setError('Failed to fetch verification token. Please try again.');
+                const payload = await response.json().catch(() => ({}));
+                setError(getFriendlyError(response.status, payload?.error));
             }
-        } catch (err) {
+        } catch {
             setError('Connection error. Please check your internet.');
         } finally {
             setIsLoading(false);
@@ -68,13 +84,22 @@ export default function SumsubKyc({ onClose, onComplete }: SumsubKycProps) {
 
                     {error ? (
                         <div className="absolute inset-0 z-40 flex flex-col items-center justify-center p-8 text-center bg-gray-800">
-                            <p className="text-red-400 font-bold mb-4">{error}</p>
-                            <button
-                                onClick={fetchToken}
-                                className="bg-blue-600 px-6 py-2 rounded-xl text-white font-bold"
-                            >
-                                Retry
-                            </button>
+                            <p className="text-red-400 font-bold mb-2">Unable to start verification</p>
+                            <p className="text-gray-300 mb-5 max-w-md">{error}</p>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={fetchToken}
+                                    className="bg-blue-600 px-6 py-2 rounded-xl text-white font-bold"
+                                >
+                                    Try Again
+                                </button>
+                                <button
+                                    onClick={onClose}
+                                    className="bg-gray-700 px-6 py-2 rounded-xl text-white font-bold"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     ) : token && (
                         <div className="h-full w-full">

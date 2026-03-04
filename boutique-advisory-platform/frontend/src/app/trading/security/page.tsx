@@ -22,6 +22,7 @@ interface TwoFaSetup {
 export default function TradingSecurityPage() {
     const { addToast } = useToast()
     const [isLoading, setIsLoading] = useState(true)
+    const [accountEmail, setAccountEmail] = useState('')
     const [is2faEnabled, setIs2faEnabled] = useState(false)
     const [sessions, setSessions] = useState<Session[]>([])
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
@@ -50,6 +51,7 @@ export default function TradingSecurityPage() {
                 if (meRes.ok) {
                     const me = await meRes.json()
                     setIs2faEnabled(Boolean(me?.user?.twoFactorEnabled))
+                    setAccountEmail(me?.user?.email || '')
                 }
 
                 if (sessionsRes.ok) {
@@ -223,6 +225,16 @@ export default function TradingSecurityPage() {
                             void handleChangePassword()
                         }}
                     >
+                        <input
+                            type="text"
+                            name="username"
+                            value={accountEmail}
+                            autoComplete="username"
+                            readOnly
+                            tabIndex={-1}
+                            aria-hidden="true"
+                            className="sr-only"
+                        />
                         <h2 className="text-white text-lg font-semibold">Change Password</h2>
                         <input
                             type="password"
@@ -306,22 +318,39 @@ export default function TradingSecurityPage() {
                         )}
 
                         {is2faEnabled && (
-                            <div className="space-y-3 pt-2 border-t border-gray-700">
+                            <form
+                                className="space-y-3 pt-2 border-t border-gray-700"
+                                onSubmit={(event) => {
+                                    event.preventDefault()
+                                    void handleDisable2fa()
+                                }}
+                            >
+                                <input
+                                    type="text"
+                                    name="username"
+                                    value={accountEmail}
+                                    autoComplete="username"
+                                    readOnly
+                                    tabIndex={-1}
+                                    aria-hidden="true"
+                                    className="sr-only"
+                                />
                                 <input
                                     type="password"
                                     value={disable2faPassword}
                                     onChange={(e) => setDisable2faPassword(e.target.value)}
                                     placeholder="Password to disable MFA"
+                                    autoComplete="current-password"
                                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white"
                                 />
                                 <button
-                                    onClick={handleDisable2fa}
+                                    type="submit"
                                     disabled={isDisabling2fa}
                                     className="px-4 py-2 bg-red-600 hover:bg-red-500 disabled:bg-gray-600 text-white rounded-lg"
                                 >
                                     {isDisabling2fa ? 'Disabling...' : 'Disable MFA'}
                                 </button>
-                            </div>
+                            </form>
                         )}
                     </div>
                 </div>

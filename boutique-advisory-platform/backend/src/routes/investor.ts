@@ -553,6 +553,15 @@ router.post('/kyc-token', authorize('investor.update', { getOwnerId: (req) => re
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
+    if (!process.env.SUMSUB_APP_TOKEN || !process.env.SUMSUB_SECRET_KEY) {
+      return res.status(503).json({ error: 'Identity verification service is temporarily unavailable' });
+    }
+
+    const investor = await prisma.investor.findUnique({ where: { userId } });
+    if (!investor) {
+      return res.status(404).json({ error: 'Investor profile not found for this account' });
+    }
+
     const levelName = process.env.SUMSUB_LEVEL_NAME || 'basic-kyc-level';
     const tokenData = await sumsub.generateAccessToken(userId, levelName);
 
