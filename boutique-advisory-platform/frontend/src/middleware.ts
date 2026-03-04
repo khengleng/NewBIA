@@ -7,6 +7,9 @@ const isTradingHost = (hostname: string) => hostname === 'trade.cambobia.com';
 const tradingAllowedPrefixes = [
   '/auth',
   '/secondary-trading',
+  '/trading',
+  '/investor/portfolio',
+  '/notifications',
   '/settings/sessions',
   '/api-proxy',
   '/_next',
