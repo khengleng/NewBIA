@@ -57,7 +57,7 @@ export default function PrivacyPage() {
                             If you have any questions about this Privacy Policy, please contact us at:
                         </p>
                         <p className="text-blue-400 mt-2">
-                            privacy@boutique-advisory.com
+                            contact@cambobia.com
                         </p>
                     </section>
                 </div>

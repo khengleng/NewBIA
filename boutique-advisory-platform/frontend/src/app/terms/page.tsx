@@ -71,7 +71,7 @@ export default function TermsPage() {
                             For questions about these Terms of Service, please contact:
                         </p>
                         <p className="text-blue-400 mt-2">
-                            legal@boutique-advisory.com
+                            contact@cambobia.com
                         </p>
                     </section>
                 </div>
