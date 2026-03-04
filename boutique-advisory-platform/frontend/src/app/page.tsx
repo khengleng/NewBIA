@@ -256,7 +256,7 @@ export default function HomePage() {
             <div>
               <h3 className="text-white font-semibold mb-4">Contact</h3>
               <ul className="space-y-2 text-gray-300">
-                <li>support@boutique-advisory.com</li>
+                <li>contact@cambobia.com</li>
                 <li>+855 12875798</li>
                 <li>24/7 Support Available</li>
               </ul>
