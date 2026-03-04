@@ -17,6 +17,18 @@ export default function SsoLaunchPage() {
         return
       }
 
+      const params = new URLSearchParams(window.location.search)
+      const prompt = params.get('prompt')
+      if (prompt === 'login') {
+        // Force explicit account selection for cross-platform SSO launches.
+        await apiRequest('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include',
+        }).catch(() => null)
+        router.replace('/auth/login?next=%2Fauth%2Fsso')
+        return
+      }
+
       try {
         const response = await apiRequest('/api/auth/sso/trading-link', {
           method: 'GET',

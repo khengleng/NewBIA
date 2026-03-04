@@ -126,7 +126,9 @@ export default function LoginPage() {
       if (response.ok) {
         const data = await response.safeJson()
         // localStorage.setItem('token', data.token)
+        localStorage.removeItem('user')
         localStorage.setItem('user', JSON.stringify(data.user))
+        window.dispatchEvent(new Event('auth:changed'))
         router.push(nextPath || postLoginPath)
       } else {
         const errorData = await response.safeJson()
@@ -166,7 +168,9 @@ export default function LoginPage() {
           setErrors({})
         } else {
           // localStorage.setItem('token', data.token) // Token is now in HttpOnly cookie
+          localStorage.removeItem('user')
           localStorage.setItem('user', JSON.stringify(data.user))
+          window.dispatchEvent(new Event('auth:changed'))
           router.push(nextPath || postLoginPath)
         }
       } else {
@@ -422,7 +426,7 @@ export default function LoginPage() {
           {isTradingRuntime && (
             <div>
               <a
-                href={`${CORE_FRONTEND_URL}/auth/sso`}
+                href={`${CORE_FRONTEND_URL}/auth/sso?prompt=login`}
                 className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Continue with CamboBia Account (SSO)

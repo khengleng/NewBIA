@@ -6,6 +6,12 @@ import { authorizedRequest } from '../../../lib/api'
 import { useToast } from '../../../contexts/ToastContext'
 
 interface TraderProfileResponse {
+    mode?: 'TRADER' | 'OPERATOR'
+    operator?: {
+        userId?: string
+        role?: string
+        tenantId?: string
+    }
     investor?: {
         id: string
         name: string
@@ -44,6 +50,7 @@ export default function TradingProfilePage() {
     const { addToast } = useToast()
     const [profile, setProfile] = useState<TraderProfileResponse | null>(null)
     const [isSaving, setIsSaving] = useState(false)
+    const isOperatorMode = profile?.mode === 'OPERATOR'
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -61,7 +68,7 @@ export default function TradingProfilePage() {
     }, [addToast])
 
     const handleSave = async () => {
-        if (!profile) return
+        if (!profile || isOperatorMode) return
         setIsSaving(true)
 
         const response = await authorizedRequest('/api/secondary-trading/trader-profile', {
@@ -93,25 +100,40 @@ export default function TradingProfilePage() {
         <DashboardLayout>
             <div className="max-w-4xl mx-auto space-y-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-white">Investor Profile</h1>
-                    <p className="text-gray-400 mt-1">Configure your risk, strategy, and trading notifications.</p>
+                    <h1 className="text-3xl font-bold text-white">{isOperatorMode ? 'Operator Profile' : 'Investor Profile'}</h1>
+                    <p className="text-gray-400 mt-1">
+                        {isOperatorMode
+                            ? 'Superadmin/admin accounts operate the marketplace and do not use trader preference settings.'
+                            : 'Configure your risk, strategy, and trading notifications.'}
+                    </p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                        <p className="text-xs text-gray-400">Trader Name</p>
-                        <p className="text-white font-semibold">{profile.investor?.name || 'Investor'}</p>
+                        <p className="text-xs text-gray-400">{isOperatorMode ? 'Operator Role' : 'Trader Name'}</p>
+                        <p className="text-white font-semibold">{isOperatorMode ? (profile.operator?.role || 'OPERATOR') : (profile.investor?.name || 'Investor')}</p>
                     </div>
                     <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                        <p className="text-xs text-gray-400">KYC Status</p>
-                        <p className="text-white font-semibold">{profile.investor?.kycStatus || 'PENDING'}</p>
+                        <p className="text-xs text-gray-400">{isOperatorMode ? 'Tenant' : 'KYC Status'}</p>
+                        <p className="text-white font-semibold">{isOperatorMode ? (profile.operator?.tenantId || 'N/A') : (profile.investor?.kycStatus || 'PENDING')}</p>
                     </div>
                     <div className="bg-gray-800 border border-gray-700 rounded-xl p-4">
-                        <p className="text-xs text-gray-400">Watchlist Items</p>
+                        <p className="text-xs text-gray-400">{isOperatorMode ? 'Profile Mode' : 'Watchlist Items'}</p>
                         <p className="text-white font-semibold">{profile.profile.watchlistCount || 0}</p>
                     </div>
                 </div>
 
+                {isOperatorMode && (
+                    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6">
+                        <h2 className="text-lg font-semibold text-white mb-2">Operator Access</h2>
+                        <p className="text-sm text-gray-300">
+                            Use Trading Operations, Market Monitor, Cases, and Platform Security from the left navigation.
+                            Trader preference and watchlist settings are only for investor/trader accounts.
+                        </p>
+                    </div>
+                )}
+
+                {!isOperatorMode && (
                 <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-5">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -222,6 +244,7 @@ export default function TradingProfilePage() {
                         {isSaving ? 'Saving...' : 'Save Investor Profile'}
                     </button>
                 </div>
+                )}
             </div>
         </DashboardLayout>
     )

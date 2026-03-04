@@ -153,7 +153,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const coreNavSections = [
         {
             label: 'Workspace',
-            roles: ['ADMIN', 'SUPER_ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
+            roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
             items: [
                 { href: '/dashboard', label: t('navigation.dashboard'), icon: BarChart3, roles: ['ADVISOR', 'INVESTOR', 'SME'] },
                 { href: '/calendar', label: 'Calendar', icon: Calendar, roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'] },
@@ -165,7 +165,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         },
         {
             label: 'Deals & Network',
-            roles: ['ADMIN', 'SUPER_ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
+            roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
             items: [
                 { href: '/smes', label: t('navigation.smes'), icon: Building2, roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'] },
                 { href: '/investors', label: t('navigation.investors'), icon: Users, roles: ['ADMIN', 'ADVISOR', 'SME'] },
@@ -223,28 +223,53 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         },
     ]
 
-    const tradingNavSections = [
-        {
-            label: 'Trading',
-            roles: ['ADMIN', 'SUPER_ADMIN', 'INVESTOR'],
-            items: [
-                { href: '/secondary-trading', label: 'Marketplace', icon: ArrowLeftRight, roles: ['INVESTOR', 'ADMIN', 'SUPER_ADMIN'] },
-                { href: '/trading/markets', label: 'Markets', icon: BarChart3, roles: ['INVESTOR', 'ADMIN', 'SUPER_ADMIN'] },
-                { href: '/investor/portfolio', label: 'My Portfolio', icon: Briefcase, roles: ['INVESTOR'] },
-                { href: '/trading/watchlist', label: 'Watchlist', icon: Sparkles, roles: ['INVESTOR', 'ADMIN', 'SUPER_ADMIN'] },
-                { href: '/trading/profile', label: 'Investor Profile', icon: UserCog, roles: ['INVESTOR', 'ADMIN', 'SUPER_ADMIN'] },
-                { href: '/trading/security', label: 'Investor Security', icon: ShieldCheck, roles: ['INVESTOR', 'ADMIN', 'SUPER_ADMIN'] },
-                { href: '/notifications', label: 'Notifications', icon: MessageSquare, roles: ['INVESTOR', 'ADMIN', 'SUPER_ADMIN'] },
-            ]
-        },
-        {
-            label: 'Security',
-            roles: ['ADMIN', 'SUPER_ADMIN', 'INVESTOR'],
-            items: [
-                { href: '/settings/sessions', label: 'Manage Sessions', icon: ShieldCheck, roles: ['ADMIN', 'SUPER_ADMIN', 'INVESTOR'] },
-            ]
-        },
-    ]
+    const currentRole = String(user?.role ?? '')
+    const isTradingOperator = ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'].includes(currentRole)
+    const tradingNavSections = isTradingOperator
+        ? [
+            {
+                label: 'Operator',
+                roles: ['ADMIN', 'SUPER_ADMIN', 'SUPPORT'],
+                items: [
+                    { href: '/secondary-trading', label: 'Trading Operations', icon: ArrowLeftRight, roles: ['ADMIN', 'SUPER_ADMIN', 'SUPPORT'] },
+                    { href: '/trading/markets', label: 'Market Monitor', icon: BarChart3, roles: ['ADMIN', 'SUPER_ADMIN', 'SUPPORT'] },
+                    { href: '/admin/dashboard', label: 'Platform Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'SUPER_ADMIN'] },
+                    { href: '/admin/deal-ops', label: 'Deal Operations', icon: Briefcase, roles: ['ADMIN', 'SUPER_ADMIN'] },
+                    { href: '/admin/cases', label: 'Case Management', icon: ClipboardList, roles: ['ADMIN', 'SUPER_ADMIN', 'SUPPORT'] },
+                    { href: '/notifications', label: 'Notifications', icon: MessageSquare, roles: ['ADMIN', 'SUPER_ADMIN', 'SUPPORT'] },
+                ]
+            },
+            {
+                label: 'Security',
+                roles: ['ADMIN', 'SUPER_ADMIN', 'SUPPORT'],
+                items: [
+                    { href: '/trading/security', label: 'Platform Security', icon: ShieldCheck, roles: ['ADMIN', 'SUPER_ADMIN', 'SUPPORT'] },
+                    { href: '/settings/sessions', label: 'Manage Sessions', icon: Shield, roles: ['ADMIN', 'SUPER_ADMIN', 'SUPPORT'] },
+                ]
+            },
+        ]
+        : [
+            {
+                label: 'Trading',
+                roles: ['INVESTOR'],
+                items: [
+                    { href: '/secondary-trading', label: 'Marketplace', icon: ArrowLeftRight, roles: ['INVESTOR'] },
+                    { href: '/trading/markets', label: 'Markets', icon: BarChart3, roles: ['INVESTOR'] },
+                    { href: '/investor/portfolio', label: 'My Portfolio', icon: Briefcase, roles: ['INVESTOR'] },
+                    { href: '/trading/watchlist', label: 'Watchlist', icon: Sparkles, roles: ['INVESTOR'] },
+                    { href: '/trading/profile', label: 'Investor Profile', icon: UserCog, roles: ['INVESTOR'] },
+                    { href: '/trading/security', label: 'Investor Security', icon: ShieldCheck, roles: ['INVESTOR'] },
+                    { href: '/notifications', label: 'Notifications', icon: MessageSquare, roles: ['INVESTOR'] },
+                ]
+            },
+            {
+                label: 'Security',
+                roles: ['INVESTOR'],
+                items: [
+                    { href: '/settings/sessions', label: 'Manage Sessions', icon: ShieldCheck, roles: ['INVESTOR'] },
+                ]
+            },
+        ]
 
     const navSections = IS_TRADING_PLATFORM ? tradingNavSections : coreNavSections;
 

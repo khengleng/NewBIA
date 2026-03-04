@@ -150,6 +150,33 @@ router.get('/trader-profile', authorize('secondary_trading.read'), async (req: A
             return;
         }
 
+        const role = req.user?.role;
+        const isOperator = role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'SUPPORT';
+        if (isOperator) {
+            res.json({
+                mode: 'OPERATOR',
+                operator: {
+                    userId: req.user?.id,
+                    role,
+                    tenantId
+                },
+                profile: {
+                    riskLevel: 'MEDIUM',
+                    investmentHorizon: 'MID',
+                    strategy: 'VALUE',
+                    maxPositionSize: 10,
+                    preferredSectors: [],
+                    notifications: {
+                        priceAlerts: true,
+                        executionUpdates: true,
+                        marketAnnouncements: true
+                    },
+                    watchlistCount: 0
+                }
+            });
+            return;
+        }
+
         const investor = await requireInvestor(req, tenantId, res);
         if (!investor) return;
 
@@ -158,6 +185,7 @@ router.get('/trader-profile', authorize('secondary_trading.read'), async (req: A
         const watchlist = Array.isArray(prefs.watchlist) ? (prefs.watchlist as unknown[]) : [];
 
         res.json({
+            mode: 'TRADER',
             investor: {
                 id: investor.id,
                 name: investor.name,
@@ -193,6 +221,12 @@ router.put('/trader-profile', authorize('secondary_trading.buy'), async (req: Au
 
         if (!shouldUseDatabase()) {
             res.status(503).json({ error: 'Database not available' });
+            return;
+        }
+
+        const role = req.user?.role;
+        if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'SUPPORT') {
+            res.status(403).json({ error: 'Operator accounts do not use trader profile settings' });
             return;
         }
 

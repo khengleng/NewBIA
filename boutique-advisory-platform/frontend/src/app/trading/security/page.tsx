@@ -22,6 +22,7 @@ interface TwoFaSetup {
 export default function TradingSecurityPage() {
     const { addToast } = useToast()
     const [isLoading, setIsLoading] = useState(true)
+    const [roleLabel, setRoleLabel] = useState('Investor')
     const [accountEmail, setAccountEmail] = useState('')
     const [is2faEnabled, setIs2faEnabled] = useState(false)
     const [sessions, setSessions] = useState<Session[]>([])
@@ -52,6 +53,8 @@ export default function TradingSecurityPage() {
                     const me = await meRes.json()
                     setIs2faEnabled(Boolean(me?.user?.twoFactorEnabled))
                     setAccountEmail(me?.user?.email || '')
+                    const role = String(me?.user?.role || '').toUpperCase()
+                    setRoleLabel(role === 'SUPER_ADMIN' || role === 'ADMIN' || role === 'SUPPORT' ? 'Operator' : 'Investor')
                 }
 
                 if (sessionsRes.ok) {
@@ -213,7 +216,7 @@ export default function TradingSecurityPage() {
         <DashboardLayout>
             <div className="max-w-6xl mx-auto space-y-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-white">Investor Security Center</h1>
+                    <h1 className="text-3xl font-bold text-white">{roleLabel} Security Center</h1>
                     <p className="text-gray-400 mt-1">Manage password, MFA/2FA, active sessions, and account protection.</p>
                 </div>
 

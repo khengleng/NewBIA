@@ -26,6 +26,9 @@ function SsoCallbackContent() {
       }
 
       try {
+        localStorage.removeItem('user')
+        window.dispatchEvent(new Event('auth:changed'))
+
         const response = await apiRequest('/api/auth/sso/trading/exchange', {
           method: 'POST',
           credentials: 'include',
@@ -40,6 +43,7 @@ function SsoCallbackContent() {
 
         if (data?.user) {
           localStorage.setItem('user', JSON.stringify(data.user))
+          window.dispatchEvent(new Event('auth:changed'))
         }
         router.replace('/secondary-trading')
       } catch {
