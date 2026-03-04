@@ -200,6 +200,68 @@ async function buildCashflowSummary(deal: DealContext) {
   };
 }
 
+async function buildLifecycleReadiness(deal: DealContext) {
+  const summary = await buildCashflowSummary(deal);
+
+  const [dealInvestors, openDisputes, openCases] = await Promise.all([
+    prisma.dealInvestor.findMany({
+      where: { dealId: deal.id },
+      include: {
+        investor: {
+          select: {
+            id: true,
+            kycStatus: true,
+            status: true
+          }
+        }
+      }
+    }),
+    prisma.dispute.count({
+      where: {
+        tenantId: deal.tenantId,
+        dealId: deal.id,
+        status: { in: ['OPEN', 'IN_PROGRESS'] }
+      }
+    }),
+    prisma.adminCase.count({
+      where: {
+        tenantId: deal.tenantId,
+        relatedEntityId: deal.id,
+        status: { in: ['OPEN', 'IN_PROGRESS', 'ESCALATED'] }
+      }
+    })
+  ]);
+
+  const totalCommitments = Number(dealInvestors.reduce((sum, investor) => sum + investor.amount, 0).toFixed(2));
+  const activeInvestors = dealInvestors.filter((investor) => ['APPROVED', 'COMPLETED'].includes(investor.status));
+  const kycReady = activeInvestors.every((investor) => investor.investor.kycStatus === 'VERIFIED');
+  const investorReady = activeInvestors.length > 0 && kycReady;
+
+  const checks = {
+    smeOnboarded: true,
+    dealFinanciallyActive: ensureDealIsFinanciallyActive(deal.status),
+    investorOnboardingReady: investorReady,
+    investorFundsReceived: summary.investorPaidCompleted >= totalCommitments && totalCommitments > 0,
+    primaryDisbursementCompleted: summary.disbursedCompleted > 0,
+    noCriticalOpenItems: openDisputes === 0 && openCases === 0
+  };
+
+  const readyForClose = Object.values(checks).every(Boolean);
+
+  return {
+    checks,
+    readyForClose,
+    totals: {
+      totalCommitments,
+      ...summary
+    },
+    blockingItems: {
+      openDisputes,
+      openCases
+    }
+  };
+}
+
 router.get('/deals/:dealId/summary', authorize('deal.read'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const deal = await getDealContext(req, req.params.dealId);
@@ -578,6 +640,75 @@ router.get('/deals/:dealId/dividends/history', authorize('deal.read'), async (re
     });
   } catch (error) {
     console.error('Dividend history error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.get('/deals/:dealId/lifecycle-readiness', authorize('deal.read'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const deal = await getDealContext(req, req.params.dealId);
+    if (!deal) return res.status(404).json({ error: 'Deal not found' });
+
+    const readiness = await buildLifecycleReadiness(deal);
+    return res.json({
+      dealId: deal.id,
+      dealStatus: deal.status,
+      readiness
+    });
+  } catch (error) {
+    console.error('Lifecycle readiness error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/deals/:dealId/close-operations', authorize('deal.update'), async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const deal = await getDealContext(req, req.params.dealId);
+    if (!deal) return res.status(404).json({ error: 'Deal not found' });
+
+    const role = req.user?.role;
+    const isSmeOwner = req.user?.id === deal.sme.userId;
+    if (!isAdminRole(role) && role !== 'ADVISOR' && !isSmeOwner) {
+      return res.status(403).json({ error: 'Only admin, advisor, or SME owner can run closing operations' });
+    }
+
+    const readiness = await buildLifecycleReadiness(deal);
+    const force = Boolean(req.body?.force);
+    if (!readiness.readyForClose && !force) {
+      return res.status(409).json({
+        error: 'Deal is not ready for operations close',
+        readiness
+      });
+    }
+
+    const updatedDeal = await prisma.deal.update({
+      where: { id: deal.id },
+      data: { status: 'CLOSED' }
+    });
+
+    const workflow = await prisma.workflow.create({
+      data: {
+        tenantId: deal.tenantId,
+        type: 'DEAL_APPROVAL',
+        status: 'COMPLETED',
+        dealId: deal.id,
+        data: {
+          operationClose: true,
+          force,
+          closedBy: req.user?.id,
+          closedAt: new Date().toISOString(),
+          readiness
+        }
+      }
+    });
+
+    return res.json({
+      message: force ? 'Deal force-closed by operations' : 'Deal closed with readiness checks passed',
+      deal: updatedDeal,
+      workflow
+    });
+  } catch (error) {
+    console.error('Close operations error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
