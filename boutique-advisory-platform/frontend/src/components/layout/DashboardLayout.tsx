@@ -42,7 +42,7 @@ import { useTranslations } from '../../hooks/useTranslations'
 import { User } from '../../types'
 import { API_URL, authorizedRequest } from '@/lib/api'
 import { hasPermission as hasUiPermission } from '@/lib/permissions'
-import { IS_TRADING_PLATFORM } from '@/lib/platform'
+import { IS_TRADING_PLATFORM, isTradingHostname } from '@/lib/platform'
 import { isTradingOperatorRole, normalizeRole, TRADING_OPERATOR_ROLES } from '@/lib/roles'
 import NotificationCenter from '../NotificationCenter'
 import LanguageSwitcher from '../LanguageSwitcher'
@@ -60,7 +60,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const [isLoading, setIsLoading] = useState(true)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+    const [isTradingRuntime, setIsTradingRuntime] = useState(IS_TRADING_PLATFORM)
     const normalizedRole = normalizeRole(user?.role)
+
+    useEffect(() => {
+        setIsTradingRuntime(IS_TRADING_PLATFORM || isTradingHostname(window.location.hostname))
+    }, [])
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -225,7 +230,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     ]
 
     const isTradingOperator = isTradingOperatorRole(normalizedRole)
-    const showTradingWidgets = !IS_TRADING_PLATFORM
+    const showTradingWidgets = !isTradingRuntime
     const tradingNavSections = isTradingOperator
         ? [
             {
@@ -272,7 +277,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             },
         ]
 
-    const navSections = IS_TRADING_PLATFORM ? tradingNavSections : coreNavSections;
+    const navSections = isTradingRuntime ? tradingNavSections : coreNavSections;
 
     const filteredNavSections = navSections.map((section: any) => {
         if (!user) return null
@@ -318,7 +323,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                         <Building2 className="w-5 h-5 text-white" />
                     </div>
-                    <span className="font-bold text-white text-lg tracking-tight">{IS_TRADING_PLATFORM ? 'CamboBia Trading' : 'BIA Platform'}</span>
+                    <span className="font-bold text-white text-lg tracking-tight">{isTradingRuntime ? 'CamboBia Trading' : 'BIA Platform'}</span>
                 </div>
                 <div className="flex items-center space-x-3">
                     <LanguageSwitcher />
@@ -343,7 +348,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                             <Building2 className="w-6 h-6 text-white" />
                         </div>
-                        <h1 className="text-xl font-bold text-white">{IS_TRADING_PLATFORM ? 'CamboBia Trading' : 'Boutique Advisory'}</h1>
+                        <h1 className="text-xl font-bold text-white">{isTradingRuntime ? 'CamboBia Trading' : 'Boutique Advisory'}</h1>
                     </div>
                     <LanguageSwitcher />
                 </div>
@@ -404,7 +409,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                             <p className="text-xs text-gray-400 capitalize truncate">
                                 {normalizedRole.toLowerCase()}
                             </p>
-                            {!IS_TRADING_PLATFORM && (normalizedRole === 'SME' || normalizedRole === 'INVESTOR') && (
+                            {!isTradingRuntime && (normalizedRole === 'SME' || normalizedRole === 'INVESTOR') && (
                                 <button
                                     onClick={handleSwitchRole}
                                     className="text-[10px] text-blue-400 hover:text-blue-300 mt-1 flex items-center gap-1 transition-colors"

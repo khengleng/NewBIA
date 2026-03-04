@@ -3,7 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { Home, Users, FileText, MessageSquare, Settings, ShieldCheck, Briefcase } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { IS_TRADING_PLATFORM } from '@/lib/platform'
+import { IS_TRADING_PLATFORM, isTradingHostname } from '@/lib/platform'
 import { isTradingOperatorRole, normalizeRole } from '@/lib/roles'
 
 export default function BottomNavigation() {
@@ -12,8 +12,11 @@ export default function BottomNavigation() {
     const [isVisible, setIsVisible] = useState(true)
     const [lastScrollY, setLastScrollY] = useState(0)
     const [role, setRole] = useState('')
+    const [isTradingRuntime, setIsTradingRuntime] = useState(IS_TRADING_PLATFORM)
 
     useEffect(() => {
+        setIsTradingRuntime(IS_TRADING_PLATFORM || isTradingHostname(window.location.hostname))
+
         const loadRole = () => {
             try {
                 const stored = localStorage.getItem('user')
@@ -60,7 +63,7 @@ export default function BottomNavigation() {
 
     const isTradingOperator = isTradingOperatorRole(role)
 
-    const navItems = IS_TRADING_PLATFORM
+    const navItems = isTradingRuntime
         ? isTradingOperator
             ? [
                 { icon: Home, label: 'Markets', path: '/trading/markets' },
