@@ -8,7 +8,7 @@ import { isMissingSchemaError } from '../utils/prisma-errors';
 const router = Router();
 
 function isValidRole(value: string): value is UserRole {
-  return ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'SUPPORT', 'INVESTOR', 'SME'].includes(value);
+  return ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'ADVISOR', 'SUPPORT', 'INVESTOR', 'SME'].includes(value);
 }
 
 function requiresSuperAdmin(role: string): boolean {

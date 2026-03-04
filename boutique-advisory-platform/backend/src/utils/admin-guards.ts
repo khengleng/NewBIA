@@ -1,4 +1,14 @@
-export type AdminRole = 'SUPER_ADMIN' | 'ADMIN' | 'ADVISOR' | 'INVESTOR' | 'SME' | 'SUPPORT';
+export type AdminRole =
+  | 'SUPER_ADMIN'
+  | 'ADMIN'
+  | 'FINOPS'
+  | 'CX'
+  | 'AUDITOR'
+  | 'COMPLIANCE'
+  | 'ADVISOR'
+  | 'INVESTOR'
+  | 'SME'
+  | 'SUPPORT';
 export type UserLifecycleStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'DELETED';
 
 export function canModifyAcrossTenant(

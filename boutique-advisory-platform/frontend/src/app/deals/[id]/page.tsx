@@ -9,7 +9,7 @@ import { authorizedRequest } from '@/lib/api'
 
 interface CurrentUser {
   id: string
-  role: 'SME' | 'INVESTOR' | 'ADVISOR' | 'ADMIN' | 'SUPER_ADMIN'
+  role: 'SME' | 'INVESTOR' | 'ADVISOR' | 'ADMIN' | 'SUPER_ADMIN' | 'FINOPS' | 'CX' | 'AUDITOR' | 'COMPLIANCE' | 'SUPPORT'
 }
 
 interface DealInvestor {

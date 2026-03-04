@@ -783,6 +783,10 @@ enum UserRole {
   INVESTOR
   ADVISOR
   ADMIN
+  FINOPS
+  CX
+  AUDITOR
+  COMPLIANCE
   SUPER_ADMIN  // System operator with full system access
   SUPPORT      // Helpdesk support with read-only access
 }

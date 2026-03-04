@@ -10,6 +10,7 @@ import { prisma, prismaReplica } from '../database';
 import { shouldUseDatabase } from '../migration-manager';
 import { createAbaTransaction } from '../utils/aba';
 import { settleSecondaryTrade } from '../services/secondary-trade-settlement';
+import { isTradingOperatorRole } from '../lib/roles';
 
 const router = Router();
 
@@ -151,7 +152,7 @@ router.get('/trader-profile', authorize('secondary_trading.read'), async (req: A
         }
 
         const role = req.user?.role;
-        const isOperator = role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'SUPPORT';
+        const isOperator = isTradingOperatorRole(role);
         if (isOperator) {
             res.json({
                 mode: 'OPERATOR',
@@ -225,7 +226,7 @@ router.put('/trader-profile', authorize('secondary_trading.buy'), async (req: Au
         }
 
         const role = req.user?.role;
-        if (role === 'ADMIN' || role === 'SUPER_ADMIN' || role === 'SUPPORT') {
+        if (isTradingOperatorRole(role)) {
             res.status(403).json({ error: 'Operator accounts do not use trader profile settings' });
             return;
         }
@@ -609,7 +610,7 @@ router.put('/listings/:id', authorize('secondary_trading.update_listing'), async
         });
 
         const isOwner = investor && existing.sellerId === investor.id;
-        const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPER_ADMIN';
+        const isAdmin = isTradingOperatorRole(req.user?.role);
 
         if (!isOwner && !isAdmin) {
             res.status(403).json({ error: 'Not authorized to update this listing' });
@@ -1110,7 +1111,7 @@ router.post('/trades/:id/report-issue', authorize('secondary_trading.read'), asy
             where: { userId: req.user?.id, tenantId }
         });
         const isParty = actorInvestor && (actorInvestor.id === trade.buyerId || actorInvestor.id === trade.sellerId);
-        const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPER_ADMIN' || req.user?.role === 'SUPPORT';
+        const isAdmin = isTradingOperatorRole(req.user?.role);
         if (!isParty && !isAdmin) {
             res.status(403).json({ error: 'Only trade participants can file trade issues' });
             return;

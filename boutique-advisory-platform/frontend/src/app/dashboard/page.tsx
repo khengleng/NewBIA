@@ -27,7 +27,7 @@ interface User {
   firstName: string
   lastName: string
   email: string
-  role: 'SME' | 'INVESTOR' | 'ADVISOR' | 'ADMIN' | 'SUPER_ADMIN'
+  role: 'SME' | 'INVESTOR' | 'ADVISOR' | 'ADMIN' | 'SUPER_ADMIN' | 'FINOPS' | 'CX' | 'AUDITOR' | 'COMPLIANCE' | 'SUPPORT'
   tenantId: string
 }
 
@@ -46,7 +46,7 @@ export default function DashboardPage() {
           const parsedUser = JSON.parse(userData)
 
           // Admin users use the dedicated admin dashboard.
-          if (parsedUser.role === 'ADMIN' || parsedUser.role === 'SUPER_ADMIN') {
+          if (['ADMIN', 'SUPER_ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'SUPPORT'].includes(parsedUser.role)) {
             router.replace('/admin/dashboard')
             return
           }
@@ -81,6 +81,11 @@ export default function DashboardPage() {
         return <AdvisorDashboard t={t} stats={stats} />
       case 'ADMIN':
       case 'SUPER_ADMIN':
+      case 'FINOPS':
+      case 'CX':
+      case 'AUDITOR':
+      case 'COMPLIANCE':
+      case 'SUPPORT':
         return <AdminDashboard t={t} stats={stats} />
       default:
         return <div>Unknown role</div>

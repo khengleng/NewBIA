@@ -7,7 +7,7 @@ import { checkPermissionDetailed, getPermissionsForRole, PERMISSIONS, UserRole }
 
 const router = Router();
 
-const RBAC_ROLES: UserRole[] = ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'SUPPORT', 'INVESTOR', 'SME'];
+const RBAC_ROLES: UserRole[] = ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'ADVISOR', 'SUPPORT', 'INVESTOR', 'SME'];
 
 // ==================== User Management ====================
 

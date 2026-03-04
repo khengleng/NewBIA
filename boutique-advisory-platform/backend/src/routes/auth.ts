@@ -27,12 +27,13 @@ import {
   AuthenticatedRequest
 } from '../middleware/jwt-auth';
 import redis from '../redis';
+import { isAdminLikeRole } from '../lib/roles';
 
 const router = Router();
 const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
 const isTradingService = serviceMode === 'trading';
 const ssoTokenTtlSeconds = Number(process.env.SSO_TOKEN_TTL_SECONDS || 120);
-const ssoAllowedRoles = new Set(['INVESTOR', 'ADMIN', 'SUPER_ADMIN']);
+const ssoAllowedRoles = new Set(['INVESTOR', 'ADMIN', 'SUPER_ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'SUPPORT']);
 
 function getSsoInternalApiKey(): string {
   const key = process.env.SSO_INTERNAL_API_KEY;
@@ -482,7 +483,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     }
 
     // 2FA Check (optionally enforce for Admin roles)
-    const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+    const isAdmin = isAdminLikeRole(user.role);
     const enforceAdmin2fa = process.env.ENFORCE_ADMIN_2FA === 'true';
     if (user.twoFactorEnabled || (isAdmin && enforceAdmin2fa)) {
       if (!user.twoFactorEnabled && isAdmin && enforceAdmin2fa) {

@@ -16,7 +16,7 @@ interface User {
   firstName: string
   lastName: string
   email: string
-  role: 'SME' | 'INVESTOR' | 'ADVISOR' | 'ADMIN'
+  role: 'SME' | 'INVESTOR' | 'ADVISOR' | 'ADMIN' | 'SUPER_ADMIN' | 'FINOPS' | 'CX' | 'AUDITOR' | 'COMPLIANCE' | 'SUPPORT'
   tenantId: string
   twoFactorEnabled?: boolean
 }

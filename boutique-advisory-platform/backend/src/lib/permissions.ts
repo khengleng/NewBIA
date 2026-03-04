@@ -10,7 +10,17 @@
  */
 
 // Role types
-export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'ADVISOR' | 'SUPPORT' | 'INVESTOR' | 'SME';
+export type UserRole =
+    | 'SUPER_ADMIN'
+    | 'ADMIN'
+    | 'FINOPS'
+    | 'CX'
+    | 'AUDITOR'
+    | 'COMPLIANCE'
+    | 'ADVISOR'
+    | 'SUPPORT'
+    | 'INVESTOR'
+    | 'SME';
 
 // Permission action types
 export type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'list' | 'export' | 'certify' | 'approve';
@@ -51,8 +61,12 @@ const OWNER_SUFFIX = ':owner';
  * Role Hierarchy - Higher roles inherit permissions from lower roles
  */
 export const ROLE_HIERARCHY: Record<UserRole, UserRole[]> = {
-    SUPER_ADMIN: ['ADMIN', 'ADVISOR', 'SUPPORT'],  // Inherits all
-    ADMIN: ['ADVISOR'],                             // Inherits ADVISOR permissions
+    SUPER_ADMIN: ['ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'ADVISOR', 'SUPPORT'], // Inherits all operator roles
+    ADMIN: ['ADVISOR', 'SUPPORT'],                  // Inherits advisory and support baseline
+    FINOPS: ['ADMIN'],                              // Mirrors admin permissions for platform financial operations
+    CX: ['ADMIN'],                                  // Mirrors admin permissions for customer operations
+    AUDITOR: ['ADMIN'],                             // Mirrors admin permissions for audit controls
+    COMPLIANCE: ['ADMIN'],                          // Mirrors admin permissions for compliance controls
     ADVISOR: [],                                    // Base advisory role
     SUPPORT: [],                                    // Read-only role
     INVESTOR: [],                                   // Resource owner role
