@@ -36,11 +36,25 @@ export async function issueTokensAndSetCookies(res: Response, user: any, req: Re
 
     const clientUserAgentHeader = req.headers['x-client-user-agent'];
     const fallbackUserAgentHeader = req.headers['user-agent'];
-    const resolvedUserAgent = (Array.isArray(clientUserAgentHeader)
-        ? clientUserAgentHeader[0]
-        : clientUserAgentHeader) || (Array.isArray(fallbackUserAgentHeader)
-            ? fallbackUserAgentHeader[0]
-            : fallbackUserAgentHeader) || 'unknown';
+    const clientPlatformHeader = req.headers['x-client-platform'];
+    const chUaPlatformHeader = req.headers['sec-ch-ua-platform'];
+
+    const readHeaderValue = (value: string | string[] | undefined): string => {
+        const raw = Array.isArray(value) ? value[0] : value;
+        return typeof raw === 'string' ? raw.trim() : '';
+    };
+
+    const resolvedUserAgent = readHeaderValue(clientUserAgentHeader)
+        || readHeaderValue(fallbackUserAgentHeader)
+        || 'unknown';
+
+    const resolvedPlatform = readHeaderValue(clientPlatformHeader)
+        || readHeaderValue(chUaPlatformHeader);
+
+    const normalizedPlatform = resolvedPlatform.replace(/^"+|"+$/g, '');
+    const storedUserAgent = normalizedPlatform
+        ? `[platform:${normalizedPlatform}] ${resolvedUserAgent}`
+        : resolvedUserAgent;
 
     // Store hash in DB
     await prisma.refreshToken.create({
@@ -49,7 +63,7 @@ export async function issueTokensAndSetCookies(res: Response, user: any, req: Re
             userId: user.id,
             expiresAt,
             ipAddress: req.ip || req.socket.remoteAddress,
-            userAgent: resolvedUserAgent
+            userAgent: storedUserAgent
         }
     });
 

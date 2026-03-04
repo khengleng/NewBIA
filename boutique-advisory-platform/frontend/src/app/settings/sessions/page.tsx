@@ -76,8 +76,25 @@ export default function SessionsPage() {
         }
     }
 
+    const getEmbeddedPlatform = (uaRaw: string) => {
+        const match = (uaRaw || '').match(/\[platform:([^\]]+)\]/i)
+        return match?.[1]?.trim().toLowerCase() || ''
+    }
+
+    const getCleanUserAgent = (uaRaw: string) => {
+        return (uaRaw || '').replace(/\[platform:[^\]]+\]\s*/i, '')
+    }
+
     const parseUserAgent = (uaRaw: string) => {
-        const ua = (uaRaw || '').toLowerCase()
+        const platform = getEmbeddedPlatform(uaRaw)
+        const ua = getCleanUserAgent(uaRaw).toLowerCase()
+
+        if (platform.includes('mac')) return 'Mac'
+        if (platform.includes('win')) return 'Windows PC'
+        if (platform.includes('android')) return 'Android Device'
+        if (platform.includes('iphone') || platform.includes('ios')) return 'iPhone'
+        if (platform.includes('ipad')) return 'iPad'
+        if (platform.includes('linux')) return 'Linux Device'
 
         // Prefer desktop signatures first to avoid false "Android" labels on mixed strings.
         if (ua.includes('macintosh') || ua.includes('mac os x')) return 'Mac'
@@ -89,39 +106,8 @@ export default function SessionsPage() {
         return 'Unknown Device'
     }
 
-    const detectCurrentDevice = () => {
-        if (typeof window === 'undefined') return 'Current Device'
-        const platform = (
-            (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ||
-            navigator.platform ||
-            ''
-        ).toLowerCase()
-        const ua = (navigator.userAgent || '').toLowerCase()
-        const isDesktopHardware = navigator.maxTouchPoints === 0 &&
-            typeof window.matchMedia === 'function' &&
-            window.matchMedia('(pointer:fine)').matches
-
-        // Prefer actual hardware capabilities over UA strings.
-        if (isDesktopHardware) {
-            if (platform.includes('mac') || ua.includes('macintosh') || ua.includes('mac os x')) return 'Mac'
-            if (platform.includes('win') || ua.includes('windows nt')) return 'Windows PC'
-            if (platform.includes('linux')) return 'Linux Desktop'
-            return 'Desktop Browser'
-        }
-
-        if (platform.includes('mac')) return 'Mac'
-        if (platform.includes('win')) return 'Windows PC'
-        if (platform.includes('iphone')) return 'iPhone'
-        if (platform.includes('ipad')) return 'iPad'
-        if (platform.includes('android')) return 'Android Device'
-        if (ua.includes('macintosh') || ua.includes('mac os x')) return 'Mac'
-        if (ua.includes('windows nt')) return 'Windows PC'
-        if (ua.includes('android')) return 'Android Device'
-        return 'Current Device'
-    }
-
     const parseBrowser = (uaRaw: string) => {
-        const ua = (uaRaw || '').toLowerCase()
+        const ua = getCleanUserAgent(uaRaw).toLowerCase()
         if (ua.includes('edg/')) return 'Edge'
         if (ua.includes('firefox/')) return 'Firefox'
         if (ua.includes('chrome/')) return 'Chrome'
@@ -163,12 +149,8 @@ export default function SessionsPage() {
                     ) : sessions.length > 0 ? (
                         sessions.map((session) => {
                             const isCurrentSession = currentSessionId === session.id
-                            const displayUserAgent = isCurrentSession && typeof window !== 'undefined'
-                                ? window.navigator.userAgent
-                                : session.userAgent;
-                            const displayDevice = isCurrentSession
-                                ? detectCurrentDevice()
-                                : parseUserAgent(displayUserAgent)
+                            const displayUserAgent = session.userAgent || ''
+                            const displayDevice = parseUserAgent(displayUserAgent)
 
                             return (
                             <div key={session.id} className="bg-gray-800 border border-gray-700 rounded-2xl p-6 transition-all hover:border-gray-600 shadow-xl">
