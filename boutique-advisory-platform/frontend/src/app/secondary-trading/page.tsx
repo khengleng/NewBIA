@@ -4,15 +4,12 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
     ArrowLeftRight,
-    Plus,
     TrendingUp,
-    TrendingDown,
     DollarSign,
     BarChart3,
     Clock,
     CheckCircle2,
     AlertCircle,
-    Filter,
     Search,
     ArrowUpRight,
     ArrowDownRight,
@@ -157,6 +154,8 @@ export default function SecondaryTradingPage() {
     const [buyShares, setBuyShares] = useState('')
     const [isBuying, setIsBuying] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
+    const [sortBy, setSortBy] = useState<'latest' | 'bestReturn' | 'lowestPrice' | 'highestPrice' | 'mostLiquid'>('latest')
+    const [showOnlyProfitable, setShowOnlyProfitable] = useState(false)
 
     // Syndicate token state
     const [tokenListings, setTokenListings] = useState<SyndicateTokenListing[]>([])
@@ -379,10 +378,29 @@ export default function SecondaryTradingPage() {
         }
     }
 
-    const filteredListings = listings.filter(l =>
-        (l.deal?.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-        (l.deal?.sme?.name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-    )
+    const filteredListings = listings
+        .filter(l =>
+            (l.deal?.title?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+            (l.deal?.sme?.name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+        )
+        .filter(l => !showOnlyProfitable || (l.returnPercentage || 0) > 0)
+        .sort((a, b) => {
+            if (sortBy === 'bestReturn') return (b.returnPercentage || 0) - (a.returnPercentage || 0)
+            if (sortBy === 'lowestPrice') return (a.pricePerShare || 0) - (b.pricePerShare || 0)
+            if (sortBy === 'highestPrice') return (b.pricePerShare || 0) - (a.pricePerShare || 0)
+            if (sortBy === 'mostLiquid') return (b.sharesAvailable || 0) - (a.sharesAvailable || 0)
+            return new Date(b.listedAt).getTime() - new Date(a.listedAt).getTime()
+        })
+
+    const topReturnListing = filteredListings.reduce<Listing | null>((best, current) => {
+        if (!best) return current
+        return (current.returnPercentage || 0) > (best.returnPercentage || 0) ? current : best
+    }, null)
+
+    const mostLiquidListing = filteredListings.reduce<Listing | null>((best, current) => {
+        if (!best) return current
+        return (current.sharesAvailable || 0) > (best.sharesAvailable || 0) ? current : best
+    }, null)
 
     if (isLoading) {
         return (
@@ -401,9 +419,9 @@ export default function SecondaryTradingPage() {
                 <div>
                     <h1 className="text-3xl font-bold text-white flex items-center gap-3">
                         <ArrowLeftRight className="w-8 h-8 text-blue-400" />
-                        Secondary Market
+                        CamboBia Trading Exchange
                     </h1>
-                    <p className="text-gray-400 mt-2">Trade your investment shares with other investors</p>
+                    <p className="text-gray-400 mt-2">Trade tokenized units with live pricing, liquidity, and performance signals.</p>
                 </div>
             </div>
 
@@ -514,8 +532,44 @@ export default function SecondaryTradingPage() {
             {/* Marketplace Tab */}
             {activeTab === 'marketplace' && (
                 <>
+                    {/* Exchange-style market signals */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div className="bg-gray-800 rounded-xl border border-gray-700 p-4">
+                            <p className="text-xs text-gray-400 mb-2">Top Return Opportunity</p>
+                            {topReturnListing ? (
+                                <div className="flex items-center justify-between gap-4">
+                                    <div>
+                                        <p className="text-white font-semibold">{topReturnListing.deal?.sme?.name || 'N/A'}</p>
+                                        <p className="text-xs text-gray-400">{topReturnListing.deal?.title || 'Deal'}</p>
+                                    </div>
+                                    <p className={`text-lg font-bold ${(topReturnListing.returnPercentage || 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        {(topReturnListing.returnPercentage || 0) >= 0 ? '+' : ''}{(topReturnListing.returnPercentage || 0).toFixed(2)}%
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-500">No active listings</p>
+                            )}
+                        </div>
+                        <div className="bg-gray-800 rounded-xl border border-gray-700 p-4">
+                            <p className="text-xs text-gray-400 mb-2">Most Liquid Listing</p>
+                            {mostLiquidListing ? (
+                                <div className="flex items-center justify-between gap-4">
+                                    <div>
+                                        <p className="text-white font-semibold">{mostLiquidListing.deal?.sme?.name || 'N/A'}</p>
+                                        <p className="text-xs text-gray-400">{mostLiquidListing.deal?.title || 'Deal'}</p>
+                                    </div>
+                                    <p className="text-lg font-bold text-cyan-400">
+                                        {(mostLiquidListing.sharesAvailable || 0).toLocaleString()} shares
+                                    </p>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-500">No active listings</p>
+                            )}
+                        </div>
+                    </div>
+
                     {/* Search */}
-                    <div className="mb-6">
+                    <div className="mb-6 space-y-3">
                         <div className="relative">
                             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                             <input
@@ -525,6 +579,28 @@ export default function SecondaryTradingPage() {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full pl-12 pr-4 py-3 bg-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                                className="px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="latest">Sort: Latest</option>
+                                <option value="bestReturn">Sort: Best Return</option>
+                                <option value="lowestPrice">Sort: Lowest Price</option>
+                                <option value="highestPrice">Sort: Highest Price</option>
+                                <option value="mostLiquid">Sort: Most Liquid</option>
+                            </select>
+                            <label className="inline-flex items-center gap-2 text-sm text-gray-300">
+                                <input
+                                    type="checkbox"
+                                    checked={showOnlyProfitable}
+                                    onChange={(e) => setShowOnlyProfitable(e.target.checked)}
+                                    className="rounded bg-gray-800 border-gray-600 text-blue-500 focus:ring-blue-500"
+                                />
+                                Profitable only
+                            </label>
                         </div>
                     </div>
 
@@ -579,6 +655,20 @@ export default function SecondaryTradingPage() {
                                         <div className="flex items-center gap-1 text-gray-500">
                                             <Clock className="w-4 h-4" />
                                             Expires {new Date(listing.expiresAt).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                                        <div className="bg-gray-900/40 border border-gray-700 rounded-md px-2 py-1">
+                                            <p className="text-gray-500">Liquidity</p>
+                                            <p className="text-gray-200">{listing.sharesAvailable.toLocaleString()}</p>
+                                        </div>
+                                        <div className="bg-gray-900/40 border border-gray-700 rounded-md px-2 py-1">
+                                            <p className="text-gray-500">Entry Min</p>
+                                            <p className="text-gray-200">{listing.minPurchase}</p>
+                                        </div>
+                                        <div className="bg-gray-900/40 border border-gray-700 rounded-md px-2 py-1">
+                                            <p className="text-gray-500">SME</p>
+                                            <p className="text-gray-200 truncate">{listing.deal?.sme?.name || 'N/A'}</p>
                                         </div>
                                     </div>
                                 </div>
