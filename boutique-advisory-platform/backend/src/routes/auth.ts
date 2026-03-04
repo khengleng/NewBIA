@@ -27,13 +27,32 @@ import {
   AuthenticatedRequest
 } from '../middleware/jwt-auth';
 import redis from '../redis';
-import { isAdminLikeRole } from '../lib/roles';
+import { isAdminLikeRole, normalizeRole } from '../lib/roles';
 
 const router = Router();
 const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
 const isTradingService = serviceMode === 'trading';
 const ssoTokenTtlSeconds = Number(process.env.SSO_TOKEN_TTL_SECONDS || 120);
 const ssoAllowedRoles = new Set(['INVESTOR', 'ADMIN', 'SUPER_ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'SUPPORT']);
+
+function clearRefreshTokenCookie(res: Response): void {
+  // Current cookie path is "/" but keep legacy "/api" cleanup for older sessions.
+  res.clearCookie('refreshToken', { ...COOKIE_OPTIONS, path: '/', maxAge: 0 });
+  res.clearCookie('refreshToken', { ...COOKIE_OPTIONS, path: '/api', maxAge: 0 });
+}
+
+function clearAuthCookies(res: Response): void {
+  res.clearCookie('token', { ...COOKIE_OPTIONS, maxAge: 0 });
+  res.clearCookie('accessToken', { ...COOKIE_OPTIONS, maxAge: 0 });
+  clearRefreshTokenCookie(res);
+}
+
+router.use((_req: Request, res: Response, next: NextFunction) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
 
 function getSsoInternalApiKey(): string {
   const key = process.env.SSO_INTERNAL_API_KEY;
@@ -240,9 +259,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // Do NOT create an authenticated session before email verification.
     // Also clear any stale cookies in case user had a previous session.
-    res.clearCookie('token', { ...COOKIE_OPTIONS, maxAge: 0 });
-    res.clearCookie('accessToken', { ...COOKIE_OPTIONS, maxAge: 0 });
-    res.clearCookie('refreshToken', { ...COOKIE_OPTIONS, path: '/api', maxAge: 0 });
+    clearAuthCookies(res);
 
     return res.status(201).json({
       message: 'User registered successfully. Please verify your email before logging in.',
@@ -603,7 +620,8 @@ router.get('/sso/trading-link', authenticateToken, async (req: AuthenticatedRequ
     if (!user.isEmailVerified && user.role !== 'SUPER_ADMIN') {
       return res.status(403).json({ error: 'Email verification required for SSO' });
     }
-    if (!ssoAllowedRoles.has(user.role)) {
+    const normalizedUserRole = normalizeRole(user.role);
+    if (!ssoAllowedRoles.has(normalizedUserRole)) {
       return res.status(403).json({ error: 'Your account role is not allowed for trading SSO' });
     }
 
@@ -615,7 +633,7 @@ router.get('/sso/trading-link', authenticateToken, async (req: AuthenticatedRequ
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        role: user.role,
+        role: normalizedUserRole,
         status: user.status,
         isEmailVerified: user.isEmailVerified
       }),
@@ -695,7 +713,7 @@ router.post('/sso/trading/exchange', async (req: Request, res: Response) => {
 
     const claims = consumeData?.claims || {};
     const email = sanitizeEmail(claims?.email);
-    const role = typeof claims?.role === 'string' ? claims.role : '';
+    const role = normalizeRole(typeof claims?.role === 'string' ? claims.role : '');
 
     if (!email) {
       return res.status(400).json({ error: 'Invalid SSO claims payload' });
@@ -855,9 +873,7 @@ router.post('/logout', async (req: Request, res: Response) => {
     }
   }
 
-  res.clearCookie('token', { ...COOKIE_OPTIONS, maxAge: 0 });
-  res.clearCookie('accessToken', { ...COOKIE_OPTIONS, maxAge: 0 });
-  res.clearCookie('refreshToken', { ...COOKIE_OPTIONS, path: '/api', maxAge: 0 });
+  clearAuthCookies(res);
 
   res.status(200).json({ message: 'Logged out successfully' });
 });
@@ -1739,9 +1755,7 @@ router.delete('/sessions/:id', authenticateToken, async (req: AuthenticatedReque
     const currentRefreshToken = req.cookies?.['refreshToken'];
     if (currentRefreshToken && session.token === hashToken(currentRefreshToken)) {
       // If user revoked the current device session, clear local auth cookies immediately.
-      res.clearCookie('token', { ...COOKIE_OPTIONS, maxAge: 0 });
-      res.clearCookie('accessToken', { ...COOKIE_OPTIONS, maxAge: 0 });
-      res.clearCookie('refreshToken', { ...COOKIE_OPTIONS, path: '/api', maxAge: 0 });
+      clearAuthCookies(res);
     }
 
     return res.json({ message: 'Session revoked successfully' });

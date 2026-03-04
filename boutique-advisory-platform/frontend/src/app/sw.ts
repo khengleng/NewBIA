@@ -1,6 +1,15 @@
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { Serwist } from "serwist";
+import { NetworkOnly, Serwist } from "serwist";
+
+const apiNetworkOnly = {
+    matcher: ({ url, request }: { url: URL; request: Request }) =>
+        request.method === "GET" && (
+            url.pathname.startsWith("/api-proxy/")
+            || url.pathname.startsWith("/api/")
+        ),
+    handler: new NetworkOnly(),
+};
 
 // This declares the value of `injectionPoint` to TypeScript.
 declare global {
@@ -16,7 +25,7 @@ const serwist = new Serwist({
     skipWaiting: true,
     clientsClaim: true,
     navigationPreload: true,
-    runtimeCaching: defaultCache,
+    runtimeCaching: [apiNetworkOnly, ...defaultCache],
     fallbacks: {
         entries: [
             {
