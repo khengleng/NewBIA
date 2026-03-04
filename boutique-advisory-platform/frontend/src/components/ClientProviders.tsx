@@ -27,18 +27,24 @@ export default function ClientProviders({ children }: Props) {
             }
         }
 
-        // One-time SW reset on trading domain to clear stale auth/register UI caches.
-        if (typeof window !== 'undefined' && window.location.hostname === 'trade.cambobia.com') {
-            const resetKey = 'trade-sw-reset-v1';
-            const hasReset = window.localStorage.getItem(resetKey);
-            if (!hasReset && 'serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then((registrations) => {
-                    Promise.all(registrations.map((registration) => registration.unregister()))
-                        .finally(() => {
-                            window.localStorage.setItem(resetKey, '1');
-                            window.location.reload();
-                        });
-                });
+        // One-time SW reset on production domains to clear stale cached bundles after deploys.
+        if (typeof window !== 'undefined') {
+            const host = window.location.hostname;
+            const shouldResetSw = host === 'trade.cambobia.com' || host === 'www.cambobia.com' || host === 'cambobia.com';
+
+            if (shouldResetSw) {
+                const resetKey = `${host}-sw-reset-v2`;
+                const hasReset = window.localStorage.getItem(resetKey);
+
+                if (!hasReset && 'serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistrations().then((registrations) => {
+                        Promise.all(registrations.map((registration) => registration.unregister()))
+                            .finally(() => {
+                                window.localStorage.setItem(resetKey, '1');
+                                window.location.reload();
+                            });
+                    });
+                }
             }
         }
     }, []);
