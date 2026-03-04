@@ -89,6 +89,26 @@ export default function SessionsPage() {
         return 'Unknown Device'
     }
 
+    const detectCurrentDevice = () => {
+        if (typeof window === 'undefined') return 'Current Device'
+        const platform = (
+            (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ||
+            navigator.platform ||
+            ''
+        ).toLowerCase()
+        const ua = (navigator.userAgent || '').toLowerCase()
+
+        if (platform.includes('mac')) return 'Mac'
+        if (platform.includes('win')) return 'Windows PC'
+        if (platform.includes('iphone')) return 'iPhone'
+        if (platform.includes('ipad')) return 'iPad'
+        if (platform.includes('android')) return 'Android Device'
+        if (ua.includes('macintosh') || ua.includes('mac os x')) return 'Mac'
+        if (ua.includes('windows nt')) return 'Windows PC'
+        if (ua.includes('android')) return 'Android Device'
+        return 'Current Device'
+    }
+
     const parseBrowser = (uaRaw: string) => {
         const ua = (uaRaw || '').toLowerCase()
         if (ua.includes('edg/')) return 'Edge'
@@ -131,9 +151,13 @@ export default function SessionsPage() {
                         </div>
                     ) : sessions.length > 0 ? (
                         sessions.map((session) => {
-                            const displayUserAgent = currentSessionId === session.id && typeof window !== 'undefined'
+                            const isCurrentSession = currentSessionId === session.id
+                            const displayUserAgent = isCurrentSession && typeof window !== 'undefined'
                                 ? window.navigator.userAgent
                                 : session.userAgent;
+                            const displayDevice = isCurrentSession
+                                ? detectCurrentDevice()
+                                : parseUserAgent(displayUserAgent)
 
                             return (
                             <div key={session.id} className="bg-gray-800 border border-gray-700 rounded-2xl p-6 transition-all hover:border-gray-600 shadow-xl">
@@ -145,9 +169,9 @@ export default function SessionsPage() {
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <h3 className="text-xl font-semibold text-white">
-                                                    {parseUserAgent(displayUserAgent)}
+                                                    {displayDevice}
                                                 </h3>
-                                                {currentSessionId === session.id && (
+                                                {isCurrentSession && (
                                                     <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded">
                                                         Current
                                                     </span>
