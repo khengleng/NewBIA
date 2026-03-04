@@ -25,6 +25,7 @@ const nextConfig: NextConfig = {
     const isProduction = process.env.NODE_ENV === 'production';
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || '';
     const wsUrl = apiBaseUrl.replace(/^http/, 'ws');
+    const secureWsUrl = apiBaseUrl.replace(/^http:\/\//, 'wss://');
 
     const cspDirectives = [
       "default-src 'self'",
@@ -33,7 +34,7 @@ const nextConfig: NextConfig = {
       "font-src 'self' data: https://fonts.gstatic.com",
       "img-src 'self' blob: data: https://storage.googleapis.com https://*.stripe.com https://*.sumsub.com",
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.stripe.com https://*.sumsub.com",
-      `connect-src 'self' ${apiBaseUrl} ${wsUrl} ${isProduction ? '' : 'http://localhost:3001 http://127.0.0.1:3001 http://localhost:3003 http://127.0.0.1:3003'} https://api.stripe.com https://maps.googleapis.com https://storage.googleapis.com https://*.stripe.com https://r.stripe.com https://*.stripe.network https://m.stripe.network https://*.sumsub.com https://cdn.onesignal.com https://onesignal.com https://*.onesignal.com wss://onesignal.com wss://*.onesignal.com`,
+      `connect-src 'self' ${apiBaseUrl} ${wsUrl} ${secureWsUrl} ${isProduction ? '' : 'http://localhost:3001 http://127.0.0.1:3001 http://localhost:3003 http://127.0.0.1:3003'} https://api.stripe.com https://maps.googleapis.com https://storage.googleapis.com https://*.stripe.com https://r.stripe.com https://*.stripe.network https://m.stripe.network https://*.sumsub.com https://cdn.onesignal.com https://onesignal.com https://*.onesignal.com wss://onesignal.com wss://*.onesignal.com`,
       "object-src 'none'",
       "upgrade-insecure-requests"
     ].join('; ');

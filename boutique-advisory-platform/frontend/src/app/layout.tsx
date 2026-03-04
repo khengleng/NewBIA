@@ -80,6 +80,9 @@ export default function RootLayout({
           {`
             window.OneSignalDeferred = window.OneSignalDeferred || [];
             OneSignalDeferred.push(async function(OneSignal) {
+              if (window.location.origin !== "https://www.cambobia.com") {
+                return;
+              }
               await OneSignal.init({
                 appId: "4d61e383-61ef-42ca-a6c5-1ece240d2ebf",
               });

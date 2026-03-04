@@ -49,7 +49,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     }, [])
 
     useEffect(() => {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+        const socketOrigin = typeof window !== 'undefined'
+            ? window.location.origin
+            : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003')
 
         if (!user) {
             if (socketRef.current) {
@@ -62,9 +64,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
         // Initialize socket connection
         if (!socketRef.current) {
-            const socket = io(API_URL, {
+            const socket = io(socketOrigin, {
+                path: '/api-proxy/socket.io',
                 withCredentials: true,
-                transports: ['websocket'],
+                transports: ['websocket', 'polling'],
                 reconnection: true,
                 reconnectionAttempts: 5,
                 reconnectionDelay: 1000,

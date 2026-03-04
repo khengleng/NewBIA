@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [twoFactorCode, setTwoFactorCode] = useState('')
   const [showResendVerification, setShowResendVerification] = useState(false)
   const [resendStatus, setResendStatus] = useState('')
+  const [nextPath, setNextPath] = useState('')
 
   const [formData, setFormData] = useState({
     email: '',
@@ -33,6 +34,7 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search)
     const verify = params.get('verify')
     const email = params.get('email')
+    const next = params.get('next')
 
     if (email) {
       setFormData(prev => ({ ...prev, email }))
@@ -40,6 +42,11 @@ export default function LoginPage() {
 
     if (verify === '1') {
       setResendStatus('Registration successful. Please verify your email before logging in.')
+    }
+
+    // Prevent open redirects by allowing only same-origin absolute paths.
+    if (next && next.startsWith('/') && !next.startsWith('//')) {
+      setNextPath(next)
     }
   }, [])
 
@@ -117,7 +124,7 @@ export default function LoginPage() {
         const data = await response.safeJson()
         // localStorage.setItem('token', data.token)
         localStorage.setItem('user', JSON.stringify(data.user))
-        router.push(postLoginPath)
+        router.push(nextPath || postLoginPath)
       } else {
         const errorData = await response.safeJson()
         setErrors({ general: errorData.error || 'Invalid code' })
@@ -157,7 +164,7 @@ export default function LoginPage() {
         } else {
           // localStorage.setItem('token', data.token) // Token is now in HttpOnly cookie
           localStorage.setItem('user', JSON.stringify(data.user))
-          router.push(postLoginPath)
+          router.push(nextPath || postLoginPath)
         }
       } else {
         const errorMsg = data.error || 'Login failed';
