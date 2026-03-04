@@ -1601,13 +1601,25 @@ router.post('/delete-account', authenticateToken, async (req: AuthenticatedReque
 router.post('/switch-role', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
     const { targetRole } = req.body;
+    const normalizedTargetRole = normalizeRole(targetRole);
+    const switchableRoles = new Set(['SME', 'INVESTOR']);
 
-    if (!['SME', 'INVESTOR'].includes(targetRole)) {
+    if (!switchableRoles.has(normalizedTargetRole)) {
+      await logAuditEvent({
+        userId,
+        action: 'ROLE_SWITCH_BLOCKED',
+        resource: 'auth',
+        details: { targetRole, reason: 'invalid_target_role' },
+        ipAddress: clientIp,
+        success: false,
+        errorMessage: 'Invalid target role'
+      });
       return res.status(400).json({ error: 'Invalid target role. Can only switch between SME and INVESTOR.' });
     }
 
@@ -1617,9 +1629,42 @@ router.post('/switch-role', authenticateToken, async (req: AuthenticatedRequest,
     });
 
     if (!user) return res.status(404).json({ error: 'User not found' });
+    const normalizedCurrentRole = normalizeRole(user.role);
+
+    // Security hardening: only SME/INVESTOR personas can use role switching.
+    if (!switchableRoles.has(normalizedCurrentRole)) {
+      await logAuditEvent({
+        userId: user.id,
+        action: 'ROLE_SWITCH_BLOCKED',
+        resource: 'auth',
+        details: {
+          currentRole: user.role,
+          targetRole: normalizedTargetRole,
+          reason: 'operator_role_forbidden'
+        },
+        ipAddress: clientIp,
+        success: false,
+        errorMessage: 'Operator roles cannot use role switching'
+      });
+      return res.status(403).json({ error: 'Role switching is only available for SME and Investor accounts.' });
+    }
+
+    if (normalizedCurrentRole === normalizedTargetRole) {
+      return res.json({
+        message: `Already using ${normalizedCurrentRole} role`,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          twoFactorEnabled: user.twoFactorEnabled
+        }
+      });
+    }
 
     // logic to ensure profile exists
-    if (targetRole === 'INVESTOR') {
+    if (normalizedTargetRole === 'INVESTOR') {
       if (!user.investor) {
         // Create Investor Profile
         await prisma.investor.create({
@@ -1632,7 +1677,7 @@ router.post('/switch-role', authenticateToken, async (req: AuthenticatedRequest,
           }
         });
       }
-    } else if (targetRole === 'SME') {
+    } else if (normalizedTargetRole === 'SME') {
       if (!user.sme) {
         // Create SME Profile
         await prisma.sME.create({
@@ -1652,14 +1697,26 @@ router.post('/switch-role', authenticateToken, async (req: AuthenticatedRequest,
     // Update User Role
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
-      data: { role: targetRole as any }
+      data: { role: normalizedTargetRole as any }
     });
 
     // Issue Access & Refresh tokens
     await issueTokensAndSetCookies(res, updatedUser, req);
 
+    await logAuditEvent({
+      userId: updatedUser.id,
+      action: 'ROLE_SWITCH_SUCCESS',
+      resource: 'auth',
+      details: {
+        fromRole: normalizedCurrentRole,
+        toRole: normalizedTargetRole
+      },
+      ipAddress: clientIp,
+      success: true
+    });
+
     return res.json({
-      message: `Successfully switched to ${targetRole}`,
+      message: `Successfully switched to ${normalizedTargetRole}`,
       user: {
         id: updatedUser.id,
         email: updatedUser.email,

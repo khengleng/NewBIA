@@ -62,6 +62,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
     const [isTradingRuntime, setIsTradingRuntime] = useState(IS_TRADING_PLATFORM)
     const normalizedRole = normalizeRole(user?.role)
+    const canSwitchPersona = !isTradingRuntime && (normalizedRole === 'SME' || normalizedRole === 'INVESTOR')
 
     useEffect(() => {
         const isTradingPath = Boolean(pathname?.startsWith('/trading') || pathname?.startsWith('/secondary-trading'))
@@ -125,7 +126,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     }, [router, pathname])
 
     const handleSwitchRole = async () => {
-        if (!user) return;
+        if (!user || !canSwitchPersona) return;
         const targetRole = normalizedRole === 'SME' ? 'INVESTOR' : 'SME';
 
         try {
@@ -418,7 +419,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                             <p className="text-xs text-gray-400 capitalize truncate">
                                 {normalizedRole.toLowerCase()}
                             </p>
-                            {!isTradingRuntime && (normalizedRole === 'SME' || normalizedRole === 'INVESTOR') && (
+                            {canSwitchPersona && (
                                 <button
                                     onClick={handleSwitchRole}
                                     className="text-[10px] text-blue-400 hover:text-blue-300 mt-1 flex items-center gap-1 transition-colors"

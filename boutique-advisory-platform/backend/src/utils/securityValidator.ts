@@ -314,6 +314,20 @@ function checkServiceModeConfiguration(): SecurityCheckResult {
     };
 }
 
+function isInternalHostname(hostname: string): boolean {
+    const lower = hostname.toLowerCase();
+    if (
+        lower === 'localhost'
+        || lower.endsWith('.local')
+        || lower.endsWith('.internal')
+        || lower.endsWith('.railway.internal')
+    ) {
+        return true;
+    }
+
+    return /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(lower);
+}
+
 function checkPlatformBoundaryConfiguration(): SecurityCheckResult {
     const isProduction = process.env.NODE_ENV === 'production';
     const mode = (process.env.SERVICE_MODE || 'core').toLowerCase();
@@ -345,7 +359,7 @@ function checkPlatformBoundaryConfiguration(): SecurityCheckResult {
             name: 'Platform Boundary',
             passed: false,
             message: 'FRONTEND_URL is required in core mode',
-            severity: 'HIGH'
+            severity: 'CRITICAL'
         };
     }
 
@@ -355,7 +369,7 @@ function checkPlatformBoundaryConfiguration(): SecurityCheckResult {
                 name: 'Platform Boundary',
                 passed: false,
                 message: 'TRADING_FRONTEND_URL is required in trading mode',
-                severity: 'HIGH'
+                severity: 'CRITICAL'
             };
         }
         if (!coreConsumeUrl) {
@@ -363,37 +377,81 @@ function checkPlatformBoundaryConfiguration(): SecurityCheckResult {
                 name: 'Platform Boundary',
                 passed: false,
                 message: 'CORE_SSO_CONSUME_URL is required in trading mode for secure SSO exchange',
-                severity: 'HIGH'
+                severity: 'CRITICAL'
             };
         }
     }
 
     try {
-        if (coreUrl && !coreUrl.startsWith('https://')) {
+        let parsedCoreUrl: URL | null = null;
+        let parsedTradingUrl: URL | null = null;
+        let parsedCoreConsumeUrl: URL | null = null;
+
+        if (coreUrl) {
+            parsedCoreUrl = new URL(coreUrl);
+        }
+        if (tradingUrl) {
+            parsedTradingUrl = new URL(tradingUrl);
+        }
+        if (coreConsumeUrl) {
+            parsedCoreConsumeUrl = new URL(coreConsumeUrl);
+        }
+
+        if (parsedCoreUrl && parsedCoreUrl.protocol !== 'https:') {
             return {
                 name: 'Platform Boundary',
                 passed: false,
                 message: 'FRONTEND_URL must use https:// in production',
-                severity: 'HIGH'
+                severity: 'CRITICAL'
             };
         }
-        if (tradingUrl && !tradingUrl.startsWith('https://')) {
+        if (parsedTradingUrl && parsedTradingUrl.protocol !== 'https:') {
             return {
                 name: 'Platform Boundary',
                 passed: false,
                 message: 'TRADING_FRONTEND_URL must use https:// in production',
-                severity: 'HIGH'
+                severity: 'CRITICAL'
             };
         }
-        if (coreUrl && tradingUrl) {
-            const coreHost = new URL(coreUrl).hostname;
-            const tradingHost = new URL(tradingUrl).hostname;
+        if (parsedCoreUrl && isInternalHostname(parsedCoreUrl.hostname)) {
+            return {
+                name: 'Platform Boundary',
+                passed: false,
+                message: 'FRONTEND_URL cannot use private/internal hostname in production',
+                severity: 'CRITICAL'
+            };
+        }
+        if (parsedTradingUrl && isInternalHostname(parsedTradingUrl.hostname)) {
+            return {
+                name: 'Platform Boundary',
+                passed: false,
+                message: 'TRADING_FRONTEND_URL cannot use private/internal hostname in production',
+                severity: 'CRITICAL'
+            };
+        }
+
+        if (mode === 'trading' && parsedCoreConsumeUrl) {
+            const consumeIsHttps = parsedCoreConsumeUrl.protocol === 'https:';
+            const consumeIsInternal = isInternalHostname(parsedCoreConsumeUrl.hostname);
+            if (!consumeIsHttps && !consumeIsInternal) {
+                return {
+                    name: 'Platform Boundary',
+                    passed: false,
+                    message: 'CORE_SSO_CONSUME_URL must use https:// or a private internal hostname',
+                    severity: 'CRITICAL'
+                };
+            }
+        }
+
+        if (parsedCoreUrl && parsedTradingUrl) {
+            const coreHost = parsedCoreUrl.hostname;
+            const tradingHost = parsedTradingUrl.hostname;
             if (coreHost === tradingHost) {
                 return {
                     name: 'Platform Boundary',
                     passed: false,
                     message: 'Core and trading frontend hostnames must be different for compliance separation',
-                    severity: 'HIGH'
+                    severity: 'CRITICAL'
                 };
             }
         }
@@ -402,7 +460,7 @@ function checkPlatformBoundaryConfiguration(): SecurityCheckResult {
             name: 'Platform Boundary',
             passed: false,
             message: 'FRONTEND_URL/TRADING_FRONTEND_URL format is invalid',
-            severity: 'HIGH'
+            severity: 'CRITICAL'
         };
     }
 

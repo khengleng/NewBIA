@@ -44,25 +44,7 @@ export type Resource =
  * Centralized Permission Definitions
  * Must match backend permissions exactly
  */
-const ADMIN_EQUIVALENT_ROLES: UserRole[] = ['FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE'];
-
-function withAdminEquivalentRoles(source: Record<string, string[]>): Record<string, string[]> {
-    const next: Record<string, string[]> = {};
-
-    for (const [permission, roles] of Object.entries(source)) {
-        const expanded = [...roles];
-        if (roles.includes('ADMIN')) {
-            for (const role of ADMIN_EQUIVALENT_ROLES) {
-                if (!expanded.includes(role)) expanded.push(role);
-            }
-        }
-        next[permission] = expanded;
-    }
-
-    return next;
-}
-
-export const PERMISSIONS: Record<string, string[]> = withAdminEquivalentRoles({
+export const PERMISSIONS: Record<string, string[]> = {
     // SME Permissions
     'sme.list': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'SUPPORT', 'INVESTOR'],
     'sme.read': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'SUPPORT', 'INVESTOR', 'SME:owner'],
@@ -186,7 +168,7 @@ export const PERMISSIONS: Record<string, string[]> = withAdminEquivalentRoles({
     'syndicate.update': ['SUPER_ADMIN', 'ADMIN', 'INVESTOR:owner'],
     'syndicate.join': ['INVESTOR'],
     'syndicate.approve': ['SUPER_ADMIN', 'ADMIN', 'INVESTOR:owner'],
-});
+};
 
 /**
  * Check if a role has a specific permission
@@ -311,7 +293,7 @@ export function createPermissionHelpers(user: User | null): PermissionHelpers {
         canPerform,
 
         // Role checks
-        isAdmin: role === 'ADMIN' || role === 'SUPER_ADMIN' || (role ? ADMIN_EQUIVALENT_ROLES.includes(role) : false),
+        isAdmin: role === 'ADMIN' || role === 'SUPER_ADMIN',
         isSuperAdmin: role === 'SUPER_ADMIN',
         isAdvisor: role === 'ADVISOR',
         isSupport: role === 'SUPPORT',

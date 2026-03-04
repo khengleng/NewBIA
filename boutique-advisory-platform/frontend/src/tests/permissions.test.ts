@@ -46,3 +46,9 @@ test('permission helpers - admin and super-admin behavior', () => {
   assert.strictEqual(superAdminHelpers.isSuperAdmin, true);
   assert.strictEqual(superAdminHelpers.canAccessSystemSettings, true);
 });
+
+test('permission helpers - finops is not implicit admin', () => {
+  const finopsHelpers = createPermissionHelpers({ id: 'f1', role: 'FINOPS' });
+  assert.strictEqual(finopsHelpers.isAdmin, false);
+  assert.strictEqual(finopsHelpers.canViewSettings, false);
+});

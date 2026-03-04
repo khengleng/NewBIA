@@ -130,6 +130,55 @@ test('Wave3 - switch-role rejects pre-auth token', async () => {
   }
 });
 
+test('Wave3 - switch-role rejects operator role personas', async () => {
+  const originalSecret = process.env.JWT_SECRET;
+  const originalFindUnique = prisma.user.findUnique;
+  const originalUpdate = prisma.user.update;
+  process.env.JWT_SECRET = 'wave3-secret-key-1234567890-abcdefghijklmnopqrstuvwxyz';
+
+  let updateCalled = false;
+
+  (prisma.user.findUnique as any) = async () => ({
+    id: 'admin-1',
+    email: 'admin@cambobia.com',
+    role: 'SUPER_ADMIN',
+    tenantId: 'tenant-a',
+    firstName: 'Admin',
+    lastName: 'User',
+    twoFactorEnabled: false,
+    investor: null,
+    sme: null,
+  });
+  (prisma.user.update as any) = async () => {
+    updateCalled = true;
+    return null;
+  };
+
+  try {
+    const token = jwt.sign(
+      { userId: 'admin-1', role: 'SUPER_ADMIN', tenantId: 'tenant-a' },
+      process.env.JWT_SECRET,
+      { expiresIn: '5m' }
+    );
+
+    const response = await invokeRoute(authRouter, 'post', '/switch-role', {
+      params: {},
+      body: { targetRole: 'INVESTOR' },
+      headers: { authorization: `Bearer ${token}` },
+      cookies: {},
+      socket: { remoteAddress: '127.0.0.1' },
+      ip: '127.0.0.1',
+    });
+
+    assert.strictEqual(response.statusCode, 403);
+    assert.strictEqual(updateCalled, false);
+  } finally {
+    process.env.JWT_SECRET = originalSecret;
+    (prisma.user.findUnique as any) = originalFindUnique;
+    (prisma.user.update as any) = originalUpdate;
+  }
+});
+
 test('Wave3 - socket auth rejects pre-auth token', async () => {
   const originalSecret = process.env.JWT_SECRET;
   process.env.JWT_SECRET = 'wave3-secret-key-1234567890-abcdefghijklmnopqrstuvwxyz';

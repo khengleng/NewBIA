@@ -63,10 +63,10 @@ const OWNER_SUFFIX = ':owner';
 export const ROLE_HIERARCHY: Record<UserRole, UserRole[]> = {
     SUPER_ADMIN: ['ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'ADVISOR', 'SUPPORT'], // Inherits all operator roles
     ADMIN: ['ADVISOR', 'SUPPORT'],                  // Inherits advisory and support baseline
-    FINOPS: ['ADMIN'],                              // Mirrors admin permissions for platform financial operations
-    CX: ['ADMIN'],                                  // Mirrors admin permissions for customer operations
-    AUDITOR: ['ADMIN'],                             // Mirrors admin permissions for audit controls
-    COMPLIANCE: ['ADMIN'],                          // Mirrors admin permissions for compliance controls
+    FINOPS: [],                                     // Least-privilege: explicit permissions only
+    CX: [],                                         // Least-privilege: explicit permissions only
+    AUDITOR: [],                                    // Least-privilege: explicit permissions only
+    COMPLIANCE: [],                                 // Least-privilege: explicit permissions only
     ADVISOR: [],                                    // Base advisory role
     SUPPORT: [],                                    // Read-only role
     INVESTOR: [],                                   // Resource owner role
