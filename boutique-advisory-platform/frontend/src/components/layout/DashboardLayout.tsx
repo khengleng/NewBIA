@@ -76,14 +76,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 return;
             }
 
-            // Optimistic load for instant navigation
-            const storedUser = localStorage.getItem('user')
-            if (storedUser) {
-                try {
-                    setUser(JSON.parse(storedUser))
-                    setIsLoading(false)
-                } catch (e) {
-                    // Invalid JSON, ignore
+            const isTradingContext = IS_TRADING_PLATFORM
+                || isTradingHostname(window.location.hostname)
+                || Boolean(pathname?.startsWith('/trading') || pathname?.startsWith('/secondary-trading'));
+
+            // Optimistic local user is intentionally disabled on trading runtime to avoid stale-role UI.
+            if (!isTradingContext) {
+                const storedUser = localStorage.getItem('user')
+                if (storedUser) {
+                    try {
+                        setUser(JSON.parse(storedUser))
+                        setIsLoading(false)
+                    } catch {
+                        // Invalid JSON, ignore
+                    }
                 }
             }
 

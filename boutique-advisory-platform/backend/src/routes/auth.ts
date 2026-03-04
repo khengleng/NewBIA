@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 
 import bcrypt from 'bcryptjs';
 
-import { COOKIE_OPTIONS, issueTokensAndSetCookies } from '../utils/auth-utils';
+import { clearAuthCookies, issueTokensAndSetCookies } from '../utils/auth-utils';
 import { getTenantId } from '../utils/tenant-utils';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../database';
@@ -34,18 +34,6 @@ const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
 const isTradingService = serviceMode === 'trading';
 const ssoTokenTtlSeconds = Number(process.env.SSO_TOKEN_TTL_SECONDS || 120);
 const ssoAllowedRoles = new Set(['INVESTOR', 'ADMIN', 'SUPER_ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'SUPPORT']);
-
-function clearRefreshTokenCookie(res: Response): void {
-  // Current cookie path is "/" but keep legacy "/api" cleanup for older sessions.
-  res.clearCookie('refreshToken', { ...COOKIE_OPTIONS, path: '/', maxAge: 0 });
-  res.clearCookie('refreshToken', { ...COOKIE_OPTIONS, path: '/api', maxAge: 0 });
-}
-
-function clearAuthCookies(res: Response): void {
-  res.clearCookie('token', { ...COOKIE_OPTIONS, maxAge: 0 });
-  res.clearCookie('accessToken', { ...COOKIE_OPTIONS, maxAge: 0 });
-  clearRefreshTokenCookie(res);
-}
 
 router.use((_req: Request, res: Response, next: NextFunction) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -259,7 +247,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // Do NOT create an authenticated session before email verification.
     // Also clear any stale cookies in case user had a previous session.
-    clearAuthCookies(res);
+    clearAuthCookies(res, req);
 
     return res.status(201).json({
       message: 'User registered successfully. Please verify your email before logging in.',
@@ -873,7 +861,7 @@ router.post('/logout', async (req: Request, res: Response) => {
     }
   }
 
-  clearAuthCookies(res);
+  clearAuthCookies(res, req);
 
   res.status(200).json({ message: 'Logged out successfully' });
 });
@@ -1755,7 +1743,7 @@ router.delete('/sessions/:id', authenticateToken, async (req: AuthenticatedReque
     const currentRefreshToken = req.cookies?.['refreshToken'];
     if (currentRefreshToken && session.token === hashToken(currentRefreshToken)) {
       // If user revoked the current device session, clear local auth cookies immediately.
-      clearAuthCookies(res);
+      clearAuthCookies(res, req);
     }
 
     return res.json({ message: 'Session revoked successfully' });

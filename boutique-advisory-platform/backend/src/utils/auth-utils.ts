@@ -11,6 +11,49 @@ export const COOKIE_OPTIONS: CookieOptions = {
     maxAge: 24 * 60 * 60 * 1000 // 24 hours default, usually overridden
 };
 
+function getCookieDomainCandidates(req: Request): string[] {
+    const domains = new Set<string>();
+    const envDomain = String(process.env.COOKIE_DOMAIN || '').trim().toLowerCase();
+
+    if (envDomain) {
+        domains.add(envDomain);
+        domains.add(envDomain.startsWith('.') ? envDomain.slice(1) : envDomain);
+        domains.add(envDomain.startsWith('.') ? envDomain : `.${envDomain}`);
+    }
+
+    const host = String(req.hostname || '').trim().toLowerCase().replace(/:\d+$/, '');
+    if (!host || host === 'localhost' || host === '127.0.0.1' || host.includes('railway.internal')) {
+        return Array.from(domains).filter(Boolean);
+    }
+
+    if (host.includes('.')) {
+        domains.add(host);
+        const parts = host.split('.').filter(Boolean);
+        if (parts.length >= 2) {
+            const base = parts.slice(-2).join('.');
+            domains.add(base);
+            domains.add(`.${base}`);
+        }
+    }
+
+    return Array.from(domains).filter(Boolean);
+}
+
+export function clearAuthCookies(res: Response, req: Request): void {
+    const clearPaths = ['/', '/api'];
+    const cookieNames = ['token', 'accessToken', 'refreshToken'];
+    const domainCandidates = getCookieDomainCandidates(req);
+
+    for (const name of cookieNames) {
+        for (const path of clearPaths) {
+            res.clearCookie(name, { ...COOKIE_OPTIONS, path, maxAge: 0 });
+            for (const domain of domainCandidates) {
+                res.clearCookie(name, { ...COOKIE_OPTIONS, path, domain, maxAge: 0 });
+            }
+        }
+    }
+}
+
 /**
  * Helper to issue Access & Refresh tokens and set cookies
  */
@@ -66,6 +109,9 @@ export async function issueTokensAndSetCookies(res: Response, user: any, req: Re
             userAgent: storedUserAgent
         }
     });
+
+    // Clear any legacy/duplicate auth cookies first so old identities cannot linger.
+    clearAuthCookies(res, req);
 
     // 3. Set Cookies
     // Access Token

@@ -42,11 +42,24 @@ function SsoCallbackContent() {
           return
         }
 
-        if (data?.user) {
-          localStorage.setItem('user', JSON.stringify(data.user))
+        let sessionUser = data?.user || null
+        try {
+          const meResponse = await apiRequest('/api/auth/me', { method: 'GET', credentials: 'include' })
+          if (meResponse.ok) {
+            const meData = await meResponse.safeJson()
+            if (meData?.user) {
+              sessionUser = meData.user
+            }
+          }
+        } catch {
+          // keep exchange payload fallback
+        }
+
+        if (sessionUser) {
+          localStorage.setItem('user', JSON.stringify(sessionUser))
           window.dispatchEvent(new Event('auth:changed'))
         }
-        const role = normalizeRole(data?.user?.role)
+        const role = normalizeRole(sessionUser?.role)
         const isOperator = isTradingOperatorRole(role)
         router.replace(isOperator ? '/admin/dashboard' : '/secondary-trading')
       } catch {

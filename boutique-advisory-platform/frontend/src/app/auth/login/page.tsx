@@ -33,6 +33,19 @@ export default function LoginPage() {
     return isTradingOperatorRole(normalizeRole(role)) ? '/admin/dashboard' : '/secondary-trading'
   }
 
+  const syncSessionUser = async (fallbackUser?: any) => {
+    try {
+      const meResponse = await apiRequest('/api/auth/me', { method: 'GET', credentials: 'include' })
+      if (meResponse.ok) {
+        const meData = await meResponse.safeJson()
+        if (meData?.user) return meData.user
+      }
+    } catch {
+      // fall back to login payload user
+    }
+    return fallbackUser || null
+  }
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -130,10 +143,15 @@ export default function LoginPage() {
       if (response.ok) {
         const data = await response.safeJson()
         // localStorage.setItem('token', data.token)
+        const sessionUser = await syncSessionUser(data?.user)
+        if (!sessionUser) {
+          setErrors({ general: 'Unable to establish session. Please try again.' })
+          return
+        }
         localStorage.removeItem('user')
-        localStorage.setItem('user', JSON.stringify(data.user))
+        localStorage.setItem('user', JSON.stringify(sessionUser))
         window.dispatchEvent(new Event('auth:changed'))
-        router.push(nextPath || getPostLoginPath(data?.user?.role))
+        router.push(nextPath || getPostLoginPath(sessionUser?.role))
       } else {
         const errorData = await response.safeJson()
         setErrors({ general: errorData.error || 'Invalid code' })
@@ -172,10 +190,15 @@ export default function LoginPage() {
           setErrors({})
         } else {
           // localStorage.setItem('token', data.token) // Token is now in HttpOnly cookie
+          const sessionUser = await syncSessionUser(data?.user)
+          if (!sessionUser) {
+            setErrors({ general: 'Unable to establish session. Please try again.' })
+            return
+          }
           localStorage.removeItem('user')
-          localStorage.setItem('user', JSON.stringify(data.user))
+          localStorage.setItem('user', JSON.stringify(sessionUser))
           window.dispatchEvent(new Event('auth:changed'))
-          router.push(nextPath || getPostLoginPath(data?.user?.role))
+          router.push(nextPath || getPostLoginPath(sessionUser?.role))
         }
       } else {
         const errorMsg = data.error || 'Login failed';
