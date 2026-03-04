@@ -29,22 +29,30 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<any>(null)
 
     useEffect(() => {
-        // Initial user check
-        const storedUser = localStorage.getItem('user')
-        if (storedUser) {
-            setUser(JSON.parse(storedUser))
+        const syncUserFromStorage = () => {
+            const storedUser = localStorage.getItem('user')
+            if (storedUser) {
+                try {
+                    setUser(JSON.parse(storedUser))
+                } catch {
+                    setUser(null)
+                }
+            } else {
+                setUser(null)
+            }
         }
+
+        // Initial user check
+        syncUserFromStorage()
 
         // Listen for storage events (login/logout from other tabs)
-        const handleStorageChange = () => {
-            const currentUser = localStorage.getItem('user')
-            setUser(currentUser ? JSON.parse(currentUser) : null)
-        }
-
-        window.addEventListener('storage', handleStorageChange)
+        window.addEventListener('storage', syncUserFromStorage)
+        // Listen for same-tab auth changes
+        window.addEventListener('auth:changed', syncUserFromStorage)
 
         return () => {
-            window.removeEventListener('storage', handleStorageChange)
+            window.removeEventListener('storage', syncUserFromStorage)
+            window.removeEventListener('auth:changed', syncUserFromStorage)
         }
     }, [])
 

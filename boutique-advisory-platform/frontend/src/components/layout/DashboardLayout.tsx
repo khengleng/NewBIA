@@ -132,9 +132,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         }
     }
 
-    const handleLogout = () => {
-        localStorage.removeItem('user')
-        router.push('/')
+    const handleLogout = async () => {
+        try {
+            await authorizedRequest('/api/auth/logout', { method: 'POST' })
+        } catch (error) {
+            // Continue local logout even if backend logout request fails.
+            console.error('Logout API failed, continuing with local logout:', error)
+        } finally {
+            localStorage.removeItem('user')
+            setUser(null)
+            window.dispatchEvent(new Event('auth:changed'))
+            router.replace('/auth/login')
+        }
     }
 
     const isActive = (path: string) => {
