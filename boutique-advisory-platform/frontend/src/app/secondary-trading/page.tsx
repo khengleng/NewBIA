@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
     ArrowLeftRight,
@@ -16,13 +16,15 @@ import {
     Activity,
     Briefcase,
     ShoppingCart,
-    X
+    X,
+    Star
 } from 'lucide-react'
+import Link from 'next/link'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { useToast } from '../../contexts/ToastContext'
 import usePermissions from '../../hooks/usePermissions'
 
-import { authorizedRequest, API_URL } from '../../lib/api'
+import { authorizedRequest } from '../../lib/api'
 
 interface Listing {
     id: string
@@ -35,7 +37,14 @@ interface Listing {
     deal: {
         id: string
         title: string
-        sme: { id: string; name: string }
+        sme: {
+            id: string
+            name: string
+            sector?: string
+            stage?: string
+            score?: number
+            certified?: boolean
+        }
     }
     originalInvestment: number
     sharesOwned: number
@@ -49,6 +58,24 @@ interface Listing {
     listedAt: string
     expiresAt: string
     isOwner?: boolean
+}
+
+interface RecentMarketTrade {
+    id: string
+    listingId: string
+    pricePerShare: number
+    shares: number
+    totalAmount: number
+    executedAt: string
+    deal: {
+        id: string
+        title: string
+        sme: {
+            id: string
+            name: string
+            sector?: string
+        }
+    } | null
 }
 
 
@@ -140,7 +167,7 @@ interface SyndicateTokenTrade {
 
 export default function SecondaryTradingPage() {
     const { addToast } = useToast()
-    const { isAdmin, isInvestor, user } = usePermissions()
+    const { isInvestor } = usePermissions()
     const router = useRouter()
     const simulateSecondaryTrades = process.env.NEXT_PUBLIC_SIMULATE_SECONDARY_TRADES === 'true'
 
@@ -156,6 +183,8 @@ export default function SecondaryTradingPage() {
     const [searchQuery, setSearchQuery] = useState('')
     const [sortBy, setSortBy] = useState<'latest' | 'bestReturn' | 'lowestPrice' | 'highestPrice' | 'mostLiquid'>('latest')
     const [showOnlyProfitable, setShowOnlyProfitable] = useState(false)
+    const [watchlistIds, setWatchlistIds] = useState<string[]>([])
+    const [recentTrades, setRecentTrades] = useState<RecentMarketTrade[]>([])
 
     // Syndicate token state
     const [tokenListings, setTokenListings] = useState<SyndicateTokenListing[]>([])
@@ -166,11 +195,7 @@ export default function SecondaryTradingPage() {
     const [isBuyingTokens, setIsBuyingTokens] = useState(false)
     const [currentInvestorId, setCurrentInvestorId] = useState<string | null>(null)
 
-    useEffect(() => {
-        fetchData()
-    }, [isInvestor]) // Re-run when permission state loads
-
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         try {
             const meRes = await authorizedRequest('/api/auth/me')
             if (meRes.status === 401) {
@@ -184,7 +209,7 @@ export default function SecondaryTradingPage() {
                     const profileRes = await authorizedRequest('/api/investors/profile')
                     if (profileRes.ok) {
                         const profile = await profileRes.json()
-                        setCurrentInvestorId(profile.id)
+                        setCurrentInvestorId(profile?.investor?.id || profile?.id || null)
                     }
                 } catch (err) {
                     console.error('Failed to fetch investor profile', err)
@@ -238,13 +263,32 @@ export default function SecondaryTradingPage() {
                 router.push('/auth/login')
                 return
             }
+
+            const [watchlistRes, recentTradesRes] = await Promise.all([
+                authorizedRequest('/api/secondary-trading/watchlist'),
+                authorizedRequest('/api/secondary-trading/trades/recent?limit=25')
+            ])
+
+            if (watchlistRes.ok) {
+                const watchlistPayload = await watchlistRes.json()
+                setWatchlistIds(Array.isArray(watchlistPayload.listingIds) ? watchlistPayload.listingIds : [])
+            }
+
+            if (recentTradesRes.ok) {
+                const tradePayload = await recentTradesRes.json()
+                setRecentTrades(Array.isArray(tradePayload.trades) ? tradePayload.trades : [])
+            }
         } catch (error) {
             console.error('Error fetching data:', error)
             addToast('error', 'Error loading marketplace. Please try again.')
         } finally {
             setIsLoading(false)
         }
-    }
+    }, [addToast, isInvestor, router])
+
+    useEffect(() => {
+        fetchData()
+    }, [fetchData])
 
     const handleBuyClick = (listing: Listing) => {
         setSelectedListing(listing)
@@ -363,6 +407,28 @@ export default function SecondaryTradingPage() {
         }
     }
 
+    const toggleWatchlist = async (listingId: string) => {
+        const isWatched = watchlistIds.includes(listingId)
+        const nextListingIds = isWatched
+            ? watchlistIds.filter(id => id !== listingId)
+            : [...watchlistIds, listingId]
+
+        setWatchlistIds(nextListingIds)
+        const response = await authorizedRequest('/api/secondary-trading/watchlist', {
+            method: 'PUT',
+            body: JSON.stringify({ listingIds: nextListingIds })
+        })
+
+        if (!response.ok) {
+            // Roll back optimistic update
+            setWatchlistIds(watchlistIds)
+            addToast('error', 'Failed to update watchlist')
+            return
+        }
+
+        addToast('success', isWatched ? 'Removed from watchlist' : 'Added to watchlist')
+    }
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'ACTIVE':
@@ -401,6 +467,20 @@ export default function SecondaryTradingPage() {
         if (!best) return current
         return (current.sharesAvailable || 0) > (best.sharesAvailable || 0) ? current : best
     }, null)
+
+    const highlightedListing = topReturnListing || mostLiquidListing || filteredListings[0] || null
+    const orderBook = highlightedListing
+        ? {
+            asks: [0.2, 0.5, 0.8, 1.2, 1.8].map(offset => ({
+                price: Number((highlightedListing.pricePerShare * (1 + offset / 100)).toFixed(2)),
+                shares: Math.max(1, Math.round(highlightedListing.sharesAvailable * (0.08 + offset / 10)))
+            })),
+            bids: [0.2, 0.5, 0.8, 1.2, 1.8].map(offset => ({
+                price: Number((highlightedListing.pricePerShare * (1 - offset / 100)).toFixed(2)),
+                shares: Math.max(1, Math.round(highlightedListing.sharesAvailable * (0.07 + offset / 12)))
+            }))
+        }
+        : { asks: [], bids: [] }
 
     if (isLoading) {
         return (
@@ -532,6 +612,18 @@ export default function SecondaryTradingPage() {
             {/* Marketplace Tab */}
             {activeTab === 'marketplace' && (
                 <>
+                    <div className="flex flex-wrap items-center gap-3 mb-4">
+                        <Link href="/trading/watchlist" className="px-3 py-2 text-sm bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-300 rounded-lg border border-yellow-400/20">
+                            Watchlist ({watchlistIds.length})
+                        </Link>
+                        <Link href="/trading/profile" className="px-3 py-2 text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-lg border border-blue-400/20">
+                            Trader Profile
+                        </Link>
+                        <Link href="/investor/portfolio" className="px-3 py-2 text-sm bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-lg border border-green-400/20">
+                            Portfolio
+                        </Link>
+                    </div>
+
                     {/* Exchange-style market signals */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div className="bg-gray-800 rounded-xl border border-gray-700 p-4">
@@ -565,6 +657,61 @@ export default function SecondaryTradingPage() {
                             ) : (
                                 <p className="text-sm text-gray-500">No active listings</p>
                             )}
+                        </div>
+                    </div>
+
+                    {/* Market depth + tape */}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
+                        <div className="bg-gray-800 rounded-xl border border-gray-700 p-4">
+                            <h3 className="text-white font-semibold mb-3">Order Book {highlightedListing ? `- ${highlightedListing.deal?.sme?.name || 'Listing'}` : ''}</h3>
+                            {highlightedListing ? (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-xs text-red-400 mb-2">Asks</p>
+                                        <div className="space-y-1">
+                                            {orderBook.asks.map((level, idx) => (
+                                                <div key={`ask-${idx}`} className="flex justify-between text-xs">
+                                                    <span className="text-red-300">${level.price.toFixed(2)}</span>
+                                                    <span className="text-gray-300">{level.shares.toLocaleString()}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-green-400 mb-2">Bids</p>
+                                        <div className="space-y-1">
+                                            {orderBook.bids.map((level, idx) => (
+                                                <div key={`bid-${idx}`} className="flex justify-between text-xs">
+                                                    <span className="text-green-300">${level.price.toFixed(2)}</span>
+                                                    <span className="text-gray-300">{level.shares.toLocaleString()}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm text-gray-500">No active listing for order book.</p>
+                            )}
+                        </div>
+                        <div className="bg-gray-800 rounded-xl border border-gray-700 p-4">
+                            <h3 className="text-white font-semibold mb-3">Recent Market Trades</h3>
+                            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                {recentTrades.length === 0 && (
+                                    <p className="text-sm text-gray-500">No recent trades yet.</p>
+                                )}
+                                {recentTrades.map((trade) => (
+                                    <div key={trade.id} className="flex items-center justify-between text-xs bg-gray-900/30 rounded px-2 py-1.5">
+                                        <div>
+                                            <p className="text-gray-200">{trade.deal?.sme?.name || 'SME'}</p>
+                                            <p className="text-gray-500">{new Date(trade.executedAt).toLocaleString()}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-white">${trade.pricePerShare.toFixed(2)}</p>
+                                            <p className="text-cyan-300">{trade.shares.toLocaleString()} shares</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
@@ -614,8 +761,20 @@ export default function SecondaryTradingPage() {
                                         <div>
                                             <h3 className="text-lg font-bold text-white mb-1">{listing.deal?.title || 'Unknown Deal'}</h3>
                                             <p className="text-sm text-gray-400">{listing.deal?.sme?.name || 'Project Name'}</p>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                {(listing.deal?.sme?.sector || 'General')} | {(listing.deal?.sme?.stage || 'N/A')} | Score {Number(listing.deal?.sme?.score || 0).toFixed(1)}
+                                            </p>
                                         </div>
-                                        {getStatusBadge(listing.status)}
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => toggleWatchlist(listing.id)}
+                                                className={`p-1 rounded ${watchlistIds.includes(listing.id) ? 'text-yellow-400' : 'text-gray-500 hover:text-yellow-300'}`}
+                                                title={watchlistIds.includes(listing.id) ? 'Remove from watchlist' : 'Add to watchlist'}
+                                            >
+                                                <Star className={`w-4 h-4 ${watchlistIds.includes(listing.id) ? 'fill-current' : ''}`} />
+                                            </button>
+                                            {getStatusBadge(listing.status)}
+                                        </div>
                                     </div>
 
                                     {/* Price Info */}

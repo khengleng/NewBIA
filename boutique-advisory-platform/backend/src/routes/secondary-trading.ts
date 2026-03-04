@@ -22,6 +22,19 @@ function requireTenantId(req: AuthenticatedRequest, res: Response): string | und
     return tenantId;
 }
 
+async function requireInvestor(req: AuthenticatedRequest, tenantId: string, res: Response) {
+    const investor = await prisma.investor.findFirst({
+        where: { userId: req.user?.id, tenantId }
+    });
+
+    if (!investor) {
+        res.status(404).json({ error: 'Investor profile not found' });
+        return undefined;
+    }
+
+    return investor;
+}
+
 // Platform fee percentage
 const PLATFORM_FEE = 0.01; // 1%
 
@@ -69,7 +82,16 @@ router.get('/listings', authorize('secondary_trading.list'), async (req: Authent
                     include: {
                         deal: {
                             include: {
-                                sme: { select: { id: true, name: true } }
+                                sme: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        sector: true,
+                                        stage: true,
+                                        score: true,
+                                        certified: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -101,6 +123,286 @@ router.get('/listings', authorize('secondary_trading.list'), async (req: Authent
     } catch (error) {
         console.error('Error fetching listings:', error);
         res.status(500).json({ error: 'Failed to fetch listings' });
+    }
+});
+
+// Trader profile/preferences (investor only)
+router.get('/trader-profile', authorize('secondary_trading.read'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.json({
+                profile: {
+                    riskLevel: 'MEDIUM',
+                    investmentHorizon: 'MID',
+                    strategy: 'VALUE',
+                    maxPositionSize: 10,
+                    preferredSectors: [],
+                    notifications: {
+                        priceAlerts: true,
+                        executionUpdates: true,
+                        marketAnnouncements: true
+                    }
+                }
+            });
+            return;
+        }
+
+        const investor = await requireInvestor(req, tenantId, res);
+        if (!investor) return;
+
+        const prefs = (investor.preferences as Record<string, unknown>) || {};
+        const tradingProfile = (prefs.tradingProfile as Record<string, unknown>) || {};
+        const watchlist = Array.isArray(prefs.watchlist) ? (prefs.watchlist as unknown[]) : [];
+
+        res.json({
+            investor: {
+                id: investor.id,
+                name: investor.name,
+                type: investor.type,
+                kycStatus: investor.kycStatus
+            },
+            profile: {
+                riskLevel: String(tradingProfile.riskLevel || 'MEDIUM'),
+                investmentHorizon: String(tradingProfile.investmentHorizon || 'MID'),
+                strategy: String(tradingProfile.strategy || 'VALUE'),
+                maxPositionSize: Number(tradingProfile.maxPositionSize ?? 10),
+                preferredSectors: Array.isArray(tradingProfile.preferredSectors)
+                    ? tradingProfile.preferredSectors.map(v => String(v)).slice(0, 10)
+                    : [],
+                notifications: {
+                    priceAlerts: Boolean((tradingProfile.notifications as any)?.priceAlerts ?? true),
+                    executionUpdates: Boolean((tradingProfile.notifications as any)?.executionUpdates ?? true),
+                    marketAnnouncements: Boolean((tradingProfile.notifications as any)?.marketAnnouncements ?? true)
+                },
+                watchlistCount: watchlist.length
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching trader profile:', error);
+        res.status(500).json({ error: 'Failed to fetch trader profile' });
+    }
+});
+
+router.put('/trader-profile', authorize('secondary_trading.buy'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.status(503).json({ error: 'Database not available' });
+            return;
+        }
+
+        const investor = await requireInvestor(req, tenantId, res);
+        if (!investor) return;
+
+        const body = req.body || {};
+        const existingPrefs = (investor.preferences as Record<string, unknown>) || {};
+        const existingTrading = (existingPrefs.tradingProfile as Record<string, unknown>) || {};
+        const existingNotifications = (existingTrading.notifications as Record<string, unknown>) || {};
+
+        const nextTradingProfile = {
+            ...existingTrading,
+            riskLevel: ['LOW', 'MEDIUM', 'HIGH'].includes(String(body.riskLevel)) ? String(body.riskLevel) : String(existingTrading.riskLevel || 'MEDIUM'),
+            investmentHorizon: ['SHORT', 'MID', 'LONG'].includes(String(body.investmentHorizon)) ? String(body.investmentHorizon) : String(existingTrading.investmentHorizon || 'MID'),
+            strategy: ['VALUE', 'GROWTH', 'MOMENTUM', 'INCOME', 'MIXED'].includes(String(body.strategy)) ? String(body.strategy) : String(existingTrading.strategy || 'VALUE'),
+            maxPositionSize: Math.max(1, Math.min(100, Number(body.maxPositionSize ?? existingTrading.maxPositionSize ?? 10))),
+            preferredSectors: Array.isArray(body.preferredSectors)
+                ? body.preferredSectors.map((v: unknown) => String(v)).filter(Boolean).slice(0, 10)
+                : (Array.isArray(existingTrading.preferredSectors) ? existingTrading.preferredSectors : []),
+            notifications: {
+                ...existingNotifications,
+                priceAlerts: body.notifications?.priceAlerts !== undefined ? Boolean(body.notifications.priceAlerts) : Boolean(existingNotifications.priceAlerts ?? true),
+                executionUpdates: body.notifications?.executionUpdates !== undefined ? Boolean(body.notifications.executionUpdates) : Boolean(existingNotifications.executionUpdates ?? true),
+                marketAnnouncements: body.notifications?.marketAnnouncements !== undefined ? Boolean(body.notifications.marketAnnouncements) : Boolean(existingNotifications.marketAnnouncements ?? true)
+            }
+        };
+
+        await prisma.investor.update({
+            where: { id: investor.id },
+            data: {
+                preferences: {
+                    ...existingPrefs,
+                    tradingProfile: nextTradingProfile
+                } as any
+            }
+        });
+
+        res.json({ message: 'Trader profile updated', profile: nextTradingProfile });
+    } catch (error) {
+        console.error('Error updating trader profile:', error);
+        res.status(500).json({ error: 'Failed to update trader profile' });
+    }
+});
+
+// Watchlist (investor-owned)
+router.get('/watchlist', authorize('secondary_trading.read'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.json({ listingIds: [], listings: [] });
+            return;
+        }
+
+        const investor = await requireInvestor(req, tenantId, res);
+        if (!investor) return;
+
+        const prefs = (investor.preferences as Record<string, unknown>) || {};
+        const rawIds = Array.isArray(prefs.watchlist) ? (prefs.watchlist as unknown[]) : [];
+        const listingIds = rawIds.map(v => String(v)).filter(Boolean).slice(0, 100);
+
+        if (listingIds.length === 0) {
+            res.json({ listingIds: [], listings: [] });
+            return;
+        }
+
+        const listings = await prismaReplica.secondaryListing.findMany({
+            where: {
+                tenantId,
+                id: { in: listingIds },
+                status: 'ACTIVE'
+            },
+            include: {
+                seller: { select: { id: true, name: true, type: true } },
+                dealInvestor: {
+                    include: {
+                        deal: {
+                            include: {
+                                sme: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        sector: true,
+                                        stage: true,
+                                        score: true,
+                                        certified: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { listedAt: 'desc' }
+        });
+
+        const formattedListings = listings.map(l => ({
+            ...l,
+            deal: l.dealInvestor?.deal || { title: 'Unknown Deal', sme: { name: 'N/A' } },
+            returnPercentage: 0,
+            originalPricePerShare: 0,
+            isOwner: l.sellerId === investor.id
+        }));
+
+        res.json({ listingIds, listings: formattedListings });
+    } catch (error) {
+        console.error('Error fetching watchlist:', error);
+        res.status(500).json({ error: 'Failed to fetch watchlist' });
+    }
+});
+
+router.put('/watchlist', authorize('secondary_trading.buy'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.status(503).json({ error: 'Database not available' });
+            return;
+        }
+
+        const investor = await requireInvestor(req, tenantId, res);
+        if (!investor) return;
+
+        const rawIds = Array.isArray(req.body?.listingIds) ? req.body.listingIds : [];
+        const listingIds = rawIds.map((v: unknown) => String(v)).filter(Boolean).slice(0, 100);
+        const uniqueIds = Array.from(new Set(listingIds));
+
+        const prefs = (investor.preferences as Record<string, unknown>) || {};
+        await prisma.investor.update({
+            where: { id: investor.id },
+            data: {
+                preferences: {
+                    ...prefs,
+                    watchlist: uniqueIds
+                } as any
+            }
+        });
+
+        res.json({ message: 'Watchlist updated', listingIds: uniqueIds });
+    } catch (error) {
+        console.error('Error updating watchlist:', error);
+        res.status(500).json({ error: 'Failed to update watchlist' });
+    }
+});
+
+// Public market tape for trading dashboard
+router.get('/trades/recent', authorize('secondary_trading.list'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.json({ trades: [] });
+            return;
+        }
+
+        const limit = Math.max(1, Math.min(100, Number(req.query.limit || 30)));
+        const trades = await prismaReplica.secondaryTrade.findMany({
+            where: {
+                status: 'COMPLETED',
+                listing: { tenantId }
+            },
+            include: {
+                listing: {
+                    include: {
+                        dealInvestor: {
+                            include: {
+                                deal: {
+                                    include: {
+                                        sme: {
+                                            select: {
+                                                id: true,
+                                                name: true,
+                                                sector: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { executedAt: 'desc' },
+            take: limit
+        });
+
+        const formatted = trades.map(t => ({
+            id: t.id,
+            listingId: t.listingId,
+            pricePerShare: t.pricePerShare,
+            shares: t.shares,
+            totalAmount: t.totalAmount,
+            executedAt: t.executedAt,
+            deal: t.listing?.dealInvestor?.deal
+                ? {
+                    id: t.listing.dealInvestor.deal.id,
+                    title: t.listing.dealInvestor.deal.title,
+                    sme: t.listing.dealInvestor.deal.sme
+                }
+                : null
+        }));
+
+        res.json({ trades: formatted });
+    } catch (error) {
+        console.error('Error fetching recent trades:', error);
+        res.status(500).json({ error: 'Failed to fetch recent trades' });
     }
 });
 
