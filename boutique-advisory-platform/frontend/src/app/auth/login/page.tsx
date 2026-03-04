@@ -176,29 +176,52 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="mx-auto h-12 w-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-          {IS_TRADING_PLATFORM ? (
-            <CandlestickChart className="h-6 w-6 text-white" />
-          ) : (
-            <Building2 className="h-6 w-6 text-white" />
-          )}
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
-          {step === '2fa' ? 'Two-Factor Authentication' : (IS_TRADING_PLATFORM ? 'CamboBia Trading Login' : t('auth.login'))}
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-300">
-          {step === '2fa'
-            ? 'Enter the 6-digit code from your authenticator app'
-            : (IS_TRADING_PLATFORM ? 'Access secondary market listings, live orders, and trade history.' : 'Sign in to your Boutique Advisory account')}
-        </p>
-        {step !== '2fa' && IS_TRADING_PLATFORM && (
-          <div className="mt-3 rounded-lg border border-blue-400/30 bg-blue-500/10 px-4 py-3 text-xs text-blue-200">
-            Trade CamboBia token units on the regulated secondary marketplace.
-          </div>
-        )}
+    <div className="relative min-h-screen overflow-hidden bg-slate-950">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(30,64,175,0.22),transparent_45%),radial-gradient(circle_at_80%_10%,rgba(15,118,110,0.18),transparent_35%),linear-gradient(180deg,rgba(15,23,42,0.98),rgba(2,6,23,1))]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[size:44px_44px]" />
       </div>
+
+      <div className={`relative z-10 mx-auto flex min-h-screen w-full items-center px-4 py-10 sm:px-6 lg:px-10 ${IS_TRADING_PLATFORM ? 'max-w-7xl gap-8 lg:grid lg:grid-cols-[1.25fr_0.95fr]' : 'max-w-md justify-center'}`}>
+        {IS_TRADING_PLATFORM && step !== '2fa' && (
+          <aside className="hidden rounded-2xl border border-slate-700/60 bg-slate-900/65 p-8 text-slate-100 shadow-2xl backdrop-blur lg:block">
+            <div className="mb-6 inline-flex items-center rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-blue-200">
+              CamboBia Trading
+            </div>
+            <h1 className="text-4xl font-bold leading-tight text-white">Professional Secondary Market Access</h1>
+            <p className="mt-4 text-base text-slate-300">
+              Monitor tokenized SME units, evaluate issuer performance, and execute trades from a dedicated marketplace experience.
+            </p>
+            <div className="mt-8 space-y-3 text-sm text-slate-300">
+              <div className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-3">Real-time listings and market depth</div>
+              <div className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-3">Order placement with live status updates</div>
+              <div className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-3">Trade history, holdings, and account security controls</div>
+            </div>
+          </aside>
+        )}
+
+        <section className="w-full">
+          <div className="rounded-2xl border border-slate-700/70 bg-slate-900/78 p-6 shadow-2xl backdrop-blur sm:p-8">
+            <div className="mx-auto mb-6 h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+              {IS_TRADING_PLATFORM ? (
+                <CandlestickChart className="h-6 w-6 text-white" />
+              ) : (
+                <Building2 className="h-6 w-6 text-white" />
+              )}
+            </div>
+            <h2 className="text-center text-3xl font-bold text-white">
+              {step === '2fa' ? 'Two-Factor Authentication' : (IS_TRADING_PLATFORM ? 'CamboBia Trading Login' : t('auth.login'))}
+            </h2>
+            <p className="mt-2 text-center text-sm text-slate-300">
+              {step === '2fa'
+                ? 'Enter the 6-digit code from your authenticator app'
+                : (IS_TRADING_PLATFORM ? 'Access secondary market listings, live orders, and trade history.' : 'Sign in to your Boutique Advisory account')}
+            </p>
+            {step !== '2fa' && IS_TRADING_PLATFORM && (
+              <div className="mt-4 rounded-lg border border-blue-400/30 bg-blue-500/10 px-4 py-3 text-xs text-blue-200">
+                Trade CamboBia token units on the regulated secondary marketplace.
+              </div>
+            )}
 
       {step === '2fa' ? (
         <form className="mt-8 space-y-6" onSubmit={handle2faSubmit}>
@@ -427,6 +450,9 @@ export default function LoginPage() {
           </div>
         </form>
       )}
+          </div>
+        </section>
+      </div>
     </div>
 
   )

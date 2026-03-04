@@ -216,7 +216,13 @@ export default function TradingSecurityPage() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-4">
+                    <form
+                        className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-4"
+                        onSubmit={(event) => {
+                            event.preventDefault()
+                            void handleChangePassword()
+                        }}
+                    >
                         <h2 className="text-white text-lg font-semibold">Change Password</h2>
                         <input
                             type="password"
@@ -243,13 +249,13 @@ export default function TradingSecurityPage() {
                             className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white"
                         />
                         <button
-                            onClick={handleChangePassword}
+                            type="submit"
                             disabled={isChangingPassword}
                             className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 text-white rounded-lg"
                         >
                             {isChangingPassword ? 'Updating...' : 'Update Password'}
                         </button>
-                    </div>
+                    </form>
 
                     <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-4">
                         <h2 className="text-white text-lg font-semibold">Multi-Factor Authentication (MFA)</h2>
