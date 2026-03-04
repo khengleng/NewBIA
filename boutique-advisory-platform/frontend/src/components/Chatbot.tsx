@@ -75,7 +75,25 @@ export default function Chatbot() {
                 })
             })
 
-            const data = await response.json()
+            const data = await response.json().catch(() => ({}))
+
+            if (!response.ok) {
+                const friendlyError =
+                    response.status === 401 ? 'Your session expired. Please sign in again.' :
+                    response.status === 403 ? 'Your account is not allowed to use AI chat.' :
+                    response.status === 404 ? 'AI chat is not available right now on this environment.' :
+                    response.status >= 500 ? 'AI service is temporarily unavailable. Please try again shortly.' :
+                    'Unable to reach AI chat right now.'
+
+                const botErrorMessage: Message = {
+                    id: (Date.now() + 1).toString(),
+                    text: data?.error || friendlyError,
+                    sender: 'bot',
+                    timestamp: new Date()
+                }
+                setMessages(prev => [...prev, botErrorMessage])
+                return
+            }
 
             const botMessage: Message = {
                 id: (Date.now() + 1).toString(),

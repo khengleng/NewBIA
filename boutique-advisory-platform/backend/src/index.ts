@@ -657,6 +657,7 @@ if (isTradingService) {
   app.use('/api/investors', authenticateToken, investorRoutes);
   app.use('/api/syndicate-tokens', authenticateToken, syndicateTokenRoutes);
   app.use('/api/secondary-trading', authenticateToken, secondaryTradingRoutes);
+  app.use('/api/ai', authenticateToken, aiRoutes);
   app.use('/api/notifications', authenticateToken, notificationRoutes);
   app.use('/api/push', authenticateToken, notificationRoutes); // Alias for push subscription endpoints
 } else {
