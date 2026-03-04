@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 const mode = process.env.NEXT_PUBLIC_PLATFORM_MODE === 'trading' ? 'trading' : 'core';
+const isTradingHost = (hostname: string) => hostname === 'trade.cambobia.com';
 
 const tradingAllowedPrefixes = [
   '/auth',
@@ -18,7 +19,9 @@ const tradingAllowedPrefixes = [
 ];
 
 export function middleware(req: NextRequest) {
-  if (mode !== 'trading') {
+  const runtimeTradingMode = mode === 'trading' || isTradingHost(req.nextUrl.hostname);
+
+  if (!runtimeTradingMode) {
     return NextResponse.next();
   }
 
@@ -42,4 +45,3 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: ['/((?!.*\\..*).*)', '/'],
 };
-
