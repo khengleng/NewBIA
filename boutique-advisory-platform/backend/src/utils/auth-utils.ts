@@ -34,6 +34,14 @@ export async function issueTokensAndSetCookies(res: Response, user: any, req: Re
     const refreshTokenHash = hashToken(refreshToken);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
+    const clientUserAgentHeader = req.headers['x-client-user-agent'];
+    const fallbackUserAgentHeader = req.headers['user-agent'];
+    const resolvedUserAgent = (Array.isArray(clientUserAgentHeader)
+        ? clientUserAgentHeader[0]
+        : clientUserAgentHeader) || (Array.isArray(fallbackUserAgentHeader)
+            ? fallbackUserAgentHeader[0]
+            : fallbackUserAgentHeader) || 'unknown';
+
     // Store hash in DB
     await prisma.refreshToken.create({
         data: {
@@ -41,7 +49,7 @@ export async function issueTokensAndSetCookies(res: Response, user: any, req: Re
             userId: user.id,
             expiresAt,
             ipAddress: req.ip || req.socket.remoteAddress,
-            userAgent: req.headers['user-agent'] || 'unknown'
+            userAgent: resolvedUserAgent
         }
     });
 

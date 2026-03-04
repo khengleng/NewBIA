@@ -130,7 +130,12 @@ export default function SessionsPage() {
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                         </div>
                     ) : sessions.length > 0 ? (
-                        sessions.map((session) => (
+                        sessions.map((session) => {
+                            const displayUserAgent = currentSessionId === session.id && typeof window !== 'undefined'
+                                ? window.navigator.userAgent
+                                : session.userAgent;
+
+                            return (
                             <div key={session.id} className="bg-gray-800 border border-gray-700 rounded-2xl p-6 transition-all hover:border-gray-600 shadow-xl">
                                 <div className="flex items-start justify-between">
                                     <div className="flex gap-4">
@@ -140,7 +145,7 @@ export default function SessionsPage() {
                                         <div>
                                             <div className="flex items-center gap-2">
                                                 <h3 className="text-xl font-semibold text-white">
-                                                    {parseUserAgent(session.userAgent)}
+                                                    {parseUserAgent(displayUserAgent)}
                                                 </h3>
                                                 {currentSessionId === session.id && (
                                                     <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 rounded">
@@ -149,7 +154,7 @@ export default function SessionsPage() {
                                                 )}
                                             </div>
                                             <p className="text-gray-400 text-sm mb-3">
-                                                {parseBrowser(session.userAgent)} • {session.ipAddress}
+                                                {parseBrowser(displayUserAgent)} • {session.ipAddress}
                                             </p>
 
                                             <div className="flex flex-wrap gap-4 text-xs text-gray-500">
@@ -174,7 +179,7 @@ export default function SessionsPage() {
                                     </button>
                                 </div>
                             </div>
-                        ))
+                        )})
                     ) : (
                         <div className="text-center py-12 bg-gray-800 rounded-2xl border border-dashed border-gray-700">
                             <Globe className="w-12 h-12 text-gray-600 mx-auto mb-4" />

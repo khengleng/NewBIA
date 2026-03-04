@@ -81,6 +81,10 @@ export async function apiRequest(
 
     // Add default headers
     const headers = new Headers(options.headers);
+    if (typeof window !== 'undefined') {
+        headers.set('x-client-user-agent', window.navigator.userAgent || 'unknown');
+        headers.set('x-client-platform', window.navigator.platform || 'unknown');
+    }
     if (!headers.has('Content-Type') && options.body && typeof options.body === 'string') {
         headers.set('Content-Type', 'application/json');
     }
