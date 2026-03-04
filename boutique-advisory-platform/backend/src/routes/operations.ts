@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest, authorize } from '../middleware/authorize';
 import { prisma } from '../database';
 import { logAuditEvent } from '../utils/security';
+import { isMissingSchemaError } from '../utils/prisma-errors';
 
 const router = Router();
 
@@ -90,13 +91,14 @@ router.put('/subscriptions/current', authorize('subscription.manage'), async (re
 router.post('/invoices/generate-monthly', authorize('invoice.manage'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const tenantId = req.user?.tenantId || 'default';
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
     const range = getMonthRange(req.body?.month);
     if (!range) return res.status(400).json({ error: 'Invalid month. Use YYYY-MM' });
 
     const byUser = await prisma.payment.groupBy({
       by: ['userId'],
       where: {
-        tenantId,
+        ...(isSuperAdmin ? {} : { tenantId }),
         createdAt: { gte: range.start, lt: range.end },
         status: { in: ['COMPLETED', 'PENDING', 'PROCESSING', 'REFUNDED'] }
       },
@@ -104,7 +106,7 @@ router.post('/invoices/generate-monthly', authorize('invoice.manage'), async (re
       _count: true
     });
 
-    const subscription = await prisma.subscription.findUnique({ where: { tenantId } });
+    const subscription = isSuperAdmin ? null : await prisma.subscription.findUnique({ where: { tenantId } });
 
     let generated = 0;
     for (const row of byUser) {
@@ -115,7 +117,7 @@ router.post('/invoices/generate-monthly', authorize('invoice.manage'), async (re
       const invoice = await prisma.invoice.upsert({
         where: { invoiceNumber },
         create: {
-          tenantId,
+          tenantId: isSuperAdmin ? (req.user?.tenantId || 'default') : tenantId,
           customerUserId: row.userId,
           subscriptionId: subscription?.id,
           invoiceNumber,
@@ -178,6 +180,13 @@ router.post('/invoices/generate-monthly', authorize('invoice.manage'), async (re
 
     return res.json({ message: 'Invoices generated', month: range.label, generated });
   } catch (error) {
+    if (isMissingSchemaError(error)) {
+      return res.status(200).json({
+        message: 'Invoices schema is not fully available yet',
+        generated: 0,
+        unavailable: true
+      });
+    }
     console.error('Generate monthly invoices error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -186,11 +195,16 @@ router.post('/invoices/generate-monthly', authorize('invoice.manage'), async (re
 router.get('/invoices', authorize('invoice.read'), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const tenantId = req.user?.tenantId || 'default';
+    const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
     const range = getMonthRange(req.query.month as string | undefined);
     if (!range) return res.status(400).json({ error: 'Invalid month. Use YYYY-MM' });
 
     const invoices = await prisma.invoice.findMany({
-      where: { tenantId, monthStart: range.start, monthEnd: range.end },
+      where: {
+        ...(isSuperAdmin ? {} : { tenantId }),
+        monthStart: range.start,
+        monthEnd: range.end
+      },
       include: {
         customer: { select: { id: true, email: true, firstName: true, lastName: true } }
       },
@@ -199,6 +213,14 @@ router.get('/invoices', authorize('invoice.read'), async (req: AuthenticatedRequ
 
     return res.json({ month: range.label, invoices });
   } catch (error) {
+    if (isMissingSchemaError(error)) {
+      return res.json({
+        month: req.query.month || null,
+        invoices: [],
+        unavailable: true,
+        reason: 'Pending database migration for invoices module'
+      });
+    }
     console.error('List invoices error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
