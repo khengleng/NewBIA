@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [showResendVerification, setShowResendVerification] = useState(false)
   const [resendStatus, setResendStatus] = useState('')
   const [nextPath, setNextPath] = useState('')
+  const [isTradingRuntime, setIsTradingRuntime] = useState(false)
 
   const [formData, setFormData] = useState({
     email: '',
@@ -26,7 +27,7 @@ export default function LoginPage() {
     rememberMe: false
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const postLoginPath = IS_TRADING_PLATFORM ? '/secondary-trading' : '/dashboard'
+  const postLoginPath = isTradingRuntime ? '/secondary-trading' : '/dashboard'
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -48,6 +49,8 @@ export default function LoginPage() {
     if (next && next.startsWith('/') && !next.startsWith('//')) {
       setNextPath(next)
     }
+
+    setIsTradingRuntime(IS_TRADING_PLATFORM || window.location.hostname === 'trade.cambobia.com')
   }, [])
 
   const handleResendVerification = async () => {
@@ -189,8 +192,8 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.08)_1px,transparent_1px)] bg-[size:44px_44px]" />
       </div>
 
-      <div className={`relative z-10 mx-auto flex min-h-screen w-full items-center px-4 py-10 sm:px-6 lg:px-10 ${IS_TRADING_PLATFORM ? 'max-w-7xl gap-8 lg:grid lg:grid-cols-[1.25fr_0.95fr]' : 'max-w-md justify-center'}`}>
-        {IS_TRADING_PLATFORM && step !== '2fa' && (
+      <div className={`relative z-10 mx-auto flex min-h-screen w-full items-center px-4 py-10 sm:px-6 lg:px-10 ${isTradingRuntime ? 'max-w-7xl gap-8 lg:grid lg:grid-cols-[1.25fr_0.95fr]' : 'max-w-md justify-center'}`}>
+        {isTradingRuntime && step !== '2fa' && (
           <aside className="hidden rounded-2xl border border-slate-700/60 bg-slate-900/65 p-8 text-slate-100 shadow-2xl backdrop-blur lg:block">
             <div className="mb-6 inline-flex items-center rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-blue-200">
               CamboBia Trading
@@ -210,21 +213,21 @@ export default function LoginPage() {
         <section className="w-full">
           <div className="rounded-2xl border border-slate-700/70 bg-slate-900/78 p-6 shadow-2xl backdrop-blur sm:p-8">
             <div className="mx-auto mb-6 h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-              {IS_TRADING_PLATFORM ? (
+              {isTradingRuntime ? (
                 <CandlestickChart className="h-6 w-6 text-white" />
               ) : (
                 <Building2 className="h-6 w-6 text-white" />
               )}
             </div>
             <h2 className="text-center text-3xl font-bold text-white">
-              {step === '2fa' ? 'Two-Factor Authentication' : (IS_TRADING_PLATFORM ? 'CamboBia Trading Login' : t('auth.login'))}
+              {step === '2fa' ? 'Two-Factor Authentication' : (isTradingRuntime ? 'CamboBia Trading Login' : t('auth.login'))}
             </h2>
             <p className="mt-2 text-center text-sm text-slate-300">
               {step === '2fa'
                 ? 'Enter the 6-digit code from your authenticator app'
-                : (IS_TRADING_PLATFORM ? 'Access secondary market listings, live orders, and trade history.' : 'Sign in to your Boutique Advisory account')}
+                : (isTradingRuntime ? 'Access secondary market listings, live orders, and trade history.' : 'Sign in to your Boutique Advisory account')}
             </p>
-            {step !== '2fa' && IS_TRADING_PLATFORM && (
+            {step !== '2fa' && isTradingRuntime && (
               <div className="mt-4 rounded-lg border border-blue-400/30 bg-blue-500/10 px-4 py-3 text-xs text-blue-200">
                 Trade CamboBia token units on the regulated secondary marketplace.
               </div>
@@ -318,7 +321,7 @@ export default function LoginPage() {
               <p className="text-green-400 text-sm">{resendStatus}</p>
             </div>
           )}
-          {IS_TRADING_PLATFORM && (
+          {isTradingRuntime && (
             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
               <p className="text-blue-300 text-sm">
                 If you normally sign in on cambobia.com, use SSO below. Direct password login on this trading site is for trading-local credentials only.
@@ -416,7 +419,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {IS_TRADING_PLATFORM && (
+          {isTradingRuntime && (
             <div>
               <a
                 href={`${CORE_FRONTEND_URL}/auth/sso`}
@@ -439,7 +442,7 @@ export default function LoginPage() {
                   Signing in...
                 </div>
               ) : (
-                IS_TRADING_PLATFORM ? 'Sign in with trading password' : t('auth.login')
+                isTradingRuntime ? 'Sign in with trading password' : t('auth.login')
               )}
             </button>
           </div>
