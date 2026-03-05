@@ -30,6 +30,18 @@ function sanitizeBaseUrl(baseUrl: string | undefined): string | null {
   }
 }
 
+function inferServiceUrl(hostOrUrl: string | undefined, fallback: string): string {
+  const candidate = (hostOrUrl || '').trim();
+  if (!candidate) return fallback;
+  if (candidate.startsWith('http://') || candidate.startsWith('https://')) return candidate;
+
+  // Railway internal service hosts should be accessed over plain HTTP.
+  if (candidate.endsWith('.railway.internal')) return `http://${candidate}`;
+
+  // Public Railway/custom domains should be accessed via HTTPS to avoid 301 redirects.
+  return `https://${candidate}`;
+}
+
 function isTradingHost(hostname: string): boolean {
   const host = String(hostname || '').trim().toLowerCase();
   return host === 'trade.cambobia.com'
@@ -55,13 +67,14 @@ function getBackendTargets(req: NextRequest): string[] {
   };
 
   const tradingRuntime = isTradingRuntime(req);
-  const coreInternalBackend = process.env.RAILWAY_SERVICE_BACKEND_URL
-    ? `http://${process.env.RAILWAY_SERVICE_BACKEND_URL}`
-    : 'http://backend.railway.internal:8080';
-  const tradingInternalBackend =
-    (process.env.RAILWAY_SERVICE_TRADING_URL && `http://${process.env.RAILWAY_SERVICE_TRADING_URL}`)
-    || (process.env.RAILWAY_SERVICE_TRADING_BACKEND_URL && `http://${process.env.RAILWAY_SERVICE_TRADING_BACKEND_URL}`)
-    || 'http://trading.railway.internal:8080';
+  const coreInternalBackend = inferServiceUrl(
+    process.env.RAILWAY_SERVICE_BACKEND_URL,
+    'http://backend.railway.internal:8080'
+  );
+  const tradingInternalBackend = inferServiceUrl(
+    process.env.RAILWAY_SERVICE_TRADING_URL || process.env.RAILWAY_SERVICE_TRADING_BACKEND_URL,
+    'http://trading.railway.internal:8080'
+  );
 
   if (tradingRuntime) {
     addTarget(process.env.TRADING_API_URL);
