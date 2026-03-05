@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Edit, Trash2, Save, X } from 'lucide-react'
-import { API_URL, authorizedRequest } from '@/lib/api'
+import { authorizedRequest } from '@/lib/api'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 
 interface Service {
@@ -35,13 +35,20 @@ export default function ManageServicesPage() {
 
     const fetchMyServices = async () => {
         try {
-            const response = await authorizedRequest('/api/advisory/my-services')
+            let response = await authorizedRequest('/api/advisory/my-services')
+            if (response.status === 404) {
+                // Backward-compatible fallback for deployments where /my-services is not exposed.
+                response = await authorizedRequest('/api/advisory/services')
+            }
             if (response.ok) {
                 const data = await response.json()
-                setServices(data)
+                setServices(Array.isArray(data) ? data : [])
+            } else {
+                setServices([])
             }
         } catch (error) {
             console.error('Error fetching services:', error)
+            setServices([])
         }
     }
 

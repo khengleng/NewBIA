@@ -716,7 +716,9 @@ export default function TradingSecurityPage() {
                 <div className="bg-blue-600/10 border border-blue-500/30 rounded-xl p-4">
                     <p className="text-blue-300 text-sm flex items-center gap-2">
                         <Shield className="w-4 h-4" />
-                        Keep MFA enabled and regularly review sessions to protect your investor account.
+                        {isOperator
+                            ? 'Enforce MFA for all operator accounts and review sessions regularly to protect platform operations.'
+                            : 'Keep MFA enabled and regularly review sessions to protect your investor account.'}
                     </p>
                 </div>
             </div>

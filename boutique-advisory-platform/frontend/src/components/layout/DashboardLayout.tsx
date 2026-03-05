@@ -263,9 +263,31 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const isTradingOperator = isTradingOperatorRole(normalizedRole)
         || hasUiPermission(normalizedRole, 'admin.read')
         || hasUiPermission(normalizedRole, 'billing.read')
+    const isTradingInvestorView = isTradingRuntime && normalizedRole === 'INVESTOR' && !isTradingOperator
     const showTradingWidgets = !isTradingRuntime
-    const tradingNavSections = isTradingOperator
+    const tradingNavSections = isTradingInvestorView
         ? [
+            {
+                label: 'Trading',
+                roles: ['INVESTOR'],
+                items: [
+                    { href: '/secondary-trading', label: 'Marketplace', icon: ArrowLeftRight, roles: ['INVESTOR'] },
+                    { href: '/trading/markets', label: 'Markets', icon: BarChart3, roles: ['INVESTOR'] },
+                    { href: '/investor/portfolio', label: 'My Portfolio', icon: Briefcase, roles: ['INVESTOR'] },
+                    { href: '/trading/watchlist', label: 'Watchlist', icon: Sparkles, roles: ['INVESTOR'] },
+                    { href: '/trading/profile', label: 'Investor Profile', icon: UserCog, roles: ['INVESTOR'] },
+                    { href: '/trading/security', label: 'Investor Security', icon: ShieldCheck, roles: ['INVESTOR'] },
+                ]
+            },
+            {
+                label: 'Security',
+                roles: ['INVESTOR'],
+                items: [
+                    { href: '/settings/sessions', label: 'Manage Sessions', icon: ShieldCheck, roles: ['INVESTOR'] },
+                ]
+            },
+        ]
+        : [
             {
                 label: 'Platform Admin',
                 roles: operatorRoles,
@@ -321,27 +343,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 ]
             },
         ]
-        : [
-            {
-                label: 'Trading',
-                roles: ['INVESTOR'],
-                items: [
-                    { href: '/secondary-trading', label: 'Marketplace', icon: ArrowLeftRight, roles: ['INVESTOR'] },
-                    { href: '/trading/markets', label: 'Markets', icon: BarChart3, roles: ['INVESTOR'] },
-                    { href: '/investor/portfolio', label: 'My Portfolio', icon: Briefcase, roles: ['INVESTOR'] },
-                    { href: '/trading/watchlist', label: 'Watchlist', icon: Sparkles, roles: ['INVESTOR'] },
-                    { href: '/trading/profile', label: 'Investor Profile', icon: UserCog, roles: ['INVESTOR'] },
-                    { href: '/trading/security', label: 'Investor Security', icon: ShieldCheck, roles: ['INVESTOR'] },
-                ]
-            },
-            {
-                label: 'Security',
-                roles: ['INVESTOR'],
-                items: [
-                    { href: '/settings/sessions', label: 'Manage Sessions', icon: ShieldCheck, roles: ['INVESTOR'] },
-                ]
-            },
-        ]
 
     const navSections = isTradingRuntime ? tradingNavSections : coreNavSections;
 
@@ -372,6 +373,19 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             return changed ? next : prev
         })
     }, [filteredNavSections])
+
+    useEffect(() => {
+        if (!isTradingRuntime || !user || !isTradingOperator) return
+        const investorOnlyPaths = [
+            '/secondary-trading',
+            '/trading/watchlist',
+            '/trading/profile',
+            '/investor/portfolio',
+        ]
+        if (pathname && investorOnlyPaths.some((path) => pathname.startsWith(path))) {
+            router.replace('/admin/dashboard')
+        }
+    }, [isTradingRuntime, isTradingOperator, pathname, router, user])
 
     if (isLoading) {
         return (
