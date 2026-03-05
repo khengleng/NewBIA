@@ -76,10 +76,14 @@ function getBackendTargets(req: NextRequest): string[] {
   }
 
   // Shared fallbacks for backward compatibility with existing Railway variables.
-  addTarget(process.env.API_URL);
-  addTarget(process.env.BACKEND_INTERNAL_URL);
-  addTarget(process.env.BACKEND_URL);
-  addTarget(process.env.NEXT_PUBLIC_API_URL);
+  // IMPORTANT: do not apply these in trading runtime, otherwise misconfigured
+  // shared vars can route trade.cambobia.com traffic into core backend auth.
+  if (!tradingRuntime) {
+    addTarget(process.env.API_URL);
+    addTarget(process.env.BACKEND_INTERNAL_URL);
+    addTarget(process.env.BACKEND_URL);
+    addTarget(process.env.NEXT_PUBLIC_API_URL);
+  }
 
   return targets;
 }
