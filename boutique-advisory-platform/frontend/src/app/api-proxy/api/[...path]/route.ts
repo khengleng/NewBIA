@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 const TRANSIENT_STATUSES = new Set([502, 503, 504]);
 const HOP_BY_HOP_HEADERS = new Set([
   'connection',
+  'content-encoding',
   'content-length',
   'host',
   'keep-alive',
@@ -70,9 +71,21 @@ function isTradingRuntime(req: NextRequest): boolean {
 function getBackendTargets(req: NextRequest): string[] {
   const targets: string[] = [];
   const tradingRuntime = isTradingRuntime(req);
+  const currentHost = req.headers.get('host')?.toLowerCase() || req.nextUrl.host.toLowerCase();
+
   const addTarget = (candidate?: string) => {
     const sanitized = sanitizeBaseUrl(candidate);
     if (!sanitized) return;
+
+    // Guardrail: do not proxy to ourselves (prevents infinite loops and 404s from misconfigured env vars)
+    try {
+      const targetHost = new URL(sanitized).host.toLowerCase();
+      if (targetHost === currentHost) return;
+    } catch {
+      // invalid URL in env var, skip
+      return;
+    }
+
     // Guardrail: keep core host traffic away from trading service targets.
     if (!tradingRuntime && looksLikeTradingServiceTarget(sanitized)) return;
     if (targets.includes(sanitized)) return;
