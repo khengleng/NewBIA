@@ -74,7 +74,7 @@ export function getAuthCookieNames(req?: Request): AuthCookieNames {
     };
 }
 
-function getCookieDomainCandidates(req: Request): string[] {
+function getCookieDomainCandidates(_req: Request): string[] {
     const domains = new Set<string>();
     const envDomain = String(process.env.COOKIE_DOMAIN || '').trim().toLowerCase();
 
@@ -83,22 +83,9 @@ function getCookieDomainCandidates(req: Request): string[] {
         domains.add(envDomain.startsWith('.') ? envDomain.slice(1) : envDomain);
         domains.add(envDomain.startsWith('.') ? envDomain : `.${envDomain}`);
     }
-
-    const host = readHostFromRequest(req);
-    if (!host || host === 'localhost' || host === '127.0.0.1' || host.includes('railway.internal')) {
-        return Array.from(domains).filter(Boolean);
-    }
-
-    if (host.includes('.')) {
-        domains.add(host);
-        const parts = host.split('.').filter(Boolean);
-        if (parts.length >= 2) {
-            const base = parts.slice(-2).join('.');
-            domains.add(base);
-            domains.add(`.${base}`);
-        }
-    }
-
+    // Keep domain cleanup narrow to avoid oversized Set-Cookie headers on login/logout.
+    // Host-derived variants can explode header count and trigger upstream "Header overflow"
+    // when auth is routed through the frontend proxy.
     return Array.from(domains).filter(Boolean);
 }
 
