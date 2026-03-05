@@ -165,9 +165,13 @@ export async function apiRequest(
     }
 
     if (shouldRetryTransient && transientStatuses.has(response.status)) {
-        // Brief backoff to smooth over short backend restarts / warm-up windows.
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        response = await executeFetch();
+        // Backoff retries to smooth over brief proxy/backend restart windows.
+        const retryDelaysMs = [300, 900];
+        for (const delayMs of retryDelaysMs) {
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+            response = await executeFetch();
+            if (!transientStatuses.has(response.status)) break;
+        }
     }
 
     // Handle occasional CSRF cookie/token desynchronization behind proxies by retrying once.
