@@ -64,17 +64,38 @@ router.get('/', authorize('investor.list'), async (req: AuthenticatedRequest, re
   }
 });
 
-// Get current investor profile
+// Get current investor profile - Auto-create if role matches but record missing
 router.get('/profile', async (req: any, res: Response) => {
   try {
     const userId = req.user?.id;
+    const role = req.user?.role;
+    const tenantId = req.user?.tenantId || 'default';
+
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
     let investor = await prisma.investor.findUnique({
       where: { userId },
       include: { user: true }
     });
 
     if (!investor) {
-      return res.status(404).json({ error: 'Investor not found' });
+      if (role === 'INVESTOR') {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) return res.status(401).json({ error: 'User not found' });
+
+        investor = await prisma.investor.create({
+          data: {
+            userId,
+            tenantId,
+            name: `${user.firstName} ${user.lastName}`.trim(),
+            type: 'ANGEL',
+            kycStatus: 'PENDING'
+          },
+          include: { user: true }
+        });
+      } else {
+        return res.status(404).json({ error: 'Investor record not found for this role.' });
+      }
     }
 
     // Decrypt sensitive data

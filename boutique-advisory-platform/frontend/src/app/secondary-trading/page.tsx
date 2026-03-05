@@ -225,6 +225,9 @@ export default function SecondaryTradingPage() {
                     if (profileRes.ok) {
                         const profile = await profileRes.json()
                         setCurrentInvestorId(profile?.investor?.id || profile?.id || null)
+                    } else if (profileRes.status === 404) {
+                        console.warn('Investor profile not found - record may be in creation or missing.')
+                        setCurrentInvestorId(null)
                     }
                 } catch (err) {
                     console.error('Failed to fetch investor profile', err)

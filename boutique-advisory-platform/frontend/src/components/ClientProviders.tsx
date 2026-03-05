@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import ErrorBoundary from './ErrorBoundary'
 import { ToastProvider } from '../contexts/ToastContext'
 import PWAInstallPrompt from './PWAInstallPrompt'
@@ -14,10 +14,13 @@ interface Props {
 }
 
 export default function ClientProviders({ children }: Props) {
-    const isTradingRuntime = typeof window !== 'undefined'
-        && resolveTradingRuntime(window.location.hostname, window.location.pathname)
+    const [mounted, setMounted] = useState(false)
+    const [isTradingRuntime, setIsTradingRuntime] = useState(false)
 
     useEffect(() => {
+        setMounted(true)
+        setIsTradingRuntime(resolveTradingRuntime(window.location.hostname, window.location.pathname))
+
         // Force unregister service workers on localhost to prevent "no-response" errors
         if (typeof window !== 'undefined' &&
             (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
@@ -37,7 +40,7 @@ export default function ClientProviders({ children }: Props) {
             const shouldResetSw = host === 'trade.cambobia.com' || host === 'www.cambobia.com' || host === 'cambobia.com';
 
             if (shouldResetSw) {
-                const resetKey = `${host}-sw-reset-v5`;
+                const resetKey = `${host}-sw-reset-v6`;
                 const hasReset = window.localStorage.getItem(resetKey);
 
                 if (!hasReset && 'serviceWorker' in navigator) {
@@ -57,31 +60,20 @@ export default function ClientProviders({ children }: Props) {
                 }
             }
         }
-    }, []);
-
-    if (isTradingRuntime) {
-        return (
-            <ErrorBoundary>
-                <ToastProvider>
-                    <SocketProvider>
-                        {children}
-                        <PWAInstallPrompt />
-                        <PushNotifications />
-                        <BottomNavigation />
-                    </SocketProvider>
-                </ToastProvider>
-            </ErrorBoundary>
-        )
-    }
+    }, [])
 
     return (
         <ErrorBoundary>
             <ToastProvider>
                 <SocketProvider>
                     {children}
-                    <PWAInstallPrompt />
-                    <PushNotifications />
-                    <BottomNavigation />
+                    {mounted && (
+                        <>
+                            <PWAInstallPrompt />
+                            <PushNotifications />
+                            <BottomNavigation />
+                        </>
+                    )}
                 </SocketProvider>
             </ToastProvider>
         </ErrorBoundary>
