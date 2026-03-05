@@ -4,6 +4,7 @@ import { AuthenticatedRequest, authorize, getAuditLogs } from '../middleware/aut
 import { prisma } from '../database';
 import { canModifyAcrossTenant, isAllowedStatusTransition } from '../utils/admin-guards';
 import { checkPermissionDetailed, getPermissionsForRole, PERMISSIONS, UserRole } from '../lib/permissions';
+import { clearFailedAttempts, sanitizeEmail } from '../utils/security';
 
 const router = Router();
 
@@ -161,11 +162,18 @@ router.post('/users', authorize('admin.user_manage'), async (req: AuthenticatedR
         }
 
         const tenantId = req.user?.tenantId || 'default';
+        const sanitizedEmail = sanitizeEmail(email);
+        if (!sanitizedEmail) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
 
         // Check if user exists in this tenant
         const existingUser = await prisma.user.findFirst({
             where: {
-                email,
+                email: {
+                    equals: sanitizedEmail,
+                    mode: 'insensitive'
+                },
                 tenantId
             }
         });
@@ -178,7 +186,7 @@ router.post('/users', authorize('admin.user_manage'), async (req: AuthenticatedR
 
         const newUser = await prisma.user.create({
             data: {
-                email,
+                email: sanitizedEmail,
                 password: hashedPassword,
                 firstName,
                 lastName,
@@ -193,6 +201,9 @@ router.post('/users', authorize('admin.user_manage'), async (req: AuthenticatedR
                 verificationTokenExpiry: null
             }
         });
+
+        // Ensure newly created users are not blocked by stale email lockout counters.
+        await clearFailedAttempts(sanitizedEmail);
 
         // Remove password from response
         const { password: _, ...userWithoutPassword } = newUser;
