@@ -2,17 +2,21 @@
 
 import Script from 'next/script'
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { shouldEnableOneSignal } from '@/lib/platform'
 
 const ONESIGNAL_APP_ID = '4d61e383-61ef-42ca-a6c5-1ece240d2ebf'
 
 export default function OneSignalLoader() {
     const [enabled, setEnabled] = useState(false)
+    const pathname = usePathname()
 
     useEffect(() => {
         if (typeof window === 'undefined') return
-        setEnabled(shouldEnableOneSignal(window.location.hostname))
-    }, [])
+        const onSupportedHost = shouldEnableOneSignal(window.location.hostname)
+        const isAuthRoute = pathname?.startsWith('/auth/')
+        setEnabled(onSupportedHost && !isAuthRoute)
+    }, [pathname])
 
     if (!enabled) return null
 
@@ -23,9 +27,17 @@ export default function OneSignalLoader() {
                 {`
                     window.OneSignalDeferred = window.OneSignalDeferred || [];
                     window.OneSignalDeferred.push(async function(OneSignal) {
-                      await OneSignal.init({
-                        appId: "${ONESIGNAL_APP_ID}",
-                      });
+                      try {
+                        if ('serviceWorker' in navigator) {
+                          await navigator.serviceWorker.register('/OneSignalSDKWorker.js');
+                          await navigator.serviceWorker.register('/OneSignalSDKUpdaterWorker.js');
+                        }
+                        await OneSignal.init({
+                          appId: "${ONESIGNAL_APP_ID}",
+                        });
+                      } catch (err) {
+                        console.warn('OneSignal init skipped:', err);
+                      }
                     });
                 `}
             </Script>
