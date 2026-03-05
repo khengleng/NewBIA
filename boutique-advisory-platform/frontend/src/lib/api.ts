@@ -122,6 +122,9 @@ export async function apiRequest(
     const shouldShareAuthMe =
         method === 'GET' &&
         endpoint.split('?')[0] === '/api/auth/me';
+    const shouldRetryTransient =
+        endpoint.split('?')[0] === '/api/auth/login';
+    const transientStatuses = new Set([502, 503, 504]);
 
     const executeFetch = () =>
         fetch(requestUrl, {
@@ -158,6 +161,12 @@ export async function apiRequest(
             }
         }
     } else {
+        response = await executeFetch();
+    }
+
+    if (shouldRetryTransient && transientStatuses.has(response.status)) {
+        // Brief backoff to smooth over short backend restarts / warm-up windows.
+        await new Promise((resolve) => setTimeout(resolve, 400));
         response = await executeFetch();
     }
 

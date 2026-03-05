@@ -248,9 +248,14 @@ export default function LoginPage() {
           setShowResendVerification(true)
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error)
-      setErrors({ general: 'Network error. Please try again.' })
+      const message = String(error?.message || '')
+      if (message.includes('503')) {
+        setErrors({ general: 'Service is temporarily unavailable. Please try again in a few seconds.' })
+      } else {
+        setErrors({ general: 'Network error. Please try again.' })
+      }
     } finally {
       setIsLoading(false)
     }
