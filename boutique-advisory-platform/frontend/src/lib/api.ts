@@ -7,6 +7,8 @@ export const API_URL = typeof window !== 'undefined' && window.location.hostname
 // CSRF Token Management
 let csrfToken: string | null = null;
 let csrfTokenPromise: Promise<string | null> | null = null;
+let authMeInFlight: Promise<Response> | null = null;
+let authMeLastResponse: { response: Response; expiresAt: number } | null = null;
 
 export function __resetApiTestState(): void {
     csrfToken = null;
@@ -102,6 +104,13 @@ export async function apiRequest(
     headers.set('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate');
     headers.set('Pragma', 'no-cache');
 
+    if (method !== 'GET') {
+        // Any mutation can change session state (login/logout/role switch), so
+        // invalidate cached auth identity responses immediately.
+        authMeInFlight = null;
+        authMeLastResponse = null;
+    }
+
     // Add CSRF token for state-changing methods
     if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
         await ensureCsrfToken();
@@ -110,12 +119,44 @@ export async function apiRequest(
         }
     }
 
-    let response = await fetch(requestUrl, {
-        ...options,
-        headers,
-        cache: 'no-store',
-        credentials: 'include',
-    });
+    const shouldShareAuthMe =
+        method === 'GET' &&
+        endpoint.split('?')[0] === '/api/auth/me';
+
+    const executeFetch = () =>
+        fetch(requestUrl, {
+            ...options,
+            headers,
+            cache: 'no-store',
+            credentials: 'include',
+        });
+
+    let response: Response;
+
+    if (shouldShareAuthMe) {
+        const now = Date.now();
+        if (authMeLastResponse && authMeLastResponse.expiresAt > now) {
+            response = authMeLastResponse.response.clone();
+        } else {
+            if (!authMeInFlight) {
+                authMeInFlight = executeFetch();
+            }
+
+            try {
+                const sharedResponse = await authMeInFlight;
+                authMeLastResponse = {
+                    response: sharedResponse,
+                    // Collapse request bursts that happen during mount/auth state sync.
+                    expiresAt: Date.now() + 1500,
+                };
+                response = sharedResponse.clone();
+            } finally {
+                authMeInFlight = null;
+            }
+        }
+    } else {
+        response = await executeFetch();
+    }
 
     // Handle occasional CSRF cookie/token desynchronization behind proxies by retrying once.
     if (response.status === 403 && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {

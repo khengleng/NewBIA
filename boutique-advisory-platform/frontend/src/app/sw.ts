@@ -20,6 +20,12 @@ declare global {
 
 declare const self: any;
 
+// Some SDKs (e.g., OneSignal) require the message handler to exist during
+// the initial worker script evaluation.
+self.addEventListener('message', () => {
+  // no-op
+});
+
 const serwist = new Serwist({
     precacheEntries: self.__SW_MANIFEST,
     skipWaiting: true,
