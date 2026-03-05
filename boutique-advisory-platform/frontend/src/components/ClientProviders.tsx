@@ -63,10 +63,12 @@ export default function ClientProviders({ children }: Props) {
         return (
             <ErrorBoundary>
                 <ToastProvider>
-                    {children}
-                    <PWAInstallPrompt />
-                    <PushNotifications />
-                    <BottomNavigation />
+                    <SocketProvider>
+                        {children}
+                        <PWAInstallPrompt />
+                        <PushNotifications />
+                        <BottomNavigation />
+                    </SocketProvider>
                 </ToastProvider>
             </ErrorBoundary>
         )

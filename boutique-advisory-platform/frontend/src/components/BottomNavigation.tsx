@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { Home, Users, FileText, MessageSquare, Settings, ShieldCheck, Briefcase } from 'lucide-react'
+import { Home, Users, FileText, MessageSquare, Settings, ShieldCheck, Briefcase, Wallet } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { IS_TRADING_PLATFORM, resolveTradingRuntime } from '@/lib/platform'
 import { isTradingOperatorRole, normalizeRole } from '@/lib/roles'
@@ -73,12 +73,12 @@ export default function BottomNavigation() {
                 { icon: Settings, label: 'Reconcile', path: '/trading/operator/reconciliation' },
             ]
             : [
-            { icon: Home, label: 'Markets', path: '/trading/markets' },
-            { icon: FileText, label: 'Trade', path: '/secondary-trading' },
-            { icon: Users, label: 'Portfolio', path: '/trading/portfolio' },
-            { icon: MessageSquare, label: 'Watchlist', path: '/trading/watchlist' },
-            { icon: Settings, label: 'Security', path: '/trading/security' },
-        ]
+                { icon: Home, label: 'Markets', path: '/trading/markets' },
+                { icon: Wallet, label: 'Wallet', path: '/trading/wallet' },
+                { icon: FileText, label: 'Trade', path: '/secondary-trading' },
+                { icon: Users, label: 'Portfolio', path: '/trading/portfolio' },
+                { icon: Settings, label: 'Security', path: '/trading/security' },
+            ]
         : [
             { icon: Home, label: 'Home', path: '/dashboard' },
             { icon: Users, label: 'Network', path: '/investors' },
