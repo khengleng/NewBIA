@@ -9,6 +9,7 @@ let csrfToken: string | null = null;
 let csrfTokenPromise: Promise<string | null> | null = null;
 let authMeInFlight: Promise<Response> | null = null;
 let authMeLastResponse: { response: Response; expiresAt: number } | null = null;
+const apiDebug = process.env.NEXT_PUBLIC_API_DEBUG === 'true';
 
 export function __resetApiTestState(): void {
     csrfToken = null;
@@ -23,20 +24,20 @@ async function ensureCsrfToken(): Promise<void> {
     }
 
     const fetchUrl = `${API_URL}/api/csrf-token?t=${Date.now()}`;
-    console.log(`📡 Fetching CSRF token from: ${fetchUrl}`);
+    if (apiDebug) {
+        console.log(`📡 Fetching CSRF token from: ${fetchUrl}`);
+    }
 
 
     csrfTokenPromise = fetch(fetchUrl, {
         credentials: 'include',
         cache: 'no-store',
-        headers: {
-            'Cache-Control': 'no-cache, no-store, max-age=0, must-revalidate',
-            Pragma: 'no-cache',
-        },
     })
         .then(async res => {
             const contentType = res.headers.get('content-type') || '';
-            console.log(`📨 CSRF Response: ${res.status} (${contentType})`);
+            if (apiDebug) {
+                console.log(`📨 CSRF Response: ${res.status} (${contentType})`);
+            }
 
             if (!res.ok || !contentType.includes('application/json')) {
                 const text = await res.text();
@@ -48,7 +49,9 @@ async function ensureCsrfToken(): Promise<void> {
             try {
                 const data = await res.json();
                 csrfToken = data.csrfToken;
-                console.log('✅ CSRF token acquired');
+                if (apiDebug) {
+                    console.log('✅ CSRF token acquired');
+                }
                 return csrfToken;
             } catch (parseError) {
                 console.error('❌ Failed to parse CSRF JSON:', parseError);
@@ -56,7 +59,9 @@ async function ensureCsrfToken(): Promise<void> {
             }
         })
         .catch(err => {
-            console.error('⚠️ CSRF Token Error:', err.message);
+            if (apiDebug) {
+                console.error('⚠️ CSRF Token Error:', err.message);
+            }
             return null;
         });
 
@@ -101,8 +106,6 @@ export async function apiRequest(
     if (!headers.has('Content-Type') && options.body && typeof options.body === 'string') {
         headers.set('Content-Type', 'application/json');
     }
-    headers.set('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate');
-    headers.set('Pragma', 'no-cache');
 
     if (method !== 'GET') {
         // Any mutation can change session state (login/logout/role switch), so

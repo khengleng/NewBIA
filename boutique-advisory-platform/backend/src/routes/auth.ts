@@ -35,6 +35,7 @@ const isTradingService = serviceMode === 'trading';
 const coreTenantId = process.env.CORE_TENANT_ID || 'default';
 const ssoTokenTtlSeconds = Number(process.env.SSO_TOKEN_TTL_SECONDS || 120);
 const ssoAllowedRoles = new Set(['INVESTOR']);
+const tradingLocalAllowedRoles = new Set(['INVESTOR', ...Array.from(new Set(['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'SUPPORT']))]);
 
 router.use((_req: Request, res: Response, next: NextFunction) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -169,7 +170,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // SECURITY: Restrict roles for public registration to prevent privilege escalation.
     // Administrative roles must still be manually assigned.
-    const allowedPublicRoles = ['SME', 'INVESTOR', 'ADVISOR'];
+    const allowedPublicRoles = isTradingService ? ['INVESTOR'] : ['SME', 'INVESTOR', 'ADVISOR'];
     if (!allowedPublicRoles.includes(role)) {
       await logAuditEvent({
         userId: 'anonymous',
@@ -444,6 +445,25 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       return res.status(401).json({
         error: 'Invalid credentials'
       });
+    }
+
+    // Trading runtime accepts only investor and designated trading-operator roles.
+    if (isTradingService) {
+      const normalizedUserRole = normalizeRole(user.role);
+      if (!tradingLocalAllowedRoles.has(normalizedUserRole)) {
+        await logAuditEvent({
+          userId: user.id,
+          action: 'LOGIN_BLOCKED',
+          resource: 'auth',
+          details: { email: sanitizedEmail, role: normalizedUserRole, reason: 'role_not_allowed_trading_runtime' },
+          ipAddress: clientIp,
+          success: false,
+          errorMessage: 'Role not allowed in trading runtime'
+        });
+        return res.status(403).json({
+          error: 'Access denied for this platform.'
+        });
+      }
     }
 
     // SECURITY: Check if email is verified
