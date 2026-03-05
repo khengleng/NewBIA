@@ -5,9 +5,11 @@ import { Request } from 'express';
  * In production, only hostname-derived tenanting is trusted.
  */
 export function getTenantId(req: Request): string {
+  const coreTenantId = process.env.CORE_TENANT_ID || 'default';
+  const tradingTenantId = process.env.TRADING_TENANT_ID || 'trade';
   const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
   if (serviceMode === 'trading') {
-    return process.env.TRADING_TENANT_ID || 'default';
+    return tradingTenantId;
   }
 
   const isProduction = process.env.NODE_ENV === 'production';
@@ -15,15 +17,12 @@ export function getTenantId(req: Request): string {
   // Use Express-trusted hostname only (avoid direct trust in forwarded headers).
   const host = String(req.hostname || '').trim().toLowerCase();
 
-  // Platform domains share the default tenant identity.
-  // Without this guard, `trade.cambobia.com` is interpreted as tenant "trade",
-  // which breaks shared operator/trader authentication.
-  if (
-    host === 'cambobia.com' ||
-    host === 'www.cambobia.com' ||
-    host === 'trade.cambobia.com'
-  ) {
-    return process.env.TRADING_TENANT_ID || 'default';
+  // Platform domains map to explicit core/trading tenants.
+  if (host === 'cambobia.com' || host === 'www.cambobia.com') {
+    return coreTenantId;
+  }
+  if (host === 'trade.cambobia.com') {
+    return tradingTenantId;
   }
 
   const isLocalHost = host.includes('localhost') || host.includes('127.0.0.1');
@@ -55,5 +54,5 @@ export function getTenantId(req: Request): string {
     return headerTenantId;
   }
 
-  return 'default';
+  return coreTenantId;
 }

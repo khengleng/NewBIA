@@ -27,13 +27,14 @@ import {
   AuthenticatedRequest
 } from '../middleware/jwt-auth';
 import redis from '../redis';
-import { isAdminLikeRole, normalizeRole, TRADING_OPERATOR_ROLES } from '../lib/roles';
+import { isAdminLikeRole, normalizeRole } from '../lib/roles';
 
 const router = Router();
 const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
 const isTradingService = serviceMode === 'trading';
+const coreTenantId = process.env.CORE_TENANT_ID || 'default';
 const ssoTokenTtlSeconds = Number(process.env.SSO_TOKEN_TTL_SECONDS || 120);
-const ssoAllowedRoles = new Set(['INVESTOR', ...TRADING_OPERATOR_ROLES]);
+const ssoAllowedRoles = new Set(['INVESTOR']);
 
 router.use((_req: Request, res: Response, next: NextFunction) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -603,6 +604,9 @@ router.get('/sso/trading-link', authenticateToken, async (req: AuthenticatedRequ
     if (!user) {
       return res.status(401).json({ error: 'Authentication required' });
     }
+    if (user.tenantId !== coreTenantId) {
+      return res.status(403).json({ error: 'Trading SSO is only available for core-platform investor accounts' });
+    }
     if (user.status !== 'ACTIVE') {
       return res.status(403).json({ error: 'Account is not active' });
     }
@@ -624,7 +628,8 @@ router.get('/sso/trading-link', authenticateToken, async (req: AuthenticatedRequ
         lastName: user.lastName,
         role: normalizedUserRole,
         status: user.status,
-        isEmailVerified: user.isEmailVerified
+        isEmailVerified: user.isEmailVerified,
+        sourceTenantId: user.tenantId
       }),
       'EX',
       ssoTokenTtlSeconds,
@@ -703,9 +708,13 @@ router.post('/sso/trading/exchange', async (req: Request, res: Response) => {
     const claims = consumeData?.claims || {};
     const email = sanitizeEmail(claims?.email);
     const role = normalizeRole(typeof claims?.role === 'string' ? claims.role : '');
+    const sourceTenantId = String(claims?.sourceTenantId || '');
 
     if (!email) {
       return res.status(400).json({ error: 'Invalid SSO claims payload' });
+    }
+    if (sourceTenantId !== coreTenantId) {
+      return res.status(403).json({ error: 'Trading SSO only accepts identities from core platform investors' });
     }
     if (claims?.status !== 'ACTIVE') {
       return res.status(403).json({ error: 'Source account is not active' });

@@ -44,7 +44,7 @@ test('Tenant resolution - production uses hostname and ignores x-tenant-id', () 
 });
 
 test('Tenant resolution - local/railway host falls back to default in production', () => {
-  withEnv({ NODE_ENV: 'production' }, () => {
+  withEnv({ NODE_ENV: 'production', CORE_TENANT_ID: 'default', TRADING_TENANT_ID: 'trade' }, () => {
     const railwayReq = {
       hostname: 'my-app.up.railway.app',
       headers: {},
@@ -67,7 +67,7 @@ test('Tenant resolution - local/railway host falls back to default in production
       hostname: 'trade.cambobia.com',
       headers: {},
     } as unknown as MinimalReq;
-    assert.strictEqual(getTenantId(tradingHostReq as any), 'default');
+    assert.strictEqual(getTenantId(tradingHostReq as any), 'trade');
   });
 });
 

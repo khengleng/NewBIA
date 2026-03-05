@@ -137,6 +137,8 @@ import {
 async function ensureAdminAccount() {
   const legacyAdminEmail = 'admin@boutique-advisory.com';
   const adminEmail = (process.env.DEFAULT_SUPERADMIN_EMAIL || 'contact@cambobia.com').toLowerCase();
+  const coreTenantId = process.env.CORE_TENANT_ID || 'default';
+  const tradingTenantId = process.env.TRADING_TENANT_ID || 'trade';
   let adminPassword = process.env.INITIAL_ADMIN_PASSWORD;
 
   if (!adminPassword) {
@@ -148,14 +150,15 @@ async function ensureAdminAccount() {
       console.log(`[DEV ONLY] Initial Admin Password: ${adminPassword}`);
     }
   }
+  const resolvedAdminPassword: string = adminPassword;
 
-  try {
-    let user = await prisma.user.findFirst({ where: { email: adminEmail, tenantId: 'default' } });
+  async function syncAdminForTenant(tenantId: string, allowLegacyMigration: boolean) {
+    let user = await prisma.user.findFirst({ where: { email: adminEmail, tenantId } });
 
     // Migrate legacy bootstrap admin email to the canonical admin email.
-    if (!user && legacyAdminEmail !== adminEmail) {
+    if (!user && allowLegacyMigration && legacyAdminEmail !== adminEmail) {
       const legacyUser = await prisma.user.findFirst({
-        where: { email: legacyAdminEmail, tenantId: 'default' }
+        where: { email: legacyAdminEmail, tenantId }
       });
 
       if (legacyUser) {
@@ -163,58 +166,83 @@ async function ensureAdminAccount() {
           where: { id: legacyUser.id },
           data: { email: adminEmail }
         });
-        console.log(`✅ Legacy admin email migrated to ${adminEmail}`);
+        console.log(`✅ Legacy admin email migrated to ${adminEmail} (tenant: ${tenantId})`);
       }
     }
 
     if (user) {
-      // SECURITY: Don't automatically rewrite password/role on every boot in production
-      // Only ensure account is ACTIVE. Admin password changes should happen via UI/Recovery.
+      // SECURITY: Don't automatically rewrite password/role on every boot in production.
+      // Only ensure account is ACTIVE and verified.
       await prisma.user.update({
         where: { id: user.id },
         data: {
           role: 'SUPER_ADMIN',
           status: 'ACTIVE',
-          isEmailVerified: true // Ensure admin can log in
-        }
-      });
-      console.log(`✅ Admin account synced (${adminEmail}, ACTIVE & Verified)`);
-    } else {
-      const hashedPassword = await bcrypt.hash(adminPassword, 12);
-      await prisma.user.create({
-        data: {
-          email: adminEmail,
-          password: hashedPassword,
-          role: 'SUPER_ADMIN',
-          firstName: 'System',
-          lastName: 'Administrator',
-          tenantId: 'default',
-          status: 'ACTIVE',
           isEmailVerified: true
         }
       });
-      console.log(`✅ Initial SUPER_ADMIN created successfully`);
+      console.log(`✅ Admin account synced (${adminEmail}, tenant: ${tenantId}, ACTIVE & Verified)`);
+      return;
+    }
+
+    const hashedPassword = await bcrypt.hash(resolvedAdminPassword, 12);
+    await prisma.user.create({
+      data: {
+        email: adminEmail,
+        password: hashedPassword,
+        role: 'SUPER_ADMIN',
+        firstName: 'System',
+        lastName: 'Administrator',
+        tenantId,
+        status: 'ACTIVE',
+        isEmailVerified: true
+      }
+    });
+    console.log(`✅ Initial SUPER_ADMIN created successfully (tenant: ${tenantId})`);
+  }
+
+  try {
+    await syncAdminForTenant(coreTenantId, true);
+    if (tradingTenantId !== coreTenantId) {
+      await syncAdminForTenant(tradingTenantId, false);
     }
   } catch (error: any) {
     console.error('❌ FATAL: Could not initialize admin account:', error.message);
   }
 }
 
-async function ensureDefaultTenant() {
+async function ensurePlatformTenants() {
+  const coreTenantId = process.env.CORE_TENANT_ID || 'default';
+  const tradingTenantId = process.env.TRADING_TENANT_ID || 'trade';
+
   try {
     await prisma.tenant.upsert({
-      where: { id: 'default' },
+      where: { id: coreTenantId },
       update: {},
       create: {
-        id: 'default',
+        id: coreTenantId,
         name: 'Boutique Advisory',
         domain: 'cambobia.com',
         settings: {}
       }
     });
-    console.log('✅ Default tenant ensured');
+
+    if (tradingTenantId !== coreTenantId) {
+      await prisma.tenant.upsert({
+        where: { id: tradingTenantId },
+        update: {},
+        create: {
+          id: tradingTenantId,
+          name: 'CamboBia Trading',
+          domain: 'trade.cambobia.com',
+          settings: {}
+        }
+      });
+    }
+
+    console.log(`✅ Platform tenants ensured (core=${coreTenantId}, trading=${tradingTenantId})`);
   } catch (error: any) {
-    console.error('❌ Failed to ensure default tenant:', error.message);
+    console.error('❌ Failed to ensure platform tenants:', error.message);
     throw error;
   }
 }
@@ -1020,7 +1048,7 @@ async function startServer() {
 
       // Run admin sync
       startupPhase = 'syncing_admin';
-      await ensureDefaultTenant();
+      await ensurePlatformTenants();
       await ensureAdminAccount();
 
       startupPhase = 'operational';
