@@ -103,15 +103,29 @@ function getBackendTargets(req: NextRequest): string[] {
   );
 
   if (tradingRuntime) {
+    // Primary: Trading-specific targets
     addTarget(process.env.TRADING_API_URL);
     addTarget(process.env.TRADING_BACKEND_INTERNAL_URL);
     addTarget(process.env.TRADING_BACKEND_URL);
     addTarget(tradingInternalBackend);
-  } else {
+
+    // Secondary: Fallback to core targets (sessions/users are often shared or stored here)
     addTarget(process.env.CORE_API_URL);
     addTarget(process.env.CORE_BACKEND_INTERNAL_URL);
     addTarget(process.env.CORE_BACKEND_URL);
     addTarget(coreInternalBackend);
+  } else {
+    // Primary: Core targets
+    addTarget(process.env.CORE_API_URL);
+    addTarget(process.env.CORE_BACKEND_INTERNAL_URL);
+    addTarget(process.env.CORE_BACKEND_URL);
+    addTarget(coreInternalBackend);
+
+    // Secondary: Fallback to trading targets (useful for shared assets/notifications)
+    addTarget(process.env.TRADING_API_URL);
+    addTarget(process.env.TRADING_BACKEND_INTERNAL_URL);
+    addTarget(process.env.TRADING_BACKEND_URL);
+    addTarget(tradingInternalBackend);
   }
 
   // Shared fallbacks for backward compatibility with existing Railway variables.
