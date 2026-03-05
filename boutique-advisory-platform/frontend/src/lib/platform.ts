@@ -25,8 +25,9 @@ export const resolveTradingRuntime = (hostname?: string, pathname?: string): boo
 };
 
 export const shouldEnableOneSignal = (hostname: string): boolean => {
-  const host = String(hostname || '').toLowerCase().trim();
-  return host === 'www.cambobia.com';
+  void hostname;
+  // Push notifications are intentionally suspended until platform rollout is re-enabled.
+  return false;
 };
 
 const envTrading = process.env.NEXT_PUBLIC_PLATFORM_MODE === 'trading';

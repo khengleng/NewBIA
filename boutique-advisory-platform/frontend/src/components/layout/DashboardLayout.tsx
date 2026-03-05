@@ -6,7 +6,6 @@ import { usePathname, useRouter } from 'next/navigation'
 import {
     Building2,
     Users,
-    Handshake,
     BarChart3,
     ClipboardCheck,
     FileText,
@@ -40,7 +39,7 @@ import {
 } from 'lucide-react'
 import { useTranslations } from '../../hooks/useTranslations'
 import { User } from '../../types'
-import { API_URL, authorizedRequest } from '@/lib/api'
+import { authorizedRequest } from '@/lib/api'
 import { hasPermission as hasUiPermission } from '@/lib/permissions'
 import { IS_TRADING_PLATFORM, resolveTradingRuntime } from '@/lib/platform'
 import { isTradingOperatorRole, normalizeRole, TRADING_OPERATOR_ROLES } from '@/lib/roles'

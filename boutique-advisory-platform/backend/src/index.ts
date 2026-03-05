@@ -98,6 +98,7 @@ import adminAdvisorOpsRoutes from './routes/admin-advisor-ops';
 import adminInvestorOpsRoutes from './routes/admin-investor-ops';
 import adminDataGovernanceRoutes from './routes/admin-data-governance';
 import adminReconciliationRoutes from './routes/admin-reconciliation';
+import adminSecurityRoutes from './routes/admin-security';
 
 // Core Feature Routes
 import authRoutes from './routes/auth';
@@ -679,6 +680,7 @@ if (isTradingService) {
   app.use('/api/admin/investor-ops', authenticateToken, adminInvestorOpsRoutes);
   app.use('/api/admin/data-governance', authenticateToken, adminDataGovernanceRoutes);
   app.use('/api/admin/reconciliation', authenticateToken, adminReconciliationRoutes);
+  app.use('/api/admin/security', authenticateToken, adminSecurityRoutes);
 } else {
   // Core endpoints - NOW PROTECTED (Fix #1)
   app.use('/api/smes', authenticateToken, smeRoutes);
@@ -726,6 +728,7 @@ if (isTradingService) {
   app.use('/api/admin/investor-ops', authenticateToken, adminInvestorOpsRoutes);
   app.use('/api/admin/data-governance', authenticateToken, adminDataGovernanceRoutes);
   app.use('/api/admin/reconciliation', authenticateToken, adminReconciliationRoutes);
+  app.use('/api/admin/security', authenticateToken, adminSecurityRoutes);
 }
 
 // Migration endpoints - PROTECTED: Only available in development or with SUPER_ADMIN role (Fix #2)

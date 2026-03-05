@@ -1,46 +1,46 @@
 'use client'
 
-import Script from 'next/script'
-import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
-import { shouldEnableOneSignal } from '@/lib/platform'
-
-const ONESIGNAL_APP_ID = '4d61e383-61ef-42ca-a6c5-1ece240d2ebf'
+import { useEffect } from 'react'
 
 export default function OneSignalLoader() {
-    const [enabled, setEnabled] = useState(false)
-    const pathname = usePathname()
-
     useEffect(() => {
         if (typeof window === 'undefined') return
-        const onSupportedHost = shouldEnableOneSignal(window.location.hostname)
-        const isAuthRoute = pathname?.startsWith('/auth/')
-        setEnabled(onSupportedHost && !isAuthRoute)
-    }, [pathname])
 
-    if (!enabled) return null
+        // OneSignal is intentionally suspended platform-wide. Clean up any stale
+        // registrations created by earlier builds to avoid worker console noise.
+        const cleanupOneSignal = async () => {
+            const w = window as Window & {
+                OneSignal?: unknown
+                OneSignalDeferred?: unknown
+            }
 
-    return (
-        <>
-            <Script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" strategy="afterInteractive" />
-            <Script id="onesignal-init" strategy="afterInteractive">
-                {`
-                    window.OneSignalDeferred = window.OneSignalDeferred || [];
-                    window.OneSignalDeferred.push(async function(OneSignal) {
-                      try {
-                        if ('serviceWorker' in navigator) {
-                          await navigator.serviceWorker.register('/OneSignalSDKWorker.js');
-                          await navigator.serviceWorker.register('/OneSignalSDKUpdaterWorker.js');
-                        }
-                        await OneSignal.init({
-                          appId: "${ONESIGNAL_APP_ID}",
-                        });
-                      } catch (err) {
-                        console.warn('OneSignal init skipped:', err);
-                      }
-                    });
-                `}
-            </Script>
-        </>
-    )
+            w.OneSignal = undefined
+            w.OneSignalDeferred = undefined
+
+            if (!('serviceWorker' in navigator)) return
+
+            const registrations = await navigator.serviceWorker.getRegistrations()
+            await Promise.all(
+                registrations.map(async (registration) => {
+                    const scriptUrl = registration.active?.scriptURL
+                        || registration.waiting?.scriptURL
+                        || registration.installing?.scriptURL
+                        || ''
+                    const scope = registration.scope || ''
+                    const isOneSignalWorker = scriptUrl.includes('OneSignalSDK')
+                        || scriptUrl.includes('onesignal')
+                        || scope.includes('onesignal')
+                    if (isOneSignalWorker) {
+                        await registration.unregister()
+                    }
+                }),
+            )
+        }
+
+        cleanupOneSignal().catch(() => {
+            // Intentionally ignore cleanup errors.
+        })
+    }, [])
+
+    return null
 }
