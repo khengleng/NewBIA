@@ -194,6 +194,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             roles: operatorRoles,
             items: [
                 { href: '/admin/dashboard', label: 'Control Tower', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'], permission: 'admin.read' },
+                { href: '/trading/launchpad', label: 'Launchpad', icon: Rocket, roles: ['SUPER_ADMIN', 'ADMIN'] },
                 { href: '/admin/users', label: 'User Management', icon: UserCog, roles: ['ADMIN', 'SUPER_ADMIN'] },
                 { href: '/admin/role-lifecycle', label: 'Role Lifecycle', icon: Shield, roles: ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE'], permission: 'role_grant.list' },
                 { href: '/admin/settings/branding', label: 'Platform Branding', icon: Palette, roles: ['ADMIN', 'SUPER_ADMIN'] },
@@ -298,6 +299,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 roles: operatorRoles,
                 items: [
                     { href: '/trading/operator/dashboard', label: 'Control Tower', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'] },
+                    { href: '/trading/launchpad', label: 'Launchpad', icon: Rocket, roles: ['SUPER_ADMIN', 'ADMIN', 'AUDITOR', 'COMPLIANCE'] },
                     { href: '/trading/operator/listing-control', label: 'Listing Governance', icon: ArrowLeftRight, roles: ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE', 'SUPPORT'] },
                     { href: '/trading/markets', label: 'Market Monitor', icon: BarChart3, roles: operatorRoles },
                 ]
@@ -388,6 +390,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             '/trading/operator',
             '/trading/markets',
             '/trading/sessions',
+            '/trading/launchpad',
         ]
         const participantAllowedPrefixes = [
             '/trading/launchpad',
