@@ -35,7 +35,8 @@ import {
     Wallet,
     ClipboardList,
     ChevronDown,
-    ChevronRight
+    ChevronRight,
+    Rocket
 } from 'lucide-react'
 import { useTranslations } from '../../hooks/useTranslations'
 import { User } from '../../types'
@@ -265,17 +266,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const isTradingOperator = isTradingOperatorRole(normalizedRole)
         || hasUiPermission(normalizedRole, 'admin.read')
         || hasUiPermission(normalizedRole, 'billing.read')
-    const isTradingInvestorView = isTradingRuntime && normalizedRole === 'INVESTOR' && !isTradingOperator
+    const isTradingParticipantView = isTradingRuntime && (normalizedRole === 'INVESTOR' || normalizedRole === 'SME' || normalizedRole === 'ADVISOR') && !isTradingOperator
     const showTradingWidgets = !isTradingRuntime
-    const tradingNavSections = isTradingInvestorView
+    const tradingNavSections = isTradingParticipantView
         ? [
             {
                 label: 'Trading',
-                roles: ['INVESTOR'],
+                roles: ['INVESTOR', 'SME', 'ADVISOR'],
                 items: [
-                    { href: '/secondary-trading', label: 'Marketplace', icon: ArrowLeftRight, roles: ['INVESTOR'] },
-                    { href: '/trading/markets', label: 'Markets', icon: BarChart3, roles: ['INVESTOR'] },
-                    { href: '/trading/wallet', label: 'My Wallet', icon: Wallet, roles: ['INVESTOR'] },
+                    { href: '/trading/launchpad', label: 'Launchpad', icon: Rocket, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
+                    { href: '/secondary-trading', label: 'Marketplace', icon: ArrowLeftRight, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
+                    { href: '/trading/markets', label: 'Markets', icon: BarChart3, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
+                    { href: '/trading/wallet', label: 'My Wallet', icon: Wallet, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
                     { href: '/trading/portfolio', label: 'My Portfolio', icon: Briefcase, roles: ['INVESTOR'] },
                     { href: '/trading/watchlist', label: 'Watchlist', icon: Sparkles, roles: ['INVESTOR'] },
                     { href: '/trading/profile', label: 'Investor Profile', icon: UserCog, roles: ['INVESTOR'] },
@@ -387,7 +389,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             '/trading/markets',
             '/trading/sessions',
         ]
-        const investorAllowedPrefixes = [
+        const participantAllowedPrefixes = [
+            '/trading/launchpad',
             '/secondary-trading',
             '/trading/markets',
             '/trading/terminal',
@@ -408,9 +411,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             return
         }
 
-        if (normalizedRole === 'INVESTOR') {
-            const isAllowedInvestorPath = investorAllowedPrefixes.some((path) => pathname.startsWith(path))
-            if (!isAllowedInvestorPath) {
+        if (normalizedRole === 'INVESTOR' || normalizedRole === 'SME' || normalizedRole === 'ADVISOR') {
+            const isAllowedParticipantPath = participantAllowedPrefixes.some((path) => pathname.startsWith(path))
+            if (!isAllowedParticipantPath) {
                 router.replace('/secondary-trading')
             }
         }
