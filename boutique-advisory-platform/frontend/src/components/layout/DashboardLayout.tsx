@@ -497,7 +497,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                         </div>
                         <h1 className="text-xl font-bold text-white">{isTradingRuntime ? 'CamboBia Trading' : 'Boutique Advisory'}</h1>
                     </div>
-                    <LanguageSwitcher />
+                    {!isTradingRuntime && <LanguageSwitcher />}
                 </div>
 
                 <nav className="flex-1 px-4 py-6 overflow-y-auto">
