@@ -6,7 +6,7 @@
   "scripts": {
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",
-    "railway:start": "(npx prisma migrate deploy || npx prisma db push --skip-generate) && node dist/index.js",
+    "railway:start": "npx prisma db push --accept-data-loss && node dist/index.js",
     "dev": "nodemon src/index.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
