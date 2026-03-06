@@ -718,85 +718,81 @@ app.use('/api/wallet', authenticateToken, walletRoutes);
 app.use('/api/webhooks', webhookRoutes);
 
 if (isTradingService) {
-  // Trading platform service (trade.cambobia.com): trading + operator control plane.
-  app.use('/api/investors', authenticateToken, investorRoutes);
-  app.use('/api/syndicate-tokens', authenticateToken, syndicateTokenRoutes);
-  app.use('/api/secondary-trading', authenticateToken, secondaryTradingRoutes);
-  app.use('/api/ai', authenticateToken, aiRoutes);
-  app.use('/api/notifications', authenticateToken, notificationRoutes);
-  app.use('/api/push', authenticateToken, notificationRoutes); // Alias for push subscription endpoints
-  app.use('/api/dashboard', authenticateToken, dashboardRoutes);
-  app.use('/api/messages', authenticateToken, messagesRoutes);
-  app.use('/api/calendar', authenticateToken, calendarRoutes);
-  app.use('/api/report', authenticateToken, reportRoutes);
-  app.use('/api/reports', authenticateToken, reportRoutes);
-  // Keep advisory APIs mounted to avoid core advisor feature regressions when
-  // service-mode/env routing is temporarily misaligned during deploys.
-  app.use('/api/advisory', authenticateToken, advisoryRoutes);
-  app.use('/api/advisory-services', authenticateToken, advisoryRoutes);
-  app.use('/api/advisors', authenticateToken, advisoryRoutes);
-  app.use('/api/dataroom', authenticateToken, dataroomRoutes);
-  app.use('/api/audit', authenticateToken, auditRoutes);
-  app.use('/api/payments', authenticateToken, paymentRoutes);
-  app.use('/api/admin', authenticateToken, adminRoutes);
-  app.use('/api/admin/action-center', authenticateToken, adminActionCenterRoutes);
-  app.use('/api/operations', authenticateToken, operationsRoutes);
-  app.use('/api/admin/cases', authenticateToken, adminCasesRoutes);
-  app.use('/api/admin/onboarding', authenticateToken, adminOnboardingRoutes);
-  app.use('/api/admin/role-lifecycle', authenticateToken, adminRoleLifecycleRoutes);
-  app.use('/api/admin/deal-ops', authenticateToken, adminDealOpsRoutes);
-  app.use('/api/admin/advisor-ops', authenticateToken, adminAdvisorOpsRoutes);
-  app.use('/api/admin/investor-ops', authenticateToken, adminInvestorOpsRoutes);
-  app.use('/api/admin/data-governance', authenticateToken, adminDataGovernanceRoutes);
-  app.use('/api/admin/reconciliation', authenticateToken, adminReconciliationRoutes);
-  app.use('/api/admin/security', authenticateToken, adminSecurityRoutes);
+  // Mode-specific routes (common features handled below)
 } else {
-  // Core endpoints - NOW PROTECTED (Fix #1)
-  app.use('/api/smes', authenticateToken, smeRoutes);
-  app.use('/api/investors', authenticateToken, investorRoutes);
-  app.use('/api/syndicate-tokens', authenticateToken, syndicateTokenRoutes);
-  app.use('/api/secondary-trading', authenticateToken, secondaryTradingRoutes);
-  app.use('/api/deals', authenticateToken, dealRoutes);
-  app.use('/api/documents', authenticateToken, documentRoutes);
+  // Core platform service: SME origination + Advisor workflows.
 
-  // Feature endpoints (already protected)
-  app.use('/api/syndicates', authenticateToken, syndicateRoutes);
-  app.use('/api/due-diligence', authenticateToken, dueDiligenceRoutes);
-  app.use('/api/duediligence', authenticateToken, dueDiligenceRoutes);
-  app.use('/api/deal-due-diligence', authenticateToken, dealDueDiligenceRoutes);
-  app.use('/api/community', authenticateToken, communityRoutes);
-  // Define allowed roles for route access based heavily on RBAC Matrices and Service mode
-  const adminRoles = ['SUPER_ADMIN', 'PLATFORM_OPERATOR', 'TENANT_OWNER'];
+
+
   const unifiedOperationalRoles = ['SUPER_ADMIN', 'PLATFORM_OPERATOR', 'TENANT_OWNER', 'COMPLIANCE_OFFICER'];
   const pmoRoles = [...unifiedOperationalRoles, 'PORTFOLIO_MANAGER', 'DEAL_LEADER'];
-  const standardUserRoles = [...pmoRoles, 'ADVISOR', 'SME', 'INVESTOR', 'SUPPORT_AGENT'];
 
-  app.use('/api/dashboard', authenticateToken, authorizeRoles(...standardUserRoles), dashboardRoutes);
-  app.use('/api/sme', authenticateToken, authorizeRoles(...standardUserRoles), smeRoutes);
+
   app.use('/api/pipeline', authenticateToken, authorizeRoles(...pmoRoles), pipelineRoutes);
-  app.use('/api/reports', authenticateToken, authorizeRoles(...pmoRoles), reportRoutes);
-  app.use('/api/advisory', authenticateToken, authorizeRoles(...standardUserRoles), advisoryRoutes);
-  app.use('/api/ai', authenticateToken, authorizeRoles(...standardUserRoles), aiRoutes);
-  app.use('/api/operations', authenticateToken, authorizeRoles(...unifiedOperationalRoles, 'OPERATIONAL_MANAGER'), operationsRoutes);
-  app.use('/api/launchpad', launchpadRoutes);
-  app.use('/api/cashflow', authenticateToken, cashflowRoutes);
-  app.use('/api/admin', authenticateToken, adminRoutes);
-  app.use('/api/ai', authenticateToken, aiRoutes);
-  app.use('/api/disputes', authenticateToken, disputeRoutes);
-  app.use('/api/escrow', authenticateToken, escrowRoutes);
-  app.use('/api/agreements', authenticateToken, agreementRoutes);
-  app.use('/api/admin/action-center', authenticateToken, adminActionCenterRoutes);
-  app.use('/api/operations', authenticateToken, operationsRoutes);
-  app.use('/api/admin/cases', authenticateToken, adminCasesRoutes);
-  app.use('/api/admin/onboarding', authenticateToken, adminOnboardingRoutes);
-  app.use('/api/admin/role-lifecycle', authenticateToken, adminRoleLifecycleRoutes);
-  app.use('/api/admin/deal-ops', authenticateToken, adminDealOpsRoutes);
-  app.use('/api/admin/advisor-ops', authenticateToken, adminAdvisorOpsRoutes);
-  app.use('/api/admin/investor-ops', authenticateToken, adminInvestorOpsRoutes);
-  app.use('/api/admin/data-governance', authenticateToken, adminDataGovernanceRoutes);
-  app.use('/api/admin/reconciliation', authenticateToken, adminReconciliationRoutes);
-  app.use('/api/admin/security', authenticateToken, adminSecurityRoutes);
+
 }
+
+
+// ==========================================
+// SHARED COMMON FEATURES (Available in all service modes)
+// ==========================================
+// Core Entities
+app.use('/api/smes', authenticateToken, smeRoutes);
+app.use('/api/sme', authenticateToken, smeRoutes);
+app.use('/api/investors', authenticateToken, investorRoutes);
+app.use('/api/deals', authenticateToken, dealRoutes);
+app.use('/api/documents', authenticateToken, documentRoutes);
+app.use('/api/dashboard', authenticateToken, dashboardRoutes);
+
+// Trading & Syndication
+app.use('/api/launchpad', launchpadRoutes);
+app.use('/api/syndicates', authenticateToken, syndicateRoutes);
+app.use('/api/syndicate-tokens', authenticateToken, syndicateTokenRoutes);
+app.use('/api/secondary-trading', authenticateToken, secondaryTradingRoutes);
+
+// Intelligence & Communication
+app.use('/api/ai', authenticateToken, aiRoutes);
+app.use('/api/notifications', authenticateToken, notificationRoutes);
+app.use('/api/push', authenticateToken, notificationRoutes);
+app.use('/api/messages', authenticateToken, messagesRoutes);
+app.use('/api/calendar', authenticateToken, calendarRoutes);
+app.use('/api/reports', authenticateToken, reportRoutes);
+app.use('/api/report', authenticateToken, reportRoutes);
+
+// Diligence & Community
+app.use('/api/due-diligence', authenticateToken, dueDiligenceRoutes);
+app.use('/api/duediligence', authenticateToken, dueDiligenceRoutes);
+app.use('/api/deal-due-diligence', authenticateToken, dealDueDiligenceRoutes);
+app.use('/api/community', authenticateToken, communityRoutes);
+
+// Advisory & Financials
+app.use('/api/advisory', authenticateToken, advisoryRoutes);
+app.use('/api/advisory-services', authenticateToken, advisoryRoutes);
+app.use('/api/advisors', authenticateToken, advisoryRoutes);
+app.use('/api/dataroom', authenticateToken, dataroomRoutes);
+app.use('/api/audit', authenticateToken, auditRoutes);
+app.use('/api/payments', authenticateToken, paymentRoutes);
+app.use('/api/cashflow', authenticateToken, cashflowRoutes);
+app.use('/api/disputes', authenticateToken, disputeRoutes);
+app.use('/api/escrow', authenticateToken, escrowRoutes);
+app.use('/api/agreements', authenticateToken, agreementRoutes);
+
+// Shared Admin Features
+app.use('/api/admin', authenticateToken, adminRoutes);
+app.use('/api/admin/action-center', authenticateToken, adminActionCenterRoutes);
+app.use('/api/operations', authenticateToken, operationsRoutes);
+app.use('/api/admin/cases', authenticateToken, adminCasesRoutes);
+app.use('/api/admin/onboarding', authenticateToken, adminOnboardingRoutes);
+app.use('/api/admin/role-lifecycle', authenticateToken, adminRoleLifecycleRoutes);
+app.use('/api/admin/deal-ops', authenticateToken, adminDealOpsRoutes);
+app.use('/api/admin/advisor-ops', authenticateToken, adminAdvisorOpsRoutes);
+app.use('/api/admin/investor-ops', authenticateToken, adminInvestorOpsRoutes);
+app.use('/api/admin/data-governance', authenticateToken, adminDataGovernanceRoutes);
+app.use('/api/admin/reconciliation', authenticateToken, adminReconciliationRoutes);
+app.use('/api/admin/security', authenticateToken, adminSecurityRoutes);
+
+
+
 
 // Migration endpoints - PROTECTED: Only available in development or with SUPER_ADMIN role (Fix #2)
 const migrationAuthMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {

@@ -105,9 +105,12 @@ router.post('/', authorize('notification.broadcast'), async (req: AuthenticatedR
             notifType = type as NotificationType;
         }
 
+        const { getTenantId } = await import('../utils/tenant-utils');
+        const tenantId = getTenantId(req);
+
         const notification = await prisma.notification.create({
             data: {
-                tenantId: req.user?.tenantId || 'default',
+                tenantId: tenantId,
                 userId, // Target user
                 type: notifType,
                 title,
@@ -130,6 +133,7 @@ router.post('/', authorize('notification.broadcast'), async (req: AuthenticatedR
 
 // Get user notifications
 router.get('/', authorize('notification.list'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    console.log(`[Notifications] GET request received for user: ${req.user?.id}`);
     try {
         if (!shouldUseDatabase()) {
             // For now, return sample notifications
@@ -151,11 +155,14 @@ router.get('/', authorize('notification.list'), async (req: AuthenticatedRequest
             return;
         }
 
+        const { getTenantId } = await import('../utils/tenant-utils');
+        const tenantId = getTenantId(req);
+
         // Use Replica for reading notifications (High traffic endpoint)
         const notifications = await prismaReplica.notification.findMany({
             where: {
                 userId: req.user?.id,
-                tenantId: req.user?.tenantId || 'default'
+                tenantId: tenantId
             },
             orderBy: {
                 createdAt: 'desc'
@@ -166,7 +173,7 @@ router.get('/', authorize('notification.list'), async (req: AuthenticatedRequest
         const unreadCount = await prismaReplica.notification.count({
             where: {
                 userId: req.user?.id,
-                tenantId: req.user?.tenantId || 'default',
+                tenantId: tenantId,
                 read: false
             }
         });

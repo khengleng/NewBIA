@@ -15,9 +15,16 @@ const router = Router();
 // Get all launchpad offerings (with optional status filters)
 router.get('/', authenticateToken, async (req, res) => {
     try {
-        const tenantId = (req as any).user?.tenantId || req.headers['x-tenant-id'];
+        const { getTenantId } = await import('../utils/tenant-utils');
+        const tenantId = getTenantId(req);
+
         if (!tenantId) {
             return res.status(400).json({ error: 'Tenant ID required' });
+        }
+
+        if (!prisma.launchpadOffering) {
+            console.error('❌ Prisma model LaunchpadOffering is not initialized');
+            return res.status(500).json({ error: 'Service configuration error: Launchpad is unavailable' });
         }
 
         const offerings = await prisma.launchpadOffering.findMany({
@@ -32,6 +39,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
         return res.json(offerings);
     } catch (error: any) {
+        console.error('❌ Launchpad fetch error:', error);
         return res.status(500).json({ error: 'Failed to fetch offerings', details: error.message });
     }
 });
@@ -227,21 +235,34 @@ router.post('/:id/commit', authenticateToken, authorizeRoles('INVESTOR'), async 
 // Get Deals that are ready to be listed on the Launchpad
 router.get('/eligible-deals', authenticateToken, authorizeRoles('SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'PLATFORM_OPERATOR'), async (req, res) => {
     try {
-        const tenantId = (req as any).user.tenantId;
+        const { getTenantId } = await import('../utils/tenant-utils');
+        const tenantId = getTenantId(req);
+
+        // Security check for Prisma models
+        if (!prisma.deal || !prisma.launchpadOffering) {
+            console.error('❌ Prisma models not initialized for eligible-deals');
+            return res.status(500).json({ error: 'Service configuration error' });
+        }
 
         const deals = await prisma.deal.findMany({
             where: {
                 tenantId,
                 status: {
                     in: ['LAUNCHPAD_PREP', 'APPROVED_FOR_LISTING']
-                },
-                launchpadOffering: null // Not already an offering
+                }
             },
-            include: { sme: true }
+            include: {
+                sme: true,
+                launchpadOffering: true
+            }
         });
 
-        return res.json(deals);
+        // Manual filter to avoid potential issues with complex Prisma query in some environments
+        const eligibleDeals = deals.filter(d => !d.launchpadOffering);
+
+        return res.json(eligibleDeals);
     } catch (error: any) {
+        console.error('❌ [Launchpad Error] Failed to fetch eligible deals:', error);
         return res.status(500).json({ error: 'Failed to fetch eligible deals', details: error.message });
     }
 });

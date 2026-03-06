@@ -195,6 +195,7 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
 
     try {
 
+      console.log(`📡 [Proxy] ${method} -> ${upstreamUrl}`);
       const upstream = await fetch(upstreamUrl, {
         method,
         headers,
