@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react'
 import { authorizedRequest } from '@/lib/api'
 import { useTranslations } from '@/hooks/useTranslations'
-import { Rocket, Clock, TrendingUp, Users, Building2, ChevronRight, Activity } from 'lucide-react'
+import { Rocket, Clock, TrendingUp, Users, Building2, ChevronRight, Activity, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import CreateLaunchpadModal from './components/CreateLaunchpadModal'
 
 interface Offering {
     id: string
@@ -31,8 +32,19 @@ export default function LaunchpadPage() {
     const router = useRouter()
     const [offerings, setOfferings] = useState<Offering[]>([])
     const [isLoading, setIsLoading] = useState(true)
+    const [isAdmin, setIsAdmin] = useState(false)
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
     useEffect(() => {
+        const userStr = localStorage.getItem('user')
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr)
+                if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+                    setIsAdmin(true)
+                }
+            } catch (e) { }
+        }
         fetchOfferings()
     }, [])
 
@@ -73,8 +85,8 @@ export default function LaunchpadPage() {
     return (
         <div className="min-h-screen bg-gray-900 text-white p-6 md:p-8">
             {/* Header */}
-            <div className="mb-10">
-                <div className="flex items-center space-x-3 mb-4">
+            <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center border border-blue-500/30">
                         <Rocket className="w-6 h-6 text-blue-400" />
                     </div>
@@ -83,6 +95,16 @@ export default function LaunchpadPage() {
                         <p className="text-gray-400">Discover and invest in top-tier SME tokenized equity drops.</p>
                     </div>
                 </div>
+
+                {isAdmin && (
+                    <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg flex items-center justify-center font-semibold transition-colors shadow-lg shadow-blue-500/20"
+                    >
+                        <Plus className="w-5 h-5 mr-2" />
+                        Create Launchpad Drop
+                    </button>
+                )}
             </div>
 
             {/* Metrics */}
@@ -192,6 +214,12 @@ export default function LaunchpadPage() {
                     })}
                 </div>
             )}
+
+            <CreateLaunchpadModal
+                isOpen={isCreateModalOpen}
+                onClose={() => setIsCreateModalOpen(false)}
+                onSuccess={() => fetchOfferings()}
+            />
         </div>
     )
 }

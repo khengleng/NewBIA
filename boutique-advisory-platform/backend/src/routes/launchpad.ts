@@ -155,8 +155,30 @@ router.post('/:id/commit', authenticateToken, authorizeRoles('INVESTOR'), async 
 // ADMIN / OPERATOR / ADVISOR ROUTES
 // ==========================================
 
+// Get Deals that are ready to be listed on the Launchpad
+router.get('/eligible-deals', authenticateToken, authorizeRoles('SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'PLATFORM_OPERATOR'), async (req, res) => {
+    try {
+        const tenantId = (req as any).user.tenantId;
+
+        const deals = await prisma.deal.findMany({
+            where: {
+                tenantId,
+                status: {
+                    in: ['LAUNCHPAD_PREP', 'APPROVED_FOR_LISTING']
+                },
+                launchpadOffering: null // Not already an offering
+            },
+            include: { sme: true }
+        });
+
+        res.json(deals);
+    } catch (error: any) {
+        res.status(500).json({ error: 'Failed to fetch eligible deals', details: error.message });
+    }
+});
+
 // Create a new offering (Triggered from cambobia.com origination normally)
-router.post('/', authenticateToken, authorizeRoles('SUPER_ADMIN', 'PLATFORM_OPERATOR', 'ADVISOR'), async (req, res) => {
+router.post('/', authenticateToken, authorizeRoles('SUPER_ADMIN', 'ADMIN', 'PLATFORM_OPERATOR', 'ADVISOR'), async (req, res) => {
     try {
         const tenantId = (req as any).user.tenantId;
         const { dealId, hardCap, unitPrice, minCommitment, maxCommitment, startTime, endTime } = req.body;
