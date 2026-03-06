@@ -194,7 +194,7 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
     const isLastTarget = i === targets.length - 1;
 
     try {
-      console.log(`📡 [Proxy Attempt ${i + 1}/${targets.length}] -> ${upstreamUrl}`);
+
       const upstream = await fetch(upstreamUrl, {
         method,
         headers,
@@ -204,7 +204,7 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
       });
 
       lastStatus = upstream.status;
-      console.log(`📨 [Proxy Response] ${upstream.status} ${upstream.statusText} from ${targetBase}`);
+
 
       if (!TRANSIENT_STATUSES.has(upstream.status) || isLastTarget) {
         // Read full body buffer to avoid streaming/decoding issues during content forwarding

@@ -149,7 +149,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
     for (const u of usersToPurge) {
       if (u.status === 'DELETED' || u.email.toLowerCase().includes('deleted_')) {
-        console.log(`[AUTH] Archiving record ${u.id} (${u.status}) to allow re-registration for ${sanitizedEmail}`);
+
         try {
           const archivedEmail = `deleted_${Date.now()}_${u.id}_${u.email}`;
           await prisma.user.update({

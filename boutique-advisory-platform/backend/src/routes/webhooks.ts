@@ -14,7 +14,8 @@ router.post('/sumsub', async (req: Request, res: Response) => {
         const body = req.body;
         const secret = process.env.SUMSUB_SECRET_KEY;
 
-        console.log('🔍 Sumsub Webhook received');
+        // Log webhook receipt in production only if debugging needed, but for now just silence or minimize
+        // console.log('[WEBHOOK] Sumsub received');
 
         if (!secret) {
             console.error('❌ Sumsub secret key missing in backend env');
@@ -76,7 +77,7 @@ router.post('/sumsub', async (req: Request, res: Response) => {
                 kycStatus = KYCStatus.UNDER_REVIEW;
             }
 
-            console.log(`Updating KYC status for user ${externalUserId} to ${kycStatus}`);
+            // console.log(`[WEBHOOK] Updating KYC status for ${externalUserId} to ${kycStatus}`);
 
             // externalUserId is our userId
             await prisma.investor.update({
@@ -96,7 +97,7 @@ router.post('/sumsub', async (req: Request, res: Response) => {
 router.post('/aba', async (req: Request, res: Response) => {
     try {
         const { tran_id, status, hash } = req.body;
-        console.log('💰 Received ABA Callback:', req.body);
+        // console.log('[WEBHOOK] ABA Callback received', req.body.tran_id);
 
         // SECURITY: Verify ABA Hash to prevent forged payment successes
         const { verifyAbaCallback } = require('../utils/aba');
@@ -129,7 +130,7 @@ router.post('/aba', async (req: Request, res: Response) => {
             // Idempotency: do not re-apply terminal updates.
             const mutableStatuses = new Set(['PENDING', 'PROCESSING']);
             if (!mutableStatuses.has(payment.status)) {
-                console.log(`ℹ️ Ignoring ABA callback for terminal payment ${payment.id} (status=${payment.status})`);
+                // console.log(`[WEBHOOK] Ignoring ABA callback for terminal payment ${payment.id} (status=${payment.status})`);
                 return res.json({ status: 0, description: 'Already processed' });
             }
 

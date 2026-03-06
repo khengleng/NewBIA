@@ -42,7 +42,7 @@ import { useTranslations } from '../../hooks/useTranslations'
 import { User } from '../../types'
 import { authorizedRequest } from '@/lib/api'
 import { hasPermission as hasUiPermission } from '@/lib/permissions'
-import { IS_TRADING_PLATFORM, resolveTradingRuntime } from '@/lib/platform'
+import { IS_TRADING_PLATFORM, resolveTradingRuntime, isTradingHostname, CORE_FRONTEND_URL } from '@/lib/platform'
 import { isTradingOperatorRole, normalizeRole, TRADING_OPERATOR_ROLES } from '@/lib/roles'
 import { TRADING_OPERATOR_HOME } from '@/lib/tradingOperatorRoutes'
 import NotificationCenter from '../NotificationCenter'
@@ -165,6 +165,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const operatorRoles = [...TRADING_OPERATOR_ROLES]
     const coreNavSections = [
         {
+            label: 'Exchange & Trading',
+            roles: ['INVESTOR', 'SME', 'ADVISOR'],
+            items: [
+                { href: '/trading/launchpad', label: 'Token Launchpad', icon: Rocket, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
+                { href: '/secondary-trading', label: 'Secondary Market', icon: ArrowLeftRight, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
+            ]
+        },
+        {
             label: 'Workspace',
             roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
             items: [
@@ -272,6 +280,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const tradingNavSections = isTradingParticipantView
         ? [
             {
+                label: 'Navigation',
+                roles: ['INVESTOR', 'SME', 'ADVISOR'],
+                items: [
+                    {
+                        href: typeof window !== 'undefined' && isTradingHostname(window.location.hostname) ? CORE_FRONTEND_URL : '/dashboard',
+                        label: 'Back to Main Portal',
+                        icon: LayoutDashboard,
+                        roles: ['INVESTOR', 'SME', 'ADVISOR']
+                    }
+                ]
+            },
+            {
                 label: 'Trading',
                 roles: ['INVESTOR', 'SME', 'ADVISOR'],
                 items: [
@@ -294,6 +314,18 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             },
         ]
         : [
+            {
+                label: 'Navigation',
+                roles: operatorRoles,
+                items: [
+                    {
+                        href: typeof window !== 'undefined' && isTradingHostname(window.location.hostname) ? `${CORE_FRONTEND_URL}/admin/dashboard` : '/admin/dashboard',
+                        label: 'Back to Main Portal',
+                        icon: LayoutDashboard,
+                        roles: operatorRoles
+                    }
+                ]
+            },
             {
                 label: 'Exchange Ops',
                 roles: operatorRoles,

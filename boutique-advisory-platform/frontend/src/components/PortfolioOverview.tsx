@@ -29,7 +29,7 @@ interface PortfolioItem {
     id: string
     parentId: string
     investmentId?: string
-    type: 'DEAL' | 'SYNDICATE'
+    type: 'DEAL' | 'SYNDICATE' | 'LAUNCHPAD'
     name: string
     sector: string
     allocation: number
@@ -222,21 +222,23 @@ export default function PortfolioOverview() {
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2 ml-4">
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (item.investmentId) {
-                                                setSelectedSellItem(item);
-                                                setShowSellModal(true);
-                                            } else {
-                                                addToast('error', 'Cannot sell this item');
-                                            }
-                                        }}
-                                        className="p-2 hover:bg-green-500/20 text-green-400/60 hover:text-green-400 rounded-lg transition-colors"
-                                        title="Sell Position"
-                                    >
-                                        <DollarSign className="w-4 h-4" />
-                                    </button>
+                                    {item.type !== 'LAUNCHPAD' && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (item.investmentId) {
+                                                    setSelectedSellItem(item);
+                                                    setShowSellModal(true);
+                                                } else {
+                                                    addToast('error', 'Cannot sell this item');
+                                                }
+                                            }}
+                                            className="p-2 hover:bg-green-500/20 text-green-400/60 hover:text-green-400 rounded-lg transition-colors"
+                                            title="Sell Position"
+                                        >
+                                            <DollarSign className="w-4 h-4" />
+                                        </button>
+                                    )}
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();

@@ -1,7 +1,7 @@
 
 import express, { Router, Response } from 'express';
 import { AuthenticatedRequest, authorize } from '../middleware/authorize';
-import { createPaymentIntent } from '../utils/mock-payments';
+
 import { createAbaTransaction, verifyAbaCallback, generateAbaQr } from '../utils/aba'; // Update import
 import { prisma } from '../database';
 import { logAuditEvent } from '../utils/security';
@@ -64,7 +64,7 @@ function resolvePaymentReturnUrl(returnUrl?: string) {
 router.post('/create-payment-intent', authorize('payment.create'), async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { amount } = req.body;
-        console.log('ℹ️  Legacy Create Payment Intent (Mocked):', amount);
+
 
         return res.json({
             clientSecret: 'mock_client_secret_' + Date.now(),
@@ -157,7 +157,7 @@ router.post('/aba/create-transaction', authorize('payment.create'), async (req: 
                 firstName: user.email.split('@')[0], // Fallback if no specific name
                 lastName: '',
                 email: user.email,
-                phone: '012000000' // TODO: Get from user profile if available
+                phone: '012000000' // Use fallback phone for now
             },
             'abapay_khqr', // Default to KHQR
             resolvePaymentReturnUrl(returnUrl)

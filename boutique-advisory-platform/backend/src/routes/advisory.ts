@@ -44,12 +44,9 @@ router.get('/services', async (req: AuthenticatedRequest, res: Response) => {
             }
         });
 
-        // Fallback to mock data if DB is empty
+        // Return empty array if no services found
         if (services.length === 0) {
-            return res.json([
-                { id: '1', name: 'M&A Advisory', description: 'Expert guidance through mergers and acquisitions.', price: 5000, category: 'Financial', duration: '4 weeks' },
-                { id: '2', name: 'Financial Modeling', description: 'Comprehensive financial forecasting and modeling.', price: 2500, category: 'Financial', duration: '1 week' }
-            ]);
+            return res.json([]);
         }
 
         return res.json(services);
@@ -67,13 +64,7 @@ router.get('/services/:id', async (req: AuthenticatedRequest, res: Response) => 
 
         const { id } = req.params;
 
-        // Handle mock IDs
-        if (id === '1') {
-            return res.json({ id: '1', name: 'M&A Advisory', description: 'Expert guidance through mergers and acquisitions.', price: 5000, category: 'Financial', duration: '4 weeks', advisor: { name: 'James Wilson' } });
-        }
-        if (id === '2') {
-            return res.json({ id: '2', name: 'Financial Modeling', description: 'Comprehensive financial forecasting and modeling.', price: 2500, category: 'Financial', duration: '1 week', advisor: { name: 'Sarah Chen' } });
-        }
+
 
         const service = await prisma.advisoryService.findFirst({
             where: { id, tenantId },
@@ -120,10 +111,7 @@ router.get('/advisors', async (req: AuthenticatedRequest, res: Response) => {
         });
 
         if (advisors.length === 0) {
-            return res.json([
-                { id: '1', name: 'James Wilson', role: 'Financial Expert', specialization: ['M&A', 'Valuation'], rating: 4.9, image: 'https://i.pravatar.cc/150?u=james' },
-                { id: '2', name: 'Sarah Chen', role: 'Strategic Consultant', specialization: ['Market Entry', 'Ops'], rating: 4.8, image: 'https://i.pravatar.cc/150?u=sarah' }
-            ]);
+            return res.json([]);
         }
 
         return res.json(advisors);
@@ -141,35 +129,7 @@ router.get('/advisors/:id', async (req: AuthenticatedRequest, res: Response) => 
 
         const { id } = req.params;
 
-        // Mock fallback
-        if (id === '1') {
-            return res.json({
-                id: '1',
-                name: 'James Wilson',
-                role: 'Financial Expert',
-                specialization: ['M&A', 'Valuation'],
-                rating: 4.9,
-                image: 'https://i.pravatar.cc/150?u=james',
-                bio: 'Senior financial advisor with over 15 years of experience in mergers and acquisitions.',
-                services: [
-                    { id: '1', name: 'M&A Advisory', price: 5000, duration: '4 weeks', category: 'Financial' }
-                ]
-            });
-        }
-        if (id === '2') {
-            return res.json({
-                id: '2',
-                name: 'Sarah Chen',
-                role: 'Strategic Consultant',
-                specialization: ['Market Entry', 'Ops'],
-                rating: 4.8,
-                image: 'https://i.pravatar.cc/150?u=sarah',
-                bio: 'Expert in market entry strategies for Southeast Asia.',
-                services: [
-                    { id: '2', name: 'Financial Modeling', price: 2500, duration: '1 week', category: 'Financial' }
-                ]
-            });
-        }
+
 
         const advisor = await prisma.advisor.findFirst({
             where: { id, tenantId },
@@ -196,11 +156,11 @@ router.get('/advisors/:id', async (req: AuthenticatedRequest, res: Response) => 
             ...advisor,
             name: `${advisor.user.firstName} ${advisor.user.lastName}`,
             email: advisor.user.email,
-            // Mock additional fields that Schema doesn't have yet
-            role: 'Professional Advisor',
-            rating: 4.5, // Placeholder
-            image: `https://ui-avatars.com/api/?name=${advisor.user.firstName}+${advisor.user.lastName}`,
-            bio: 'Experienced advisor on the Boutique Advisory Platform.'
+            // Production fields
+            role: advisor.specialization?.[0] || 'Professional Advisor',
+            rating: null,
+            image: `https://ui-avatars.com/api/?name=${encodeURIComponent(advisor.user.firstName)}+${encodeURIComponent(advisor.user.lastName)}`,
+            bio: advisor.specialization ? `Expert in ${advisor.specialization.join(', ')}` : 'Professional Advisor'
         };
 
         return res.json(formattedAdvisor);

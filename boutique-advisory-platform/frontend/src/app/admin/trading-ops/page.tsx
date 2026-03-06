@@ -35,6 +35,7 @@ export default function TradingOpsPage() {
     stalePendingKyc?: number
     suspendedInvestors?: number
   } | null>(null)
+  const [launchpadOfferings, setLaunchpadOfferings] = useState<any[]>([])
 
   const loadListings = useCallback(async () => {
     setIsLoading(true)
@@ -65,6 +66,11 @@ export default function TradingOpsPage() {
         setInvestorOverview(investorData || null)
       } else {
         setInvestorOverview(null)
+      }
+
+      const launchpadRes = await authorizedRequest('/api/launchpad')
+      if (launchpadRes.ok) {
+        setLaunchpadOfferings(await launchpadRes.json())
       }
     } catch (error: any) {
       addToast('error', error?.message || 'Failed to load listings')
@@ -101,6 +107,20 @@ export default function TradingOpsPage() {
       setListings((prev) => prev.map((listing) => (listing.id === listingId ? { ...listing, status } : listing)))
     } catch (error: any) {
       addToast('error', error?.message || 'Failed to update listing')
+    } finally {
+      setIsSaving(null)
+    }
+  }
+
+  const finalizeOffering = async (id: string) => {
+    setIsSaving(id)
+    try {
+      const response = await authorizedRequest(`/api/launchpad/${id}/close`, { method: 'POST' })
+      if (!response.ok) throw new Error('Failed to finalize offering')
+      addToast('success', 'Offering finalized and commitments allocated')
+      loadListings()
+    } catch (err: any) {
+      addToast('error', err.message)
     } finally {
       setIsSaving(null)
     }
@@ -204,13 +224,12 @@ export default function TradingOpsPage() {
                     <td className="px-4 py-3 text-sm text-gray-200">{listing.sharesAvailable.toLocaleString()}</td>
                     <td className="px-4 py-3 text-sm text-gray-200">${listing.pricePerShare.toLocaleString()}</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                        listing.status === 'ACTIVE'
+                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${listing.status === 'ACTIVE'
                           ? 'bg-green-900/50 text-green-300'
                           : listing.status === 'CANCELLED'
                             ? 'bg-red-900/40 text-red-300'
                             : 'bg-gray-700 text-gray-200'
-                      }`}>
+                        }`}>
                         {listing.status}
                       </span>
                     </td>
@@ -238,6 +257,50 @@ export default function TradingOpsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold text-white mb-4 mt-8">Launchpad Offerings</h2>
+          <div className="overflow-hidden rounded-xl border border-gray-700 bg-gray-800">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-700">
+                <thead className="bg-gray-900/60">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-300">Offering / SME</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-300">Hard Cap</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-300">Raising Period</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-300">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-700">
+                  {launchpadOfferings.length === 0 && (
+                    <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-400">No offerings found.</td></tr>
+                  )}
+                  {launchpadOfferings.map((offering) => (
+                    <tr key={offering.id} className="hover:bg-gray-700/25">
+                      <td className="px-4 py-3 text-sm text-white">
+                        <div className="font-medium">{offering.deal?.sme?.name || 'Unknown SME'}</div>
+                        <div className="text-xs text-gray-400">{offering.deal?.title}</div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-200">${offering.hardCap.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm text-gray-200">
+                        {new Date(offering.startTime).toLocaleDateString()} - {new Date(offering.endTime).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => finalizeOffering(offering.id)}
+                          disabled={isSaving === offering.id || new Date() < new Date(offering.endTime) || offering.status === 'CLOSED'}
+                          className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 disabled:bg-gray-700"
+                        >
+                          {offering.status === 'CLOSED' ? 'Finalized' : isSaving === offering.id ? 'Finalizing...' : 'Finalize & Allocate'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

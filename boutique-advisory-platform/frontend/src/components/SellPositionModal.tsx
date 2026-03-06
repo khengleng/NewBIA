@@ -8,7 +8,7 @@ import { X, DollarSign, Loader2 } from 'lucide-react'
 interface SellPositionModalProps {
     investmentId: string
     parentId: string
-    type: 'DEAL' | 'SYNDICATE'
+    type: 'DEAL' | 'SYNDICATE' | 'LAUNCHPAD'
     dealName: string
     currentValue: number
     onClose: () => void

@@ -143,7 +143,7 @@ export default function InvestorsPage() {
         description: editForm.description
       }
 
-      console.log('Updating investor:', editingInvestor.id, { name: editForm.name, type: editForm.type, preferences })
+
 
       const response = await authorizedRequest(`/api/investors/${editingInvestor.id}`, {
         method: 'PUT',
@@ -154,7 +154,7 @@ export default function InvestorsPage() {
         })
       })
 
-      console.log('Update response status:', response.status)
+
 
       if (response.ok) {
         const updatedInvestor = await response.json()

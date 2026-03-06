@@ -184,8 +184,7 @@ router.post('/:agreementId/sign', authorize('deal.read'), validateBody(signAgree
                 where: { id: agreementId },
                 data: { status: 'COMPLETED' }
             });
-            // TODO: Notify all parties
-            // TODO: Update Deal Status if this was the final requirement
+
         }
 
         return res.json({ success: true, message: 'Agreement signed successfully.' });

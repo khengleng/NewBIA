@@ -117,21 +117,10 @@ router.post('/listings', authorize('secondary_trading.create_listing'), async (r
             return;
         }
 
-        // Debug logging
-        console.log('=== Token Listing Debug ===');
-        console.log('Investor ID:', investor.id);
-        console.log('Syndicate ID:', syndicateId);
-        console.log('Membership Amount:', membership.amount);
-        console.log('Membership Tokens (DB):', membership.tokens);
-        console.log('Syndicate isTokenized:', membership.syndicate.isTokenized);
-        console.log('Syndicate pricePerToken:', membership.syndicate.pricePerToken);
-        console.log('Tokens to list:', tokensAvailable);
-
         // Auto-repair/Resilient check for tokens
         let currentTokens = membership.tokens || 0;
         if (currentTokens === 0 && membership.syndicate.isTokenized && membership.syndicate.pricePerToken) {
             currentTokens = membership.amount / membership.syndicate.pricePerToken;
-            console.log('Auto-calculated tokens:', currentTokens);
         }
 
         // Check existing active listings to prevent double-spending
@@ -144,23 +133,11 @@ router.post('/listings', authorize('secondary_trading.create_listing'), async (r
         });
 
         const tokensLockedInListings = activeListings.reduce((sum, l) => sum + l.tokensAvailable, 0);
-
-        console.log('Tokens locked in active listings:', tokensLockedInListings);
-        console.log('Final currentTokens:', currentTokens);
-
         const availableToSell = currentTokens - tokensLockedInListings;
 
         if (availableToSell < tokensAvailable) {
-            console.warn(`❌ Insufficient tokens for ${investor.id}: Has ${currentTokens}, Locked ${tokensLockedInListings}, Available ${availableToSell}, tried to list ${tokensAvailable}`);
             res.status(400).json({
-                error: `Insufficient tokens. You have ${currentTokens.toFixed(2)} tokens, but ${tokensLockedInListings.toFixed(2)} are already listed. Available: ${availableToSell.toFixed(2)}`,
-                debug: {
-                    totalTokens: currentTokens,
-                    lockedInListings: tokensLockedInListings,
-                    available: availableToSell,
-                    requested: tokensAvailable,
-                    activeListingsCount: activeListings.length
-                }
+                error: `Insufficient tokens. You have ${currentTokens.toFixed(2)} tokens, but ${tokensLockedInListings.toFixed(2)} are already listed. Available: ${availableToSell.toFixed(2)}`
             });
             return;
         }

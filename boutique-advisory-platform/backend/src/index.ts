@@ -770,23 +770,16 @@ if (isTradingService) {
   const unifiedOperationalRoles = ['SUPER_ADMIN', 'PLATFORM_OPERATOR', 'TENANT_OWNER', 'COMPLIANCE_OFFICER'];
   const pmoRoles = [...unifiedOperationalRoles, 'PORTFOLIO_MANAGER', 'DEAL_LEADER'];
   const standardUserRoles = [...pmoRoles, 'ADVISOR', 'SME', 'INVESTOR', 'SUPPORT_AGENT'];
-  const strictTradingRoles = ['SUPER_ADMIN', 'PLATFORM_OPERATOR', 'INVESTOR']; // Ensure SMEs and non-trading users don't break strict boundary
 
-  // Apply strict service boundaries (Ensures trade.cambobia.com stays separate if needed)
-  if (isTradingService) {
-    app.use('/api/secondary-trading', authenticateToken, authorizeRoles(...strictTradingRoles), secondaryTradingRoutes);
-    app.use('/api/wallet', authenticateToken, authorizeRoles(...strictTradingRoles), walletRoutes);
-    app.use('/api/launchpad', launchpadRoutes);
-  } else {
-    app.use('/api/dashboard', authenticateToken, authorizeRoles(...standardUserRoles), dashboardRoutes);
-    app.use('/api/sme', authenticateToken, authorizeRoles(...standardUserRoles), smeRoutes);
-    app.use('/api/pipeline', authenticateToken, authorizeRoles(...pmoRoles), pipelineRoutes);
-    app.use('/api/reports', authenticateToken, authorizeRoles(...pmoRoles), reportRoutes);
-    app.use('/api/advisory', authenticateToken, authorizeRoles(...standardUserRoles), advisoryRoutes);
-    app.use('/api/ai', authenticateToken, authorizeRoles(...standardUserRoles), aiRoutes);
-    app.use('/api/operations', authenticateToken, authorizeRoles(...unifiedOperationalRoles, 'OPERATIONAL_MANAGER'), operationsRoutes);
-    app.use('/api/launchpad', launchpadRoutes); // For Advisor to publish Deal
-  } app.use('/api/cashflow', authenticateToken, cashflowRoutes);
+  app.use('/api/dashboard', authenticateToken, authorizeRoles(...standardUserRoles), dashboardRoutes);
+  app.use('/api/sme', authenticateToken, authorizeRoles(...standardUserRoles), smeRoutes);
+  app.use('/api/pipeline', authenticateToken, authorizeRoles(...pmoRoles), pipelineRoutes);
+  app.use('/api/reports', authenticateToken, authorizeRoles(...pmoRoles), reportRoutes);
+  app.use('/api/advisory', authenticateToken, authorizeRoles(...standardUserRoles), advisoryRoutes);
+  app.use('/api/ai', authenticateToken, authorizeRoles(...standardUserRoles), aiRoutes);
+  app.use('/api/operations', authenticateToken, authorizeRoles(...unifiedOperationalRoles, 'OPERATIONAL_MANAGER'), operationsRoutes);
+  app.use('/api/launchpad', launchpadRoutes);
+  app.use('/api/cashflow', authenticateToken, cashflowRoutes);
   app.use('/api/admin', authenticateToken, adminRoutes);
   app.use('/api/ai', authenticateToken, aiRoutes);
   app.use('/api/disputes', authenticateToken, disputeRoutes);

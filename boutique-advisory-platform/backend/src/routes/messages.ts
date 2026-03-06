@@ -23,7 +23,7 @@ router.post('/start', async (req: AuthenticatedRequest, res: Response) => {
             return res.status(404).json({ error: 'Recipient not found or account is inactive' });
         }
 
-        console.log(`[MESSAGES] Start request: ${userId} -> ${recipientId} (Deal: ${dealId})`);
+
 
         // Check if conversation already exists between these two within the same tenant.
         const existingConv = await (prisma as any).conversation.findFirst({
@@ -42,7 +42,7 @@ router.post('/start', async (req: AuthenticatedRequest, res: Response) => {
         });
 
         if (existingConv) {
-            console.log(`[MESSAGES] Found existing conversation: ${existingConv.id}`);
+
             // specific logic: if initialMessage provided, send it
             if (initialMessage) {
                 await (prisma as any).message.create({
@@ -58,7 +58,7 @@ router.post('/start', async (req: AuthenticatedRequest, res: Response) => {
         }
 
         // Create new conversation
-        console.log(`[MESSAGES] Creating new conversation for ${userId} and ${recipientId}`);
+
         const newConv = await (prisma as any).conversation.create({
             data: {
                 tenantId,

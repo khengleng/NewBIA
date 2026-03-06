@@ -100,31 +100,31 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             socketRef.current = socket
 
             socket.on('connect', () => {
-                console.log('📡 Connected to WebSocket')
+
                 intentionalDisconnectRef.current = false
                 setIsConnected(true)
             })
 
             socket.on('disconnect', () => {
                 if (!intentionalDisconnectRef.current) {
-                    console.log('📡 Disconnected from WebSocket')
+
                 }
                 setIsConnected(false)
             })
 
             socket.on('connect_error', (error) => {
                 if (!intentionalDisconnectRef.current) {
-                    console.log('📡 WebSocket connect error:', error?.message || 'connection failed')
+
                 }
             })
 
             socket.on('notification', (notification) => {
-                console.log('🔔 New notification:', notification)
+
                 setLastNotification(notification)
             })
 
             socket.on('system_alert', (alert) => {
-                console.log('⚠️ System alert:', alert.message)
+
             })
 
             socket.connect()
