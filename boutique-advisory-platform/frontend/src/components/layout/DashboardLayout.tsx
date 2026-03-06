@@ -276,7 +276,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         || hasUiPermission(normalizedRole, 'admin.read')
         || hasUiPermission(normalizedRole, 'billing.read')
     const isTradingParticipantView = isTradingRuntime && (normalizedRole === 'INVESTOR' || normalizedRole === 'SME' || normalizedRole === 'ADVISOR') && !isTradingOperator
-    const showTradingWidgets = !isTradingRuntime
+    const showTradingWidgets = true // Always show widgets for a rich application experience
     const tradingNavSections = isTradingParticipantView
         ? [
             {
@@ -295,8 +295,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 label: 'Trading',
                 roles: ['INVESTOR', 'SME', 'ADVISOR'],
                 items: [
-                    { href: '/trading/launchpad', label: 'Launchpad', icon: Rocket, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
-                    { href: '/secondary-trading', label: 'Marketplace', icon: ArrowLeftRight, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
+                    { href: '/trading/launchpad', label: 'Token Launchpad', icon: Rocket, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
+                    { href: '/secondary-trading', label: 'Secondary Market', icon: ArrowLeftRight, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
                     { href: '/trading/markets', label: 'Markets', icon: BarChart3, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
                     { href: '/trading/wallet', label: 'My Wallet', icon: Wallet, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
                     { href: '/trading/portfolio', label: 'My Portfolio', icon: Briefcase, roles: ['INVESTOR'] },
@@ -331,8 +331,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 roles: operatorRoles,
                 items: [
                     { href: '/trading/operator/dashboard', label: 'Control Tower', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'] },
-                    { href: '/trading/launchpad', label: 'Launchpad', icon: Rocket, roles: ['SUPER_ADMIN', 'ADMIN', 'AUDITOR', 'COMPLIANCE'] },
-                    { href: '/trading/operator/listing-control', label: 'Listing Governance', icon: ArrowLeftRight, roles: ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE', 'SUPPORT'] },
+                    { href: '/trading/launchpad', label: 'Token Launchpad', icon: Rocket, roles: ['SUPER_ADMIN', 'ADMIN', 'AUDITOR', 'COMPLIANCE'] },
+                    { href: '/trading/operator/listing-control', label: 'Secondary Listing Governance', icon: ArrowLeftRight, roles: ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE', 'SUPPORT'] },
                     { href: '/trading/markets', label: 'Market Monitor', icon: BarChart3, roles: operatorRoles },
                 ]
             },
@@ -588,6 +588,33 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col min-w-0 overflow-hidden pb-24 md:pb-0">
+                {/* Desktop Header for Trading Runtime - Institutional Navigation Structure */}
+                {isTradingRuntime && (
+                    <header className="hidden md:flex items-center justify-between h-20 px-8 bg-gray-900/50 backdrop-blur-xl border-b border-gray-800 sticky top-0 z-30">
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm font-black text-gray-500 uppercase tracking-widest px-3 py-1 bg-gray-800 rounded-lg">CamboBia</span>
+                            <ChevronRight className="w-4 h-4 text-gray-700" />
+                            <span className="text-sm font-bold text-blue-400 capitalize">{pathname?.split('/').pop()?.replace('-', ' ')}</span>
+                        </div>
+                        <div className="flex items-center space-x-6">
+                            <LanguageSwitcher />
+                            <div className="h-8 w-[1px] bg-gray-800 mx-2" />
+                            <NotificationCenter />
+                            {user && (
+                                <div className="flex items-center space-x-3 pl-4 border-l border-gray-800">
+                                    <div className="flex flex-col items-end mr-3">
+                                        <p className="text-sm font-black text-white leading-none">{user.firstName} {user.lastName}</p>
+                                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1">{normalizedRole}</p>
+                                    </div>
+                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center text-white font-black shadow-lg">
+                                        {user.firstName?.[0]}{user.lastName?.[1] || user.lastName?.[0]}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </header>
+                )}
+
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
                     {children}
                 </div>

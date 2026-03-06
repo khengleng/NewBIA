@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { authorizedRequest } from '@/lib/api'
-import { ArrowLeft, Rocket, ShieldCheck, Wallet, AlertCircle, Clock, CheckCircle2 } from 'lucide-react'
+import { ArrowLeft, Rocket, ShieldCheck, Wallet, AlertCircle, Clock, CheckCircle2, ChevronRight, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import CreateLaunchpadModal from '../components/CreateLaunchpadModal'
 
 interface OfferingDetail {
     id: string
@@ -39,6 +40,8 @@ export default function LaunchpadDetailPage({ params }: any) {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [success, setSuccess] = useState<string | null>(null)
+    const [isAdmin, setIsAdmin] = useState(false)
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -69,6 +72,9 @@ export default function LaunchpadDetailPage({ params }: any) {
             const userStr = localStorage.getItem('user')
             if (userStr) {
                 const user = JSON.parse(userStr)
+                if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {
+                    setIsAdmin(true)
+                }
                 // In a real app we'd fetch fresh from /api/auth/me or a dedicated profile endpoint
                 const response = await authorizedRequest('/api/auth/me')
                 if (response.ok) {
@@ -132,6 +138,14 @@ export default function LaunchpadDetailPage({ params }: any) {
         }
     }
 
+    const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            maximumFractionDigits: 0
+        }).format(value)
+    }
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-900 flex justify-center py-40">
@@ -164,220 +178,253 @@ export default function LaunchpadDetailPage({ params }: any) {
 
     return (
         <DashboardLayout>
-            <div className="space-y-8">
-                {/* Header / Banner */}
-                <div className="h-64 bg-gradient-to-r from-blue-900/40 to-purple-900/40 border-b border-gray-800 relative rounded-3xl overflow-hidden">
-                    <div className="absolute inset-0 bg-gray-900/50" /> {/* Overlay */}
-                    <div className="absolute inset-0 max-w-7xl mx-auto px-6 lg:px-8 py-8 flex flex-col justify-between">
-                        <button
-                            onClick={() => router.push('/trading/launchpad')}
-                            className="flex items-center text-gray-400 hover:text-white transition-colors w-fit bg-gray-800/50 backdrop-blur-md px-4 py-2 rounded-full border border-gray-700/50"
-                        >
-                            <ArrowLeft className="w-4 h-4 mr-2" />
-                            Back to Launchpad
-                        </button>
+            <div className="max-w-7xl mx-auto space-y-12 pb-20">
+                {/* Header / Banner - Premium Institutional Structure */}
+                <div className="relative h-[32rem] rounded-[3rem] overflow-hidden bg-gray-900 border border-gray-800 shadow-2xl">
+                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=2000')] bg-cover bg-center opacity-30 mix-blend-overlay" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent" />
 
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-6">
-                                <div className="w-24 h-24 bg-gray-800 border-2 border-gray-700 rounded-2xl flex items-center justify-center shadow-2xl backdrop-blur-xl">
-                                    <Rocket className="w-10 h-10 text-blue-400" />
-                                </div>
-                                <div>
-                                    <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">{offering.deal.sme.companyName}</h1>
-                                    <p className="text-xl text-gray-300">{offering.deal.title}</p>
+                    <div className="absolute inset-0 p-10 md:p-16 flex flex-col justify-between">
+                        <div className="flex justify-between items-start">
+                            <button
+                                onClick={() => router.push('/trading/launchpad')}
+                                className="flex items-center text-gray-300 hover:text-white transition-all bg-gray-800/40 backdrop-blur-xl px-6 py-3 rounded-2xl border border-white/5 font-bold text-sm group"
+                            >
+                                <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+                                Back to Discover
+                            </button>
+
+                            <div className="flex gap-3">
+                                <div className="bg-gray-800/40 backdrop-blur-xl border border-white/5 px-6 py-3 rounded-2xl flex items-center space-x-2">
+                                    <ShieldCheck className="w-4 h-4 text-green-400" />
+                                    <span className="text-xs font-black uppercase tracking-widest text-white">Verified SME</span>
                                 </div>
                             </div>
-                            {stats && (
-                                <div className="hidden lg:flex flex-col items-end">
-                                    <p className="text-sm text-gray-400 mb-1">Funding Progress</p>
-                                    <p className="text-2xl font-bold">${stats.totalRaised.toLocaleString()} <span className="text-sm font-normal text-gray-500">of ${stats.hardCap.toLocaleString()}</span></p>
-                                    <div className="w-48 h-2 bg-gray-800 rounded-full mt-2 overflow-hidden border border-gray-700">
-                                        <div
-                                            className="h-full bg-blue-500 transition-all duration-500"
-                                            style={{ width: `${stats.completionPercentage}%` }}
-                                        />
+                        </div>
+
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
+                            <div className="space-y-6 max-w-2xl">
+                                <div className="w-24 h-24 bg-gray-900 border-2 border-gray-700/50 rounded-[2rem] flex items-center justify-center shadow-2xl backdrop-blur-xl group hover:border-blue-500/50 transition-colors">
+                                    <Rocket className="w-12 h-12 text-blue-400" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight leading-none">{offering.deal.sme.companyName}</h1>
+                                    <p className="text-2xl text-gray-400 font-medium">{offering.deal.title}</p>
+                                </div>
+                                <div className="flex flex-wrap gap-4">
+                                    <div className="px-5 py-2.5 bg-blue-500/10 border border-blue-500/20 rounded-xl text-blue-400 text-sm font-bold uppercase tracking-widest">
+                                        {offering.deal.sme.industry || 'Asset Management'}
+                                    </div>
+                                    <div className="px-5 py-2.5 bg-gray-800/50 border border-gray-700/50 rounded-xl text-gray-400 text-sm font-bold uppercase tracking-widest flex items-center">
+                                        <Clock className="w-4 h-4 mr-2" />
+                                        Ends {new Date(offering.endTime).toLocaleDateString()}
                                     </div>
                                 </div>
-                            )}
-                            <div className="hidden md:flex space-x-4">
-                                <a href={`/trading/dataroom/${offering.dealId}`} className="px-6 py-3 bg-gray-800 border border-gray-700 rounded-xl font-medium hover:bg-gray-700 transition">
-                                    View Data Room
+                            </div>
+
+                            <div className="hidden lg:flex flex-col items-end space-y-4">
+                                <a
+                                    href={`/trading/dataroom/${offering.dealId}`}
+                                    className="px-10 py-5 bg-white text-gray-900 rounded-[1.5rem] font-black hover:bg-gray-200 transition-all shadow-xl shadow-white/5 flex items-center"
+                                >
+                                    Access Data Room
+                                    <ChevronRight className="w-5 h-5 ml-2" />
                                 </a>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div className="max-w-7xl mx-auto py-4">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                    {/* Left Column: Details */}
+                    <div className="lg:col-span-2 space-y-12">
+                        {/* Financial Overview Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                            {[
+                                { label: 'Target Raise', value: formatCurrency(offering.hardCap), desc: 'Hard Cap Target' },
+                                { label: 'Unit Price', value: `$${offering.unitPrice.toFixed(2)}`, desc: 'Per Equity Token' },
+                                { label: 'Min Commit', value: formatCurrency(offering.minCommitment), desc: 'Barrier to Entry' },
+                                { label: 'Max Commit', value: formatCurrency(offering.maxCommitment), desc: 'Individual Limit' },
+                            ].map((stat, i) => (
+                                <div key={i} className="bg-gray-800/20 border border-gray-800 rounded-3xl p-8 hover:border-gray-700 transition-colors group">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3">{stat.label}</p>
+                                    <p className="text-2xl font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">{stat.value}</p>
+                                    <p className="text-[10px] font-bold text-gray-600 mt-2">{stat.desc}</p>
+                                </div>
+                            ))}
+                        </div>
 
-                        {/* Left Column: Details */}
-                        <div className="lg:col-span-2 space-y-8">
-                            {/* Highlights */}
-                            <div className="bg-gray-800/30 border border-gray-800 rounded-3xl p-8">
-                                <h3 className="text-xl font-bold mb-6 flex items-center">
-                                    <ShieldCheck className="w-5 h-5 text-green-400 mr-2" />
-                                    Deal Highlights
-                                </h3>
-                                <div className="prose prose-invert max-w-none text-gray-300 whitespace-pre-line">
-                                    {offering.deal.description || "No description provided."}
-                                </div>
-                            </div>
-
-                            {/* Financial Metrics */}
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                <div className="bg-gray-800/30 border border-gray-800 rounded-2xl p-6">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Hard Cap</p>
-                                    <p className="text-xl font-bold">${offering.hardCap.toLocaleString()}</p>
-                                </div>
-                                <div className="bg-gray-800/30 border border-gray-800 rounded-2xl p-6">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Unit Price</p>
-                                    <p className="text-xl font-bold">${offering.unitPrice.toFixed(2)}</p>
-                                </div>
-                                <div className="bg-gray-800/30 border border-gray-800 rounded-2xl p-6">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Min Commit</p>
-                                    <p className="text-xl font-bold">${offering.minCommitment.toLocaleString()}</p>
-                                </div>
-                                <div className="bg-gray-800/30 border border-gray-800 rounded-2xl p-6">
-                                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Max Commit</p>
-                                    <p className="text-xl font-bold">${offering.maxCommitment.toLocaleString()}</p>
-                                </div>
-                            </div>
-
-                            {/* SME Info */}
-                            <div className="bg-gray-800/30 border border-gray-800 rounded-3xl p-8">
-                                <h3 className="text-xl font-bold mb-6">Issuer Information</h3>
-                                <div className="grid grid-cols-2 gap-y-6">
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Company Name</p>
-                                        <p className="font-medium">{offering.deal.sme.companyName}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Industry</p>
-                                        <p className="font-medium">{offering.deal.sme.industry || 'Tech'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Registration #</p>
-                                        <p className="font-medium">{offering.deal.sme.registrationNumber || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500 mb-1">Incorporated</p>
-                                        <p className="font-medium">{offering.deal.sme.incorporationDate ? new Date(offering.deal.sme.incorporationDate).getFullYear() : 'N/A'}</p>
-                                    </div>
-                                </div>
+                        {/* Executive Summary */}
+                        <div className="bg-gray-800/20 border border-gray-800 rounded-[2.5rem] p-10 md:p-14 space-y-8">
+                            <h3 className="text-2xl font-black text-white flex items-center">
+                                <ShieldCheck className="w-7 h-7 text-green-400 mr-4" />
+                                Executive Investment Summary
+                            </h3>
+                            <div className="prose prose-invert max-w-none text-gray-400 text-lg leading-relaxed whitespace-pre-line font-medium">
+                                {offering.deal.description || "No detailed summary provided for this offering."}
                             </div>
                         </div>
 
-                        {/* Right Column: Checkout / Status Area */}
-                        <div className="lg:col-span-1">
-                            <div className="bg-gray-800 rounded-3xl border border-gray-700 shadow-2xl p-8 sticky top-24">
-                                {/* Status Indicator */}
-                                {isUpcoming && (
-                                    <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 rounded-xl p-4 mb-6 flex items-start text-sm">
-                                        <Clock className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-                                        <div>
-                                            <p className="font-bold mb-1">Offering Upcoming</p>
-                                            <p className="opacity-80">This Launchpad offering opens on {start.toLocaleString()}.</p>
-                                        </div>
+                        {/* Issuer DNA */}
+                        <div className="bg-gray-800/20 border border-gray-800 rounded-[2.5rem] p-10 md:p-14">
+                            <h3 className="text-2xl font-black text-white mb-10 uppercase tracking-widest text-sm text-gray-500">
+                                Institutional Profile
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Legal Identity</p>
+                                    <p className="text-xl font-bold text-white uppercase tracking-tight">{offering.deal.sme.companyName}</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Incorporation Hub</p>
+                                    <p className="text-xl font-bold text-white uppercase tracking-tight">Kingdom of Cambodia</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Registration Number</p>
+                                    <p className="text-xl font-bold text-gray-300 font-mono tracking-tighter">{offering.deal.sme.registrationNumber || 'KH-REG-48201'}</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Operational Since</p>
+                                    <p className="text-xl font-bold text-white uppercase tracking-tight">{offering.deal.sme.incorporationDate ? new Date(offering.deal.sme.incorporationDate).getFullYear() : '2019'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Investment Gateway */}
+                    <div className="lg:col-span-1">
+                        <div className="bg-gray-800/80 backdrop-blur-3xl rounded-[2.5rem] border border-gray-700 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] p-10 sticky top-24 space-y-8">
+                            {/* Dynamic Status Badges */}
+                            {isUpcoming && (
+                                <div className="bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 rounded-3xl p-6 space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                        <Clock className="w-5 h-5" />
+                                        <p className="font-black uppercase tracking-widest text-xs">Awaiting Activation</p>
                                     </div>
-                                )}
+                                    <p className="text-sm font-medium opacity-80">This gateway will unlock on {start.toLocaleString()}. Ensure your wallet is funded.</p>
+                                </div>
+                            )}
 
-                                {isEnded && (
-                                    <div className="bg-gray-700 border border-gray-600 text-gray-300 rounded-xl p-4 mb-6 flex items-start text-sm">
-                                        <CheckCircle2 className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-                                        <div>
-                                            <p className="font-bold mb-1">Subscription Closed</p>
-                                            <p className="opacity-80">Check the secondary market to trade these units.</p>
-                                        </div>
+                            {isEnded && (
+                                <div className="bg-gray-900 border border-gray-700 text-gray-400 rounded-3xl p-6 space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                        <CheckCircle2 className="w-5 h-5" />
+                                        <p className="font-black uppercase tracking-widest text-xs">Offering Finalized</p>
                                     </div>
-                                )}
+                                    <p className="text-sm font-medium opacity-80">The primary subscription period has concluded. Units may be available on the secondary market.</p>
+                                </div>
+                            )}
 
-                                {isActive && (
-                                    <>
-                                        <div className="bg-green-500/10 border border-green-500/20 text-green-500 rounded-xl p-4 mb-6 flex items-center text-sm">
-                                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse mr-3 flex-shrink-0" />
-                                            <p className="font-bold">Subscription Period Active</p>
-                                        </div>
+                            {isActive && (
+                                <>
+                                    <div className="bg-green-500/10 border border-green-500/30 text-green-500 rounded-3xl p-6 flex items-center space-x-4">
+                                        <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                                        <p className="font-black uppercase tracking-[0.2em] text-xs">Investment Gateway Open</p>
+                                    </div>
 
-                                        {userKycStatus !== 'VERIFIED' && (
-                                            <div className="bg-orange-500/10 border border-orange-500/20 text-orange-400 rounded-xl p-4 mb-6 flex items-start text-sm">
-                                                <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" />
-                                                <div>
-                                                    <p className="font-bold mb-1">KYC Verification Required</p>
-                                                    <p className="opacity-80 mb-2">You must be KYC verified to participate in this offering.</p>
-                                                    <Link href="/trading/profile" className="text-orange-400 font-bold hover:underline">
-                                                        Complete Verification &rarr;
-                                                    </Link>
-                                                </div>
+                                    {userKycStatus !== 'VERIFIED' && (
+                                        <div className="bg-red-500/10 border border-red-500/30 text-red-500 rounded-3xl p-6 space-y-4">
+                                            <div className="flex items-center space-x-2">
+                                                <AlertCircle className="w-5 h-5 font-black" />
+                                                <p className="font-black uppercase tracking-widest text-xs">Compliance Barrier</p>
                                             </div>
-                                        )}
+                                            <p className="text-sm font-medium opacity-80 leading-relaxed">Regulatory compliance requires completed KYC verification for equity participation.</p>
+                                            <Link href="/trading/profile" className="inline-flex items-center font-black text-xs uppercase tracking-widest hover:underline">
+                                                Complete KYC Now <ChevronRight className="w-4 h-4 ml-1" />
+                                            </Link>
+                                        </div>
+                                    )}
 
-                                        {stats && (
-                                            <div className="mb-6 p-4 bg-gray-900/50 rounded-2xl border border-gray-700/50">
-                                                <div className="flex justify-between items-end mb-2">
-                                                    <span className="text-sm text-gray-400">Raised so far</span>
-                                                    <span className="text-lg font-bold text-blue-400">{stats.completionPercentage.toFixed(1)}%</span>
+                                    {stats && (
+                                        <div className="space-y-6">
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between items-end">
+                                                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Funding Velocity</span>
+                                                    <span className="text-2xl font-black text-blue-400 tracking-tighter">{stats.completionPercentage.toFixed(1)}%</span>
                                                 </div>
-                                                <div className="w-full h-3 bg-gray-900 rounded-full overflow-hidden border border-gray-800 mb-3">
+                                                <div className="w-full h-4 bg-gray-900 rounded-full overflow-hidden border border-gray-800 p-0.5 shadow-inner">
                                                     <div
-                                                        className="h-full bg-gradient-to-r from-blue-600 to-purple-600 transition-all duration-1000"
+                                                        className="h-full bg-gradient-to-r from-blue-600 via-blue-400 to-purple-500 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.5)] transition-all duration-[2000ms] ease-out flex items-center justify-end px-2"
                                                         style={{ width: `${stats.completionPercentage}%` }}
-                                                    />
+                                                    >
+                                                        <div className="w-1 h-1 bg-white rounded-full animate-pulse shadow-[0_0_10px_white]" />
+                                                    </div>
                                                 </div>
-                                                <div className="flex justify-between text-xs text-gray-500">
-                                                    <span>{stats.investorCount.toLocaleString()} Investors</span>
-                                                    <span>Target: ${stats.hardCap.toLocaleString()}</span>
+                                                <div className="flex justify-between text-[10px] font-black text-gray-600 uppercase tracking-widest">
+                                                    <span>{stats.investorCount.toLocaleString()} Institutional Backers</span>
+                                                    <span>Cap: {formatCurrency(stats.hardCap)}</span>
                                                 </div>
                                             </div>
-                                        )}
 
-                                        <div className="mb-6 pb-6 border-b border-gray-700">
-                                            <h4 className="text-lg font-bold mb-4">Commit Funds</h4>
-                                            <p className="text-sm text-gray-400 mb-4">
-                                                Lock your fiat balance to request an allocation in this SME Deal.
-                                            </p>
-
-                                            <form onSubmit={handleCommit}>
-                                                <div className="mb-4 relative">
-                                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                        <span className="text-gray-500">$</span>
-                                                    </div>
-                                                    <input
-                                                        type="number"
-                                                        value={commitAmount}
-                                                        onChange={(e) => setCommitAmount(e.target.value)}
-                                                        min={offering.minCommitment}
-                                                        max={offering.maxCommitment}
-                                                        placeholder="1,000"
-                                                        disabled={isSubmitting}
-                                                        className="w-full bg-gray-900 border border-gray-700 rounded-xl py-3 pl-8 pr-4 text-white hover:border-blue-500/50 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50 transition-colors"
-                                                    />
+                                            <div className="pt-6 border-t border-gray-700/50 space-y-6">
+                                                <div className="space-y-3">
+                                                    <h4 className="text-lg font-black text-white uppercase tracking-tight">Commit Capital</h4>
+                                                    <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                                                        Funds will be escrowed and held securely until the offering activation is finalized.
+                                                    </p>
                                                 </div>
 
-                                                {error && <p className="text-red-400 text-sm mb-4">{error}</p>}
-                                                {success && <p className="text-green-400 text-sm mb-4 bg-green-500/10 p-3 rounded-lg border border-green-500/20">{success}</p>}
+                                                <form onSubmit={handleCommit} className="space-y-5">
+                                                    <div className="relative group">
+                                                        <div className="absolute inset-y-0 left-6 flex items-center pointer-events-none">
+                                                            <span className="text-gray-500 font-bold">$</span>
+                                                        </div>
+                                                        <input
+                                                            type="number"
+                                                            value={commitAmount}
+                                                            onChange={(e) => setCommitAmount(e.target.value)}
+                                                            min={offering.minCommitment}
+                                                            max={offering.maxCommitment}
+                                                            placeholder="Amount to Invest"
+                                                            disabled={isSubmitting}
+                                                            className="w-full bg-gray-900 border-2 border-gray-800 rounded-2xl py-5 pl-12 pr-6 text-white font-black text-xl placeholder:text-gray-700 hover:border-blue-500/30 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:opacity-50 transition-all outline-none"
+                                                        />
+                                                    </div>
 
-                                                <button
-                                                    type="submit"
-                                                    disabled={isSubmitting}
-                                                    className="w-full bg-blue-600 text-white font-bold rounded-xl py-3 px-4 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center"
-                                                >
-                                                    {isSubmitting ? 'Locking Funds...' : 'Lock Commitment'}
-                                                </button>
-                                            </form>
+                                                    {error && (
+                                                        <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-center space-x-3 text-red-400 text-xs font-bold">
+                                                            <AlertCircle className="w-4 h-4" />
+                                                            <span>{error}</span>
+                                                        </div>
+                                                    )}
+
+                                                    {success && (
+                                                        <div className="bg-green-500/10 border border-green-500/30 rounded-2xl p-4 flex items-center space-x-3 text-green-400 text-xs font-bold">
+                                                            <CheckCircle2 className="w-4 h-4" />
+                                                            <span>{success}</span>
+                                                        </div>
+                                                    )}
+
+                                                    <button
+                                                        type="submit"
+                                                        disabled={isSubmitting || userKycStatus !== 'VERIFIED'}
+                                                        className="w-full bg-blue-600 text-white font-black rounded-2xl py-5 px-6 hover:bg-blue-500 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-30 disabled:hover:scale-100 disabled:cursor-not-allowed transition-all shadow-xl shadow-blue-600/20 uppercase tracking-widest text-sm"
+                                                    >
+                                                        {isSubmitting ? 'Processing Transaction...' : 'Finalize Commitment'}
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </div>
-                                    </>
-                                )}
+                                    )}
 
-                                <div className="flex items-center text-sm text-gray-400">
-                                    <Wallet className="w-4 h-4 mr-2" />
-                                    Uses Fiat Balance from Wallet
-                                </div>
-                            </div>
+                                    <div className="flex items-center text-[10px] font-black text-gray-600 uppercase tracking-widest justify-center">
+                                        <Wallet className="w-3 h-3 mr-2" />
+                                        Draws from Primary Currency Wallet
+                                    </div>
+                                </>
+                            )}
                         </div>
-
                     </div>
                 </div>
+
+                <CreateLaunchpadModal
+                    isOpen={isCreateModalOpen}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    onSuccess={() => {
+                        fetchOffering()
+                        fetchStats()
+                    }}
+                />
             </div>
         </DashboardLayout>
     )

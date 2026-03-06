@@ -86,163 +86,176 @@ export default function LaunchpadPage() {
 
     return (
         <DashboardLayout>
-            <div className="space-y-6">
-                {/* Header */}
-                <div className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center border border-blue-500/30">
-                            <Rocket className="w-6 h-6 text-blue-400" />
+            <div className="max-w-7xl mx-auto space-y-12 pb-20">
+                {/* Hero Section - Discovery Structure */}
+                <div className="relative rounded-[2.5rem] overflow-hidden bg-gray-900 border border-gray-800 shadow-2xl">
+                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1639322537228-f710d846310a?auto=format&fit=crop&q=80&w=2000')] bg-cover bg-center opacity-20 mix-blend-overlay" />
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-transparent to-purple-600/20" />
+
+                    <div className="relative p-10 md:p-16 flex flex-col md:flex-row items-center justify-between gap-10">
+                        <div className="max-w-xl space-y-6 text-center md:text-left">
+                            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-full text-blue-400 text-sm font-bold uppercase tracking-widest">
+                                <Rocket className="w-4 h-4" />
+                                <span>Tokenized SME Equity</span>
+                            </div>
+                            <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight leading-[1.1]">
+                                Next Generation <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">Capital Raising</span>
+                            </h1>
+                            <p className="text-xl text-gray-400 leading-relaxed">
+                                Join the future of SME financing. Invest in high-growth companies through compliant, institutional-grade equity tokenization.
+                            </p>
+                            <div className="flex flex-wrap gap-4 justify-center md:justify-start">
+                                {isAdmin && (
+                                    <button
+                                        onClick={() => setIsCreateModalOpen(true)}
+                                        className="bg-white text-gray-900 px-8 py-4 rounded-2xl font-black hover:bg-gray-200 transition-all shadow-xl flex items-center"
+                                    >
+                                        <Plus className="w-5 h-5 mr-2" />
+                                        Initialize Drop
+                                    </button>
+                                )}
+                                <button className="bg-gray-800 text-white border border-gray-700 px-8 py-4 rounded-2xl font-black hover:bg-gray-700 transition"
+                                    onClick={() => window.scrollTo({ top: 800, behavior: 'smooth' })}>
+                                    Browse Offerings
+                                </button>
+                            </div>
                         </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full md:w-auto">
+                            <div className="bg-gray-800/40 backdrop-blur-md border border-gray-700/50 p-6 rounded-3xl">
+                                <Activity className="w-8 h-8 text-blue-400 mb-3" />
+                                <p className="text-sm text-gray-500 font-bold uppercase mb-1">Total Raised</p>
+                                <p className="text-3xl font-black text-white leading-none">$12.4M</p>
+                            </div>
+                            <div className="bg-gray-800/40 backdrop-blur-md border border-gray-700/50 p-6 rounded-3xl">
+                                <Building2 className="w-8 h-8 text-green-400 mb-3" />
+                                <p className="text-sm text-gray-500 font-bold uppercase mb-1">Live Deals</p>
+                                <p className="text-3xl font-black text-white leading-none">42</p>
+                            </div>
+                            <div className="bg-gray-800/40 backdrop-blur-md border border-gray-700/50 p-6 rounded-3xl">
+                                <Users className="w-8 h-8 text-purple-400 mb-3" />
+                                <p className="text-sm text-gray-500 font-bold uppercase mb-1">Participants</p>
+                                <p className="text-3xl font-black text-white leading-none">8,204</p>
+                            </div>
+                            <div className="bg-gray-800/40 backdrop-blur-md border border-gray-700/50 p-6 rounded-3xl flex items-center justify-center">
+                                <div className="text-center group cursor-pointer">
+                                    <p className="text-blue-400 font-bold hover:underline mb-1">View Analytics</p>
+                                    <TrendingUp className="w-5 h-5 text-blue-400 mx-auto group-hover:translate-y-[-2px] transition-transform" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Main Content Area */}
+                <div className="space-y-8">
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight">Launchpad</h1>
-                            <p className="text-gray-400">Discover and invest in top-tier SME tokenized equity drops.</p>
+                            <h2 className="text-3xl font-bold text-white mb-2">Investment Opportunities</h2>
+                            <p className="text-gray-400">Discover vetted SME deals currently open for subscription.</p>
+                        </div>
+
+                        {/* Filter Tabs */}
+                        <div className="flex space-x-1 bg-gray-800/50 p-1 rounded-2xl border border-gray-800 h-fit">
+                            {(['active', 'upcoming', 'ended'] as const).map((f) => (
+                                <button
+                                    key={f}
+                                    onClick={() => setActiveFilter(f)}
+                                    className={`px-6 py-2.5 rounded-xl font-bold capitalize transition-all text-sm ${activeFilter === f
+                                        ? 'bg-blue-600 text-white shadow-lg'
+                                        : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800'
+                                        }`}
+                                >
+                                    {f}
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    {isAdmin && (
-                        <button
-                            onClick={() => setIsCreateModalOpen(true)}
-                            className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-2.5 rounded-lg flex items-center justify-center font-semibold transition-colors shadow-lg shadow-blue-500/20"
-                        >
-                            <Plus className="w-5 h-5 mr-2" />
-                            Create Launchpad Drop
-                        </button>
+                    {/* Offerings Grid */}
+                    {isLoading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-10">
+                            {[1, 2].map(i => (
+                                <div key={i} className="bg-gray-800/50 border border-gray-800 rounded-[2rem] h-[400px] animate-pulse" />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+                            {offerings.length === 0 ? (
+                                <div className="col-span-full text-center py-32 bg-gray-800/30 rounded-[2.5rem] border border-gray-800 border-dashed">
+                                    <Rocket className="w-16 h-16 text-gray-700 mx-auto mb-4" />
+                                    <h3 className="text-2xl font-bold text-gray-500">No Offerings Available</h3>
+                                    <p className="text-gray-600 mt-2 max-w-sm mx-auto">There are currently no SMEs listed on the Launchpad. Check back soon for new drops.</p>
+                                </div>
+                            ) : offerings.filter(o => calculateStatus(o.startTime, o.endTime).label.toLowerCase() === activeFilter).length === 0 ? (
+                                <div className="col-span-full text-center py-32 bg-gray-800/30 rounded-[2.5rem] border border-gray-800 border-dashed">
+                                    <Clock className="w-16 h-16 text-gray-700 mx-auto mb-4" />
+                                    <h3 className="text-2xl font-bold text-gray-500">No {activeFilter} Drops</h3>
+                                    <p className="text-gray-600 mt-2">Check the other categories for available investments.</p>
+                                </div>
+                            ) : (
+                                offerings
+                                    .filter(offering => calculateStatus(offering.startTime, offering.endTime).label.toLowerCase() === activeFilter)
+                                    .map((offering) => {
+                                        const status = calculateStatus(offering.startTime, offering.endTime)
+                                        return (
+                                            <div
+                                                key={offering.id}
+                                                className="group relative bg-gray-800/40 border border-gray-700/50 rounded-[2rem] overflow-hidden hover:border-blue-500/50 transition-all duration-500 cursor-pointer flex flex-col shadow-lg hover:shadow-blue-500/10"
+                                                onClick={() => router.push(`/trading/launchpad/${offering.id}`)}
+                                            >
+                                                {/* Card Header with Background */}
+                                                <div className="h-48 relative overflow-hidden">
+                                                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1620325867502-221cfb5fc5f7?auto=format&fit=crop&q=80&w=1000')] bg-cover bg-center group-hover:scale-110 transition-transform duration-700" />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-gray-800 to-transparent" />
+
+                                                    <div className="absolute top-5 right-5">
+                                                        <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-tighter backdrop-blur-xl border border-white/10 ${status.color}`}>
+                                                            {status.label}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="p-8 space-y-6 flex-1 flex flex-col pt-0 -mt-10 relative z-10">
+                                                    <div className="w-20 h-20 bg-gray-900 border-2 border-gray-700 rounded-3xl flex items-center justify-center shadow-2xl group-hover:border-blue-500/50 transition-colors">
+                                                        <Rocket className="w-10 h-10 text-blue-400" />
+                                                    </div>
+
+                                                    <div className="space-y-2">
+                                                        <h3 className="text-2xl font-black text-white group-hover:text-blue-400 transition-colors leading-tight">
+                                                            {offering.deal?.sme?.companyName}
+                                                        </h3>
+                                                        <p className="text-sm text-gray-400 font-medium">{offering.deal?.title}</p>
+                                                    </div>
+
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div className="space-y-1">
+                                                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Target Raise</p>
+                                                            <p className="text-lg font-black text-white">{formatCurrency(offering.hardCap)}</p>
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Price / Unit</p>
+                                                            <p className="text-lg font-black text-blue-400">${offering.unitPrice.toFixed(2)}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="pt-6 border-t border-gray-700/50 mt-auto flex items-center justify-between">
+                                                        <div className="flex items-center space-x-2 text-gray-500 text-xs font-bold">
+                                                            <Clock className="w-4 h-4" />
+                                                            <span>Ends {new Date(offering.endTime).toLocaleDateString()}</span>
+                                                        </div>
+                                                        <div className="flex items-center text-xs font-black text-blue-400 uppercase tracking-widest group-hover:translate-x-1 transition-transform">
+                                                            Explore Deal <ChevronRight className="w-4 h-4 ml-1" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })
+                            )}
+                        </div>
                     )}
                 </div>
-
-                {/* Filter Tabs */}
-                <div className="flex space-x-2 mb-8 bg-gray-800/30 p-1.5 rounded-xl w-fit border border-gray-800">
-                    {(['active', 'upcoming', 'ended'] as const).map((f) => (
-                        <button
-                            key={f}
-                            onClick={() => setActiveFilter(f)}
-                            className={`px-6 py-2 rounded-lg font-medium capitalize transition-all ${activeFilter === f
-                                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-700/50'
-                                }`}
-                        >
-                            {f}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                    <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700/50 p-6 rounded-2xl relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                                <Activity className="w-6 h-6 text-blue-400" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-400">Total Funds Raised</p>
-                                <p className="text-2xl font-bold tracking-tight">$12.4M</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700/50 p-6 rounded-2xl relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center border border-green-500/20">
-                                <Building2 className="w-6 h-6 text-green-400" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-400">Projects Launched</p>
-                                <p className="text-2xl font-bold tracking-tight">42 SMEs</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700/50 p-6 rounded-2xl relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
-                                <Users className="w-6 h-6 text-purple-400" />
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-400">Unique Participants</p>
-                                <p className="text-2xl font-bold tracking-tight">8,204</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Offerings List */}
-                {isLoading ? (
-                    <div className="flex justify-center py-20">
-                        <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                ) : offerings.length === 0 ? (
-                    <div className="text-center py-20 bg-gray-800/50 rounded-2xl border border-gray-700/50">
-                        <Rocket className="w-12 h-12 text-gray-500 mx-auto mb-4" />
-                        <h3 className="text-xl font-medium text-white mb-2">No Active Offerings</h3>
-                        <p className="text-gray-400">There are currently no SMEs listed on the Launchpad.</p>
-                    </div>
-                ) : offerings.filter(o => calculateStatus(o.startTime, o.endTime).label.toLowerCase() === activeFilter).length === 0 ? (
-                    <div className="text-center py-20 bg-gray-800/50 rounded-2xl border border-gray-700/50 flex flex-col items-center">
-                        <Rocket className="w-16 h-16 text-gray-700 mb-4" />
-                        <h3 className="text-xl font-bold text-gray-400">No {activeFilter} Offerings</h3>
-                        <p className="text-gray-500 mt-2">There are currently no SMEs listed in this category on the Launchpad.</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {offerings
-                            .filter(offering => {
-                                const status = calculateStatus(offering.startTime, offering.endTime)
-                                return status.label.toLowerCase() === activeFilter
-                            })
-                            .map((offering) => {
-                                const status = calculateStatus(offering.startTime, offering.endTime)
-                                return (
-                                    <div
-                                        key={offering.id}
-                                        className="bg-gray-800 border border-gray-700 rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all group cursor-pointer flex flex-col"
-                                        onClick={() => router.push(`/trading/launchpad/${offering.id}`)}
-                                    >
-                                        {/* Banner Placeholder */}
-                                        <div className="h-44 w-full bg-gradient-to-br from-blue-900/40 via-purple-900/40 to-gray-900 relative">
-                                            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1639762681485-074b7f938ba0?auto=format&fit=crop&q=80&w=2232')] bg-cover bg-center opacity-20 mix-blend-overlay" />
-                                            <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-medium backdrop-blur-md border border-white/10 ${status.color}`}>
-                                                <div className="flex items-center space-x-1">
-                                                    {status.active && <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />}
-                                                    <span>{status.label}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="p-6 flex-1 flex flex-col">
-                                            <div className="mb-4">
-                                                <h3 className="text-2xl font-bold mb-1 group-hover:text-blue-400 transition-colors">
-                                                    {offering.deal?.sme?.companyName}
-                                                </h3>
-                                                <p className="text-sm text-gray-400">{offering.deal?.title}</p>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-4 mb-6">
-                                                <div className="bg-gray-900/50 rounded-xl p-4 border border-gray-800">
-                                                    <p className="text-xs text-gray-400 mb-1 font-bold uppercase tracking-widest">Target Raise</p>
-                                                    <p className="text-lg font-bold text-white">{formatCurrency(offering.hardCap)}</p>
-                                                </div>
-                                                <div className="bg-gray-900/50 rounded-xl p-4 border border-gray-800">
-                                                    <p className="text-xs text-gray-400 mb-1 font-bold uppercase tracking-widest">Price per DU</p>
-                                                    <p className="text-lg font-bold text-blue-400">${offering.unitPrice.toFixed(2)}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-auto flex items-center justify-between text-sm pt-4 border-t border-gray-700/50">
-                                                <div className="flex items-center space-x-2 text-gray-400">
-                                                    <Clock className="w-4 h-4" />
-                                                    <span>Ends {new Date(offering.endTime).toLocaleDateString()}</span>
-                                                </div>
-                                                <div className="flex items-center text-blue-400 font-bold group-hover:translate-x-1 transition-transform">
-                                                    Invest Now <ChevronRight className="w-4 h-4 ml-1" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                    </div>
-                )}
 
                 <CreateLaunchpadModal
                     isOpen={isCreateModalOpen}
