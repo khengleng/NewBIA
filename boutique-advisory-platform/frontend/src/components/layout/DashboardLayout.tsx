@@ -207,6 +207,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 { href: '/admin/role-lifecycle', label: 'Role Lifecycle', icon: Shield, roles: ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE'], permission: 'role_grant.list' },
                 { href: '/admin/settings/branding', label: 'Platform Branding', icon: Palette, roles: ['ADMIN', 'SUPER_ADMIN'] },
                 { href: '/admin/audit', label: 'System Audit', icon: History, roles: ['SUPER_ADMIN', 'ADMIN', 'AUDITOR', 'COMPLIANCE'] },
+                { href: '/admin/bot', label: 'Telegram Management', icon: MessagesSquare, roles: ['SUPER_ADMIN', 'ADMIN'] },
             ]
         },
         {
@@ -381,6 +382,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     { href: '/trading/operator/role-lifecycle', label: 'Access Lifecycle', icon: Shield, roles: ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE'] },
                     { href: '/trading/operator/security', label: 'Security Controls', icon: ShieldCheck, roles: operatorRoles },
                     { href: '/trading/sessions', label: 'Manage Sessions', icon: Shield, roles: operatorRoles },
+                    { href: '/admin/bot', label: 'Telegram Management', icon: MessagesSquare, roles: ['SUPER_ADMIN', 'ADMIN'] },
                 ]
             },
         ]
@@ -423,6 +425,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             '/trading/markets',
             '/trading/sessions',
             '/trading/launchpad',
+            '/admin/bot',
         ]
         const participantAllowedPrefixes = [
             '/trading/launchpad',

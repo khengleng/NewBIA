@@ -102,6 +102,8 @@ import adminReconciliationRoutes from './routes/admin-reconciliation';
 import adminSecurityRoutes from './routes/admin-security';
 import walletRoutes from './routes/wallet';
 import launchpadRoutes from './routes/launchpad';
+import mobileRoutes from './routes/mobile';
+import adminBotRoutes from './routes/admin-bot';
 
 // Core Feature Routes
 import authRoutes from './routes/auth';
@@ -790,6 +792,8 @@ app.use('/api/admin/investor-ops', authenticateToken, adminInvestorOpsRoutes);
 app.use('/api/admin/data-governance', authenticateToken, adminDataGovernanceRoutes);
 app.use('/api/admin/reconciliation', authenticateToken, adminReconciliationRoutes);
 app.use('/api/admin/security', authenticateToken, adminSecurityRoutes);
+app.use('/api/mobile', authenticateToken, mobileRoutes);
+app.use('/api/admin/bot', authenticateToken, adminBotRoutes);
 
 
 

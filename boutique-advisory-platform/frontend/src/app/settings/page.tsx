@@ -8,8 +8,10 @@ import {
   Shield,
   Bell as BellIcon,
   Globe,
-  Save
+  Save,
+  Send
 } from 'lucide-react'
+import TelegramLink from '../../components/TelegramLink'
 
 interface User {
   id: string
@@ -302,327 +304,330 @@ export default function SettingsPage() {
   return (
     <DashboardLayout>
       <main>
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white">Settings</h1>
-            <p className="text-gray-400 mt-2">Manage your account settings and preferences</p>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white">Settings</h1>
+          <p className="text-gray-400 mt-2">Manage your account settings and preferences</p>
+        </div>
+
+        <div className="bg-gray-800 rounded-lg">
+          <div className="border-b border-gray-700">
+            <nav className="flex space-x-8 px-6">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
+                    ? 'border-blue-500 text-blue-400'
+                    : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+                    }`}
+                >
+                  <tab.icon className="w-5 h-5 mr-2" />
+                  {tab.name}
+                </button>
+              ))}
+            </nav>
           </div>
 
-          <div className="bg-gray-800 rounded-lg">
-            <div className="border-b border-gray-700">
-              <nav className="flex space-x-8 px-6">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center py-4 px-1 border-b-2 font-medium text-sm ${activeTab === tab.id
-                      ? 'border-blue-500 text-blue-400'
-                      : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
-                      }`}
-                  >
-                    <tab.icon className="w-5 h-5 mr-2" />
-                    {tab.name}
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            <div className="p-6">
-              {activeTab === 'profile' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-semibold text-white">Profile Information</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">First Name</label>
-                      <input
-                        type="text"
-                        defaultValue={user?.firstName}
-                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Last Name</label>
-                      <input
-                        type="text"
-                        defaultValue={user?.lastName}
-                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
-                      <input
-                        type="email"
-                        defaultValue={user?.email}
-                        className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Role</label>
-                      <input
-                        type="text"
-                        defaultValue={user?.role}
-                        disabled
-                        className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-gray-400 cursor-not-allowed"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => handleSaveProfile()}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </button>
-                </div>
-              )}
-
-              {activeTab === 'security' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-semibold text-white">Security Settings</h2>
-
-                  {/* Password Section */}
-                  <form
-                    className="bg-gray-800 p-6 rounded-lg border border-gray-700"
-                    onSubmit={(e) => {
-                      e.preventDefault()
-                      void handleUpdatePassword()
-                    }}
-                  >
+          <div className="p-6">
+            {activeTab === 'profile' && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold text-white">Profile Information</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">First Name</label>
                     <input
                       type="text"
-                      name="username"
-                      value={user?.email || ''}
-                      autoComplete="username"
-                      readOnly
-                      tabIndex={-1}
-                      aria-hidden="true"
-                      className="sr-only"
+                      defaultValue={user?.firstName}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <h3 className="text-lg font-medium text-white mb-4">Change Password</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Current Password</label>
-                        <input
-                          type="password"
-                          value={currentPassword}
-                          onChange={(e) => setCurrentPassword(e.target.value)}
-                          autoComplete="current-password"
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">New Password</label>
-                        <input
-                          type="password"
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          autoComplete="new-password"
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">Confirm New Password</label>
-                        <input
-                          type="password"
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          autoComplete="new-password"
-                          className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-                      >
-                        Update Password
-                      </button>
-                    </div>
-                  </form>
-
-                  {/* 2FA Section */}
-                  <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
-                    <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
-                      <Shield className="w-5 h-5 text-blue-400" />
-                      Two-Factor Authentication (2FA)
-                    </h3>
-
-                    {is2faEnabled ? (
-                      <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 p-4 rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-green-500/20 rounded-full">
-                            <Shield className="w-6 h-6 text-green-400" />
-                          </div>
-                          <div>
-                            <p className="text-white font-medium">2FA is Enabled</p>
-                            <p className="text-sm text-gray-400">Your account is secured with an authenticator app.</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setShowDisableModal(true)}
-                          className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg border border-red-500/20 transition-colors"
-                        >
-                          Disable
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-between bg-gray-700/30 p-4 rounded-lg">
-                        <div>
-                          <p className="text-gray-300">Protect your account with an extra layer of security.</p>
-                          <p className="text-sm text-gray-500">Require a code from your mobile device to sign in.</p>
-                        </div>
-                        <button
-                          onClick={handleEnable2FA}
-                          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                        >
-                          Enable 2FA
-                        </button>
-                      </div>
-                    )}
                   </div>
-
-                  {/* Danger Zone - Delete Account */}
-                  <div className="bg-red-900/10 border border-red-500/20 p-6 rounded-lg mt-8">
-                    <h3 className="text-lg font-medium text-red-400 mb-2 flex items-center gap-2">
-                      <LogOut className="w-5 h-5" />
-                      Danger Zone
-                    </h3>
-                    <p className="text-gray-400 text-sm mb-4">
-                      Once you delete your account, there is no going back. Please be certain.
-                    </p>
-
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-white font-medium">Delete Account</p>
-                        <p className="text-sm text-gray-500">Permanently remove your account and all of its content.</p>
-                      </div>
-                      <button
-                        onClick={() => setShowDeleteModal(true)}
-                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium text-sm"
-                      >
-                        Delete Account
-                      </button>
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Last Name</label>
+                    <input
+                      type="text"
+                      defaultValue={user?.lastName}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                    <input
+                      type="email"
+                      defaultValue={user?.email}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Role</label>
+                    <input
+                      type="text"
+                      defaultValue={user?.role}
+                      disabled
+                      className="w-full px-3 py-2 bg-gray-600 border border-gray-500 rounded-lg text-gray-400 cursor-not-allowed"
+                    />
                   </div>
                 </div>
-              )}
+                <button
+                  onClick={() => handleSaveProfile()}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center"
+                >
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Changes
+                </button>
+              </div>
+            )}
 
-              {activeTab === 'notifications' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-semibold text-white">Notification Preferences</h2>
-                  <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-                    {[
-                      {
-                        id: 'deals',
-                        title: 'Deal Updates',
-                        description: 'Receive notifications about new deals, status changes, and investments.',
-                      },
-                      {
-                        id: 'messages',
-                        title: 'Messages',
-                        description: 'Get notified when you receive a new message or reply.',
-                      },
-                      {
-                        id: 'security',
-                        title: 'Security Alerts',
-                        description: 'Important notifications about your account security and login attempts.',
-                      },
-                      {
-                        id: 'marketing',
-                        title: 'Marketing & News',
-                        description: 'Receive updates about platform features, newsletters, and promotions.',
-                      }
-                    ].map((item) => (
-                      <div key={item.id} className="p-6 border-b border-gray-700 last:border-0 flex items-start justify-between">
-                        <div>
-                          <h3 className="text-white font-medium">{item.title}</h3>
-                          <p className="text-gray-400 text-sm mt-1">{item.description}</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <label className="flex items-center cursor-pointer">
-                            <div className="relative">
-                              <input type="checkbox" className="sr-only peer" defaultChecked={true} />
-                              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </div>
-                            <span className="ml-3 text-sm font-medium text-gray-300">Email</span>
-                          </label>
-                          <label className="flex items-center cursor-pointer">
-                            <div className="relative">
-                              <input type="checkbox" className="sr-only peer" defaultChecked={item.id !== 'marketing'} />
-                              <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            </div>
-                            <span className="ml-3 text-sm font-medium text-gray-300">Push</span>
-                          </label>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex justify-end">
-                    <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg" onClick={() => alert('Preferences saved!')}>
-                      Save Preferences
-                    </button>
-                  </div>
-                </div>
-              )}
+            {activeTab === 'security' && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold text-white">Security Settings</h2>
 
-              {activeTab === 'preferences' && (
-                <div className="space-y-6">
-                  <h2 className="text-xl font-semibold text-white">General Preferences</h2>
-
-                  <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-6">
+                {/* Password Section */}
+                <form
+                  className="bg-gray-800 p-6 rounded-lg border border-gray-700"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    void handleUpdatePassword()
+                  }}
+                >
+                  <input
+                    type="text"
+                    name="username"
+                    value={user?.email || ''}
+                    autoComplete="username"
+                    readOnly
+                    tabIndex={-1}
+                    aria-hidden="true"
+                    className="sr-only"
+                  />
+                  <h3 className="text-lg font-medium text-white mb-4">Change Password</h3>
+                  <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Language</label>
-                      <select
-                        value={preferences.language}
-                        onChange={(e) => setPreferences({ ...preferences, language: e.target.value })}
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Current Password</label>
+                      <input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        autoComplete="current-password"
                         className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="EN">English (US)</option>
-                        <option value="KM">Khmer (ភាសាខ្មែរ)</option>
-                        <option value="ZH">Chinese (中文)</option>
-                      </select>
-                      <p className="text-xs text-gray-500 mt-1">Select the language for the platform interface.</p>
+                      />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Timezone</label>
-                      <select
-                        value={preferences.timezone}
-                        onChange={(e) => setPreferences({ ...preferences, timezone: e.target.value })}
+                      <label className="block text-sm font-medium text-gray-300 mb-2">New Password</label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        autoComplete="new-password"
                         className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="UTC+7">Indochina Time (ICT) - UTC+07:00</option>
-                        <option value="UTC+0">Coordinated Universal Time (UTC)</option>
-                        <option value="UTC+8">Singapore Standard Time (SST) - UTC+08:00</option>
-                        <option value="UTC-5">Eastern Standard Time (EST) - UTC-05:00</option>
-                      </select>
+                      />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-2">Currency Display</label>
-                      <select
-                        value={preferences.currency}
-                        onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Confirm New Password</label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        autoComplete="new-password"
                         className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="USD">USD ($)</option>
-                        <option value="KHR">KHR (៛)</option>
-                      </select>
-                      <p className="text-xs text-gray-500 mt-1">Preferred currency for financial reports and deal values.</p>
+                      />
                     </div>
-                  </div>
-
-                  <div className="flex justify-end">
                     <button
-                      onClick={handleSavePreferences}
+                      type="submit"
                       className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
                     >
-                      Save Preferences
+                      Update Password
+                    </button>
+                  </div>
+                </form>
+
+                {/* 2FA Section */}
+                <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
+                  <h3 className="text-lg font-medium text-white mb-4 flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-blue-400" />
+                    Two-Factor Authentication (2FA)
+                  </h3>
+
+                  {is2faEnabled ? (
+                    <div className="flex items-center justify-between bg-green-500/10 border border-green-500/20 p-4 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-green-500/20 rounded-full">
+                          <Shield className="w-6 h-6 text-green-400" />
+                        </div>
+                        <div>
+                          <p className="text-white font-medium">2FA is Enabled</p>
+                          <p className="text-sm text-gray-400">Your account is secured with an authenticator app.</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setShowDisableModal(true)}
+                        className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg border border-red-500/20 transition-colors"
+                      >
+                        Disable
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between bg-gray-700/30 p-4 rounded-lg">
+                      <div>
+                        <p className="text-gray-300">Protect your account with an extra layer of security.</p>
+                        <p className="text-sm text-gray-500">Require a code from your mobile device to sign in.</p>
+                      </div>
+                      <button
+                        onClick={handleEnable2FA}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                      >
+                        Enable 2FA
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Telegram Bot Integration */}
+                <TelegramLink user={user} />
+
+                {/* Danger Zone - Delete Account */}
+                <div className="bg-red-900/10 border border-red-500/20 p-6 rounded-lg mt-8">
+                  <h3 className="text-lg font-medium text-red-400 mb-2 flex items-center gap-2">
+                    <LogOut className="w-5 h-5" />
+                    Danger Zone
+                  </h3>
+                  <p className="text-gray-400 text-sm mb-4">
+                    Once you delete your account, there is no going back. Please be certain.
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-white font-medium">Delete Account</p>
+                      <p className="text-sm text-gray-500">Permanently remove your account and all of its content.</p>
+                    </div>
+                    <button
+                      onClick={() => setShowDeleteModal(true)}
+                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium text-sm"
+                    >
+                      Delete Account
                     </button>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {activeTab === 'notifications' && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold text-white">Notification Preferences</h2>
+                <div className="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+                  {[
+                    {
+                      id: 'deals',
+                      title: 'Deal Updates',
+                      description: 'Receive notifications about new deals, status changes, and investments.',
+                    },
+                    {
+                      id: 'messages',
+                      title: 'Messages',
+                      description: 'Get notified when you receive a new message or reply.',
+                    },
+                    {
+                      id: 'security',
+                      title: 'Security Alerts',
+                      description: 'Important notifications about your account security and login attempts.',
+                    },
+                    {
+                      id: 'marketing',
+                      title: 'Marketing & News',
+                      description: 'Receive updates about platform features, newsletters, and promotions.',
+                    }
+                  ].map((item) => (
+                    <div key={item.id} className="p-6 border-b border-gray-700 last:border-0 flex items-start justify-between">
+                      <div>
+                        <h3 className="text-white font-medium">{item.title}</h3>
+                        <p className="text-gray-400 text-sm mt-1">{item.description}</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center cursor-pointer">
+                          <div className="relative">
+                            <input type="checkbox" className="sr-only peer" defaultChecked={true} />
+                            <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </div>
+                          <span className="ml-3 text-sm font-medium text-gray-300">Email</span>
+                        </label>
+                        <label className="flex items-center cursor-pointer">
+                          <div className="relative">
+                            <input type="checkbox" className="sr-only peer" defaultChecked={item.id !== 'marketing'} />
+                            <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </div>
+                          <span className="ml-3 text-sm font-medium text-gray-300">Push</span>
+                        </label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-end">
+                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg" onClick={() => alert('Preferences saved!')}>
+                    Save Preferences
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'preferences' && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-semibold text-white">General Preferences</h2>
+
+                <div className="bg-gray-800 border border-gray-700 rounded-lg p-6 space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Language</label>
+                    <select
+                      value={preferences.language}
+                      onChange={(e) => setPreferences({ ...preferences, language: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="EN">English (US)</option>
+                      <option value="KM">Khmer (ភាសាខ្មែរ)</option>
+                      <option value="ZH">Chinese (中文)</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Select the language for the platform interface.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Timezone</label>
+                    <select
+                      value={preferences.timezone}
+                      onChange={(e) => setPreferences({ ...preferences, timezone: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="UTC+7">Indochina Time (ICT) - UTC+07:00</option>
+                      <option value="UTC+0">Coordinated Universal Time (UTC)</option>
+                      <option value="UTC+8">Singapore Standard Time (SST) - UTC+08:00</option>
+                      <option value="UTC-5">Eastern Standard Time (EST) - UTC-05:00</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Currency Display</label>
+                    <select
+                      value={preferences.currency}
+                      onChange={(e) => setPreferences({ ...preferences, currency: e.target.value })}
+                      className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="USD">USD ($)</option>
+                      <option value="KHR">KHR (៛)</option>
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">Preferred currency for financial reports and deal values.</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSavePreferences}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                  >
+                    Save Preferences
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        </main>
+        </div>
+      </main>
 
       {/* Enable 2FA Modal */}
       {
