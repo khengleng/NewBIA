@@ -9,7 +9,7 @@ WORKDIR /app
 
 # Copy the pre-built web assets from our local build/web folder
 # Note: This assumes you ran 'flutter build web' locally.
-COPY build/web /app/build/web
+COPY mobile_app/build/web /app/build/web
 
 # Expose the Railway-provided port
 ENV PORT=8080
