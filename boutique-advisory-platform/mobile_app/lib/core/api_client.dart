@@ -8,7 +8,7 @@ class ApiClient {
   final _storage = const FlutterSecureStorage();
   
   // Update this with your actual local or production URL
-  final String baseUrl = 'https://www.cambobia.com/api';
+  final String baseUrl = 'https://cambobia.com/api';
 
   ApiClient() {
     _dio = Dio(BaseOptions(
