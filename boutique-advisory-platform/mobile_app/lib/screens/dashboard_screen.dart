@@ -100,32 +100,56 @@ class _MarketHomeState extends ConsumerState<MarketHome> {
     final cur = NumberFormat.currency(symbol: '\$', decimalDigits: 0);
 
     return Scaffold(
+      backgroundColor: const Color(0xFF0B0E11),
       appBar: AppBar(
-        title: const Text('SMEs Trading Co.,ltd'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text('Markets', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
-          IconButton(onPressed: _fetchData, icon: const Icon(Icons.refresh, color: Colors.blueAccent)),
+          IconButton(onPressed: _fetchData, icon: const Icon(Icons.refresh, color: Color(0xFFF0B90B))),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.search, color: Colors.white70)),
         ],
       ),
       body: RefreshIndicator(
         onRefresh: _fetchData,
+        color: const Color(0xFFF0B90B),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(vertical: 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 1. Market Ticker (Binance Style)
+              Container(
+                height: 40,
+                width: double.infinity,
+                color: const Color(0xFF1E2329),
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    _buildTicker('SME/USD', '1.25', '+1.2%'),
+                    _buildTicker('AGRI/USD', '0.85', '-0.5%'),
+                    _buildTicker('TECH/USD', '5.42', '+2.3%'),
+                    _buildTicker('SME/USD', '1.00', '0.0%'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+              
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
-                    const Text('Quick Trade', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text('Top Offerings', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                     const Spacer(),
-                    TextButton(onPressed: () {}, child: const Text('View All', style: TextStyle(color: Colors.blueAccent, fontSize: 12))),
+                    TextButton(onPressed: () {}, child: const Text('Favorites', style: TextStyle(color: Color(0xFFF0B90B), fontSize: 12))),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
               SizedBox(
-                height: 160,
+                height: 170,
                 child: _isLoading 
                     ? _buildQuickTradeShimmer()
                     : _listings.isEmpty
@@ -137,7 +161,24 @@ class _MarketHomeState extends ConsumerState<MarketHome> {
                             itemBuilder: (context, index) => _buildQuickTradeCard(_listings[index]),
                           ),
               ),
-              const SizedBox(height: 40),
+              
+              const SizedBox(height: 32),
+              
+              // 2. Tab-like Categories
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    _buildCategoryTab('All', true),
+                    _buildCategoryTab('Technology', false),
+                    _buildCategoryTab('Fintech', false),
+                    _buildCategoryTab('Agriculture', false),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+              
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24),
                 child: Text('Institutional SMEs', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
@@ -149,9 +190,11 @@ class _MarketHomeState extends ConsumerState<MarketHome> {
                 const Center(child: Text('No active deals found.'))
               else
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(children: _deals.map((d) => _buildDealCard(d, cur)).toList()),
                 ),
+                
+              const SizedBox(height: 100),
             ],
           ),
         ),
@@ -159,20 +202,55 @@ class _MarketHomeState extends ConsumerState<MarketHome> {
     );
   }
 
+  Widget _buildTicker(String pair, String price, String change) {
+    final isPos = change.startsWith('+');
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Text(pair, style: const TextStyle(color: Color(0xFF848E9C), fontSize: 11, fontWeight: FontWeight.bold)),
+          const SizedBox(width: 8),
+          Text(price, style: const TextStyle(color: Colors.white, fontSize: 11)),
+          const SizedBox(width: 4),
+          Text(change, style: TextStyle(color: isPos ? const Color(0xFF0ECB81) : const Color(0xFFF6465D), fontSize: 11)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryTab(String title, bool isActive) {
+    return Container(
+      margin: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: isActive ? const Color(0xFFF0B90B).withOpacity(0.1) : Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: isActive ? const Color(0xFFF0B90B) : const Color(0xFF848E9C),
+          fontSize: 13,
+          fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+    );
+  }
+
   Widget _buildQuickTradeCard(SecondaryListing listing) {
-    final cardBg = const Color(0xFF1E293B).withOpacity(0.8);
+    final cardBg = const Color(0xFF1E2329);
     final isPositive = (listing.pricePerShare % 2) == 0;
     return FadeInRight(
       child: InkWell(
         onTap: () => _showTradeSheet(listing),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
-          width: 150,
+          width: 160,
           margin: const EdgeInsets.only(right: 16),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: cardBg,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white.withOpacity(0.05)),
           ),
           child: Column(
@@ -181,32 +259,21 @@ class _MarketHomeState extends ConsumerState<MarketHome> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(color: Colors.blueAccent.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                    child: const Icon(Icons.business_outlined, color: Colors.blueAccent, size: 14),
-                  ),
-                  Text(isPositive ? '+2.4%' : '-1.2%', style: TextStyle(color: isPositive ? Colors.greenAccent : Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+                  Text(listing.dealTitle.substring(0, 3).toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text(isPositive ? '+2.4%' : '-1.2%', style: TextStyle(color: isPositive ? const Color(0xFF0ECB81) : const Color(0xFFF6465D), fontSize: 10, fontWeight: FontWeight.bold)),
                 ],
               ),
-              const Spacer(),
-              Text(listing.dealTitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
               const SizedBox(height: 4),
-              Text(listing.sector, style: const TextStyle(color: Colors.white38, fontSize: 10)),
-              const SizedBox(height: 12),
+              Text(listing.sector, style: const TextStyle(color: Color(0xFF848E9C), fontSize: 10)),
+              const Spacer(),
               SizedBox(
                 height: 30,
                 width: double.infinity,
-                child: CustomPaint(painter: SparklinePainter(color: isPositive ? Colors.greenAccent : Colors.redAccent, points: isPositive ? [0.2, 0.4, 0.3, 0.6, 0.5, 0.8, 0.7, 0.9] : [0.8, 0.6, 0.7, 0.4, 0.5, 0.2, 0.3, 0.1])),
+                child: CustomPaint(painter: SparklinePainter(color: isPositive ? const Color(0xFF0ECB81) : const Color(0xFFF6465D), points: isPositive ? [0.2, 0.4, 0.3, 0.6, 0.5, 0.8, 0.7, 0.9] : [0.8, 0.6, 0.7, 0.4, 0.5, 0.2, 0.3, 0.1])),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('\$${listing.pricePerShare}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                  Text('${listing.sharesAvailable.toInt()} shrs', style: const TextStyle(color: Colors.white38, fontSize: 9)),
-                ],
-              ),
+              const SizedBox(height: 12),
+              Text('\$${listing.pricePerShare}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+              Text('Vol: ${listing.sharesAvailable.toInt()} shrs', style: const TextStyle(color: Color(0xFF848E9C), fontSize: 9)),
             ],
           ),
         ),

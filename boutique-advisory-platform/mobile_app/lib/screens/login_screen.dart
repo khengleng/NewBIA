@@ -115,123 +115,217 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+      backgroundColor: const Color(0xFF0B0E11), // Binance-like dark background
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 80),
+                // 1. Branding Header
+                FadeInDown(
+                  duration: const Duration(milliseconds: 800),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0B90B).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(Icons.account_balance_wallet, color: Color(0xFFF0B90B), size: 32),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Secure institutional\nAdvisory & Trade',
+                        style: TextStyle(
+                          fontSize: 34,
+                          fontWeight: FontWeight.bold,
+                          height: 1.1,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'SMEs Trading Co.,ltd 🇰🇭',
+                        style: TextStyle(color: Color(0xFF848E9C), fontSize: 16),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-          ),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 60),
-                    FadeInDown(
-                      duration: const Duration(milliseconds: 800),
-                      child: const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Premium\nAdvisory & Trade',
-                            style: TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              height: 1.2,
-                              color: Colors.white,
-                            ),
-                          ),
-                          SizedBox(height: 12),
-                          Text(
-                            'SMEs Trading Co.,ltd 🇰🇭',
-                            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 16),
-                          ),
-                        ],
+                const SizedBox(height: 60),
+                
+                // 2. Form Fields
+                FadeInUp(
+                  duration: const Duration(milliseconds: 800),
+                  delay: const Duration(milliseconds: 200),
+                  child: Column(
+                    children: [
+                      _buildTextField(
+                        controller: _emailController,
+                        hint: 'Email / Phone Number',
+                        icon: Icons.alternate_email,
                       ),
-                    ),
-                    const SizedBox(height: 60),
-                    FadeInUp(
-                      duration: const Duration(milliseconds: 800),
-                      delay: const Duration(milliseconds: 200),
-                      child: Column(
-                        children: [
-                          TextField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: const InputDecoration(
-                              hintText: 'Email Address',
-                              prefixIcon: Icon(Icons.email_outlined),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          TextField(
-                            controller: _passwordController,
-                            obscureText: true,
-                            decoration: const InputDecoration(
-                              hintText: 'Password',
-                              prefixIcon: Icon(Icons.lock_outline),
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          if (_errorMessage != null)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: Text(
-                                _errorMessage!,
-                                style: const TextStyle(color: Colors.redAccent),
-                              ),
-                            ),
-                          ElevatedButton(
-                            onPressed: _isLoading ? null : _handleLogin,
-                            child: _isLoading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                  )
-                                : const Text('Sign In'),
-                          ),
-                          if (_canCheckBiometrics) ...[
-                            const SizedBox(height: 24),
-                            FadeIn(
-                              child: IconButton(
-                                icon: const Icon(Icons.fingerprint, size: 48, color: Colors.blueAccent),
-                                onPressed: _handleBiometricLogin,
-                              ),
-                            ),
-                            const Text(
-                              'Quick Login with Biometrics',
-                              style: TextStyle(color: Colors.white54, fontSize: 12),
-                            ),
-                          ],
-                        ],
+                      const SizedBox(height: 20),
+                      _buildTextField(
+                        controller: _passwordController,
+                        hint: 'Password',
+                        icon: Icons.lock_outline,
+                        isPassword: true,
                       ),
-                    ),
-                    const SizedBox(height: 40),
-                    Center(
-                      child: TextButton(
+                      const SizedBox(height: 32),
+                      
+                      if (_errorMessage != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.error_outline, color: Colors.redAccent, size: 16),
+                                const SizedBox(width: 8),
+                                Expanded(child: Text(_errorMessage!, style: const TextStyle(color: Colors.redAccent, fontSize: 12))),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _handleLogin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFF0B90B),
+                            foregroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.black),
+                                )
+                              : const Text(
+                                  'Sign In',
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 24),
+                      
+                      if (_canCheckBiometrics) ...[
+                        FadeIn(
+                          child: InkWell(
+                            onTap: _handleBiometricLogin,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.fingerprint, color: Color(0xFFF0B90B), size: 20),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Fingerprint Login',
+                                  style: TextStyle(color: Color(0xFF848E9C), fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                         const SizedBox(height: 24),
+                      ],
+                    ],
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // 3. Footer Links
+                Center(
+                  child: Column(
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (c) => AlertDialog(
+                              backgroundColor: const Color(0xFF1E2329),
+                              title: const Text('Investor Account', style: TextStyle(color: Colors.white)),
+                              content: const Text(
+                                'To create a new SME or Investor account, please visit the BIA Portal on your desktop at trade.cambobia.com.',
+                                style: TextStyle(color: Color(0xFF848E9C)),
+                              ),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.pop(c), child: const Text('Close', style: TextStyle(color: Color(0xFFF0B90B)))),
+                              ],
+                            ),
+                          );
+                        },
+                        child: RichText(
+                          text: const TextSpan(
+                            style: TextStyle(color: Color(0xFF848E9C), fontSize: 14),
+                            children: [
+                              TextSpan(text: "Don't have an account? "),
+                              TextSpan(
+                                text: 'Register',
+                                style: TextStyle(color: Color(0xFFF0B90B), fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
                         onPressed: () {},
                         child: const Text(
                           'Forgot Password?',
-                          style: TextStyle(color: Color(0xFF3B82F6)),
+                          style: TextStyle(color: Color(0xFF848E9C), fontSize: 13),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 40),
+              ],
             ),
           ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+    bool isPassword = false,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E2329),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: isPassword,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Color(0xFF848E9C), fontSize: 15),
+          prefixIcon: Icon(icon, color: const Color(0xFF848E9C), size: 20),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 18),
+        ),
       ),
     );
   }

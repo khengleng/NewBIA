@@ -4,6 +4,7 @@ class PortfolioSummary {
   final double realizedRoi;
   final double totalPerformance;
   final String kycStatus;
+  final String? role;
 
   PortfolioSummary({
     required this.totalAum,
@@ -11,6 +12,7 @@ class PortfolioSummary {
     required this.realizedRoi,
     required this.totalPerformance,
     required this.kycStatus,
+    this.role,
   });
 
   factory PortfolioSummary.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class PortfolioSummary {
       realizedRoi: (json['realizedRoi'] as num).toDouble(),
       totalPerformance: (json['totalPerformance'] as num).toDouble(),
       kycStatus: json['kycStatus'] as String? ?? 'PENDING',
+      role: json['role'] as String?,
     );
   }
 }
