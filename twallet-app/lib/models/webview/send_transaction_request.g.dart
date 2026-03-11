@@ -1,0 +1,192 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'send_transaction_request.dart';
+
+// **************************************************************************
+// BuiltValueGenerator
+// **************************************************************************
+
+Serializer<SendTransactionRequest> _$sendTransactionRequestSerializer =
+    new _$SendTransactionRequestSerializer();
+
+class _$SendTransactionRequestSerializer
+    implements StructuredSerializer<SendTransactionRequest> {
+  @override
+  final Iterable<Type> types = const [
+    SendTransactionRequest,
+    _$SendTransactionRequest
+  ];
+  @override
+  final String wireName = 'SendTransactionRequest';
+
+  @override
+  Iterable<Object?> serialize(
+      Serializers serializers, SendTransactionRequest object,
+      {FullType specifiedType = FullType.unspecified}) {
+    final result = <Object?>[
+      'fromAddress',
+      serializers.serialize(object.fromAddress,
+          specifiedType: const FullType(String)),
+      'fromPublicKey',
+      serializers.serialize(object.fromPublicKey,
+          specifiedType: const FullType(String)),
+      'signedTransactionRawData',
+      serializers.serialize(object.signedTransactionRawData,
+          specifiedType: const FullType(String)),
+    ];
+
+    return result;
+  }
+
+  @override
+  SendTransactionRequest deserialize(
+      Serializers serializers, Iterable<Object?> serialized,
+      {FullType specifiedType = FullType.unspecified}) {
+    final result = new SendTransactionRequestBuilder();
+
+    final iterator = serialized.iterator;
+    while (iterator.moveNext()) {
+      final key = iterator.current! as String;
+      iterator.moveNext();
+      final Object? value = iterator.current;
+      switch (key) {
+        case 'fromAddress':
+          result.fromAddress = serializers.deserialize(value,
+              specifiedType: const FullType(String))! as String;
+          break;
+        case 'fromPublicKey':
+          result.fromPublicKey = serializers.deserialize(value,
+              specifiedType: const FullType(String))! as String;
+          break;
+        case 'signedTransactionRawData':
+          result.signedTransactionRawData = serializers.deserialize(value,
+              specifiedType: const FullType(String))! as String;
+          break;
+      }
+    }
+
+    return result.build();
+  }
+}
+
+class _$SendTransactionRequest extends SendTransactionRequest {
+  @override
+  final String fromAddress;
+  @override
+  final String fromPublicKey;
+  @override
+  final String signedTransactionRawData;
+
+  factory _$SendTransactionRequest(
+          [void Function(SendTransactionRequestBuilder)? updates]) =>
+      (new SendTransactionRequestBuilder()..update(updates))._build();
+
+  _$SendTransactionRequest._(
+      {required this.fromAddress,
+      required this.fromPublicKey,
+      required this.signedTransactionRawData})
+      : super._() {
+    BuiltValueNullFieldError.checkNotNull(
+        fromAddress, r'SendTransactionRequest', 'fromAddress');
+    BuiltValueNullFieldError.checkNotNull(
+        fromPublicKey, r'SendTransactionRequest', 'fromPublicKey');
+    BuiltValueNullFieldError.checkNotNull(signedTransactionRawData,
+        r'SendTransactionRequest', 'signedTransactionRawData');
+  }
+
+  @override
+  SendTransactionRequest rebuild(
+          void Function(SendTransactionRequestBuilder) updates) =>
+      (toBuilder()..update(updates)).build();
+
+  @override
+  SendTransactionRequestBuilder toBuilder() =>
+      new SendTransactionRequestBuilder()..replace(this);
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(other, this)) return true;
+    return other is SendTransactionRequest &&
+        fromAddress == other.fromAddress &&
+        fromPublicKey == other.fromPublicKey &&
+        signedTransactionRawData == other.signedTransactionRawData;
+  }
+
+  @override
+  int get hashCode {
+    return $jf($jc($jc($jc(0, fromAddress.hashCode), fromPublicKey.hashCode),
+        signedTransactionRawData.hashCode));
+  }
+
+  @override
+  String toString() {
+    return (newBuiltValueToStringHelper(r'SendTransactionRequest')
+          ..add('fromAddress', fromAddress)
+          ..add('fromPublicKey', fromPublicKey)
+          ..add('signedTransactionRawData', signedTransactionRawData))
+        .toString();
+  }
+}
+
+class SendTransactionRequestBuilder
+    implements Builder<SendTransactionRequest, SendTransactionRequestBuilder> {
+  _$SendTransactionRequest? _$v;
+
+  String? _fromAddress;
+  String? get fromAddress => _$this._fromAddress;
+  set fromAddress(String? fromAddress) => _$this._fromAddress = fromAddress;
+
+  String? _fromPublicKey;
+  String? get fromPublicKey => _$this._fromPublicKey;
+  set fromPublicKey(String? fromPublicKey) =>
+      _$this._fromPublicKey = fromPublicKey;
+
+  String? _signedTransactionRawData;
+  String? get signedTransactionRawData => _$this._signedTransactionRawData;
+  set signedTransactionRawData(String? signedTransactionRawData) =>
+      _$this._signedTransactionRawData = signedTransactionRawData;
+
+  SendTransactionRequestBuilder();
+
+  SendTransactionRequestBuilder get _$this {
+    final $v = _$v;
+    if ($v != null) {
+      _fromAddress = $v.fromAddress;
+      _fromPublicKey = $v.fromPublicKey;
+      _signedTransactionRawData = $v.signedTransactionRawData;
+      _$v = null;
+    }
+    return this;
+  }
+
+  @override
+  void replace(SendTransactionRequest other) {
+    ArgumentError.checkNotNull(other, 'other');
+    _$v = other as _$SendTransactionRequest;
+  }
+
+  @override
+  void update(void Function(SendTransactionRequestBuilder)? updates) {
+    if (updates != null) updates(this);
+  }
+
+  @override
+  SendTransactionRequest build() => _build();
+
+  _$SendTransactionRequest _build() {
+    final _$result = _$v ??
+        new _$SendTransactionRequest._(
+            fromAddress: BuiltValueNullFieldError.checkNotNull(
+                fromAddress, r'SendTransactionRequest', 'fromAddress'),
+            fromPublicKey: BuiltValueNullFieldError.checkNotNull(
+                fromPublicKey, r'SendTransactionRequest', 'fromPublicKey'),
+            signedTransactionRawData: BuiltValueNullFieldError.checkNotNull(
+                signedTransactionRawData,
+                r'SendTransactionRequest',
+                'signedTransactionRawData'));
+    replace(_$result);
+    return _$result;
+  }
+}
+
+// ignore_for_file: always_put_control_body_on_new_line,always_specify_types,annotate_overrides,avoid_annotating_with_dynamic,avoid_as,avoid_catches_without_on_clauses,avoid_returning_this,deprecated_member_use_from_same_package,lines_longer_than_80_chars,no_leading_underscores_for_local_identifiers,omit_local_variable_types,prefer_expression_function_bodies,sort_constructors_first,test_types_in_equals,unnecessary_const,unnecessary_new,unnecessary_lambdas
