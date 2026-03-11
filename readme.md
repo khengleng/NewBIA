@@ -209,6 +209,9 @@ mkdir boutique-advisory-backend && cd boutique-advisory-backend && npm init -y
 
 ---
 
+## 📱 TWallet mobile companion
+- The Flutter mobile app lives inside `twallet-app` and runs independently from the cambobia.com + trade.cambobia.com web apps.
+- Its CI job (`.github/workflows/twallet-flutter.yml`) fires only when `twallet-app/**` changes, so the existing web deployments remain unaffected.
 
 
 ## 📎 Notes for Developers

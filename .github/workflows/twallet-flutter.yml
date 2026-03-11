@@ -1,0 +1,38 @@
+name: Build TWallet Flutter App
+
+on:
+  push:
+    paths:
+      - 'twallet-app/**'
+  pull_request:
+    paths:
+      - 'twallet-app/**'
+
+jobs:
+  flutter-build:
+    name: Flutter Analyze & Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.14.0'
+          channel: stable
+          cache: pub
+
+      - name: Install dependencies
+        working-directory: twallet-app
+        run: flutter pub get
+
+      - name: Run Flutter analyze
+        working-directory: twallet-app
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        working-directory: twallet-app
+        run: flutter test --no-codesign
