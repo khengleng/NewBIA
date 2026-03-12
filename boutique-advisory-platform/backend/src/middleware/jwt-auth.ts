@@ -56,12 +56,16 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
         const requestTenantId = getTenantId(req);
         const coreTenantId = process.env.CORE_TENANT_ID || 'default';
         const tradingTenantId = process.env.TRADING_TENANT_ID || 'trade';
-        const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
-        const isTradingService = serviceMode === 'trading';
+        
+        // Detect if we are in the trading context based on the cookie naming convention, 
+        // which is derived from the current request hostname.
+        const isTradingContext = getAuthCookieNames(req).accessToken.startsWith('tr_');
 
-        const isAuthorizedCrossTenant = isTradingService && 
+        const isAuthorizedCrossTenant = isTradingContext && 
             user.tenantId === coreTenantId && 
-            requestTenantId === tradingTenantId;
+            (requestTenantId === tradingTenantId || requestTenantId === coreTenantId);
+
+        const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
 
         if (requestTenantId !== user.tenantId && !isAuthorizedCrossTenant) {
             console.warn('[AUTH] Tenant access denied', {
@@ -117,12 +121,14 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
         const requestTenantId = getTenantId(req);
         const coreTenantId = process.env.CORE_TENANT_ID || 'default';
         const tradingTenantId = process.env.TRADING_TENANT_ID || 'trade';
-        const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
-        const isTradingService = serviceMode === 'trading';
+        
+        const isTradingContext = getAuthCookieNames(req).accessToken.startsWith('tr_');
 
-        const isAuthorizedCrossTenant = isTradingService && 
+        const isAuthorizedCrossTenant = isTradingContext && 
             storedToken.user.tenantId === coreTenantId && 
-            requestTenantId === tradingTenantId;
+            (requestTenantId === tradingTenantId || requestTenantId === coreTenantId);
+
+        const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
 
         if (requestTenantId !== storedToken.user.tenantId && !isAuthorizedCrossTenant) {
             console.warn('[AUTH] Tenant access denied during refresh', {
