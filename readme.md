@@ -212,6 +212,8 @@ mkdir boutique-advisory-backend && cd boutique-advisory-backend && npm init -y
 ## 📱 TWallet mobile companion
 - The Flutter mobile app lives inside `twallet-app` and runs independently from the cambobia.com + trade.cambobia.com web apps.
 - Its CI job (`.github/workflows/twallet-flutter.yml`) fires only when `twallet-app/**` changes, so the existing web deployments remain unaffected.
+- Release artifacts are produced in GitHub Actions (`flutter build appbundle --release` and `flutter build apk --release`) and stored as workflow artifacts. Use Fastlane or your chosen tool to sign and upload those binaries to the Google Play Store and Apple App Store. iOS builds require macOS runners (not covered by this workflow) so perform them manually or via a separate macOS job.
+- The mobile app consumes the same Railway-hosted APIs that service cambobia.com and trade.cambobia.com (authentication, listings, portfolios, notifications) so investor/SME data stays consistent between web and mobile.
 
 
 ## 📎 Notes for Developers
@@ -223,7 +225,6 @@ mkdir boutique-advisory-backend && cd boutique-advisory-backend && npm init -y
 ---
 Platform description:
 **Boutique Advisory** → Bridging SMEs and Investors with trust, governance, and smart technology.
-
 
 
 
