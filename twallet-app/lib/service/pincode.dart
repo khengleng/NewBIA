@@ -7,7 +7,9 @@ import 'package:tw_wallet_ui/common/theme/color.dart';
 import 'package:tw_wallet_ui/models/webview/pincode_dialog/pincode_dialog_style.dart';
 import 'package:tw_wallet_ui/widgets/pin_dialog.dart';
 
-const tokenSecret = 'tokenSecret';
+// SECURITY: Do not use hardcoded secrets in production.
+// This should be provided during build via --dart-define=PINCODE_JWT_SECRET=your_secret
+const tokenSecret = String.fromEnvironment('PINCODE_JWT_SECRET', defaultValue: 'dev_token_secret_fallback');
 
 class PincodeService {
   static YYDialog? dialogInstance;

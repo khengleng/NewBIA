@@ -338,8 +338,10 @@ export function getSecurityHeaders(): Record<string, string> {
 
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
-if (!ENCRYPTION_KEY && process.env.NODE_ENV === 'production') {
-    throw new Error('ENCRYPTION_KEY is required in production');
+// SECURITY: Encryption key is strictly required in any non-local/non-test environment.
+const isLocalEnv = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+if (!ENCRYPTION_KEY && !isLocalEnv) {
+    throw new Error('FATAL: ENCRYPTION_KEY environment variable is mandatory for this environment.');
 }
 
 function getEncryptionKey(): string {

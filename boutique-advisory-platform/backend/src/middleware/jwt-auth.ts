@@ -56,7 +56,7 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
         }
 
         const requestTenantId = getTenantId(req);
-        if (requestTenantId !== 'default' && requestTenantId !== user.tenantId) {
+        if (requestTenantId !== user.tenantId && user.role !== 'SUPER_ADMIN') {
             res.status(403).json({ error: 'Tenant access denied' });
             return;
         }
@@ -99,7 +99,7 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
         }
 
         const requestTenantId = getTenantId(req);
-        if (requestTenantId !== 'default' && requestTenantId !== storedToken.user.tenantId) {
+        if (requestTenantId !== storedToken.user.tenantId && storedToken.user.role !== 'SUPER_ADMIN') {
             res.status(403).json({ error: 'Tenant access denied' });
             return;
         }
