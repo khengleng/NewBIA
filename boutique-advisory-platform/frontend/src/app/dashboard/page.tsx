@@ -23,6 +23,8 @@ import { useTranslations } from '../../hooks/useTranslations'
 import { authorizedRequest } from '../../lib/api'
 import { resolveTradingRuntime } from '@/lib/platform'
 import { TRADING_OPERATOR_HOME } from '@/lib/tradingOperatorRoutes'
+import { hasPermission } from '@/lib/permissions'
+import { normalizeRole } from '@/lib/roles'
 
 interface User {
   id: string
@@ -43,24 +45,38 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const userData = localStorage.getItem('user')
-        if (userData) {
-          const parsedUser = JSON.parse(userData)
+        const meResponse = await authorizedRequest('/api/auth/me')
+        if (!meResponse.ok) {
+          router.replace('/auth/login')
+          return
+        }
 
-          // Admin users use the dedicated admin dashboard.
-          if (['ADMIN', 'SUPER_ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'SUPPORT'].includes(parsedUser.role)) {
-            const isTradingRuntime = resolveTradingRuntime(window.location.hostname, window.location.pathname)
-            router.replace(isTradingRuntime ? TRADING_OPERATOR_HOME : '/admin/dashboard')
-            return
-          }
+        const meData = await meResponse.json()
+        const apiUser = meData?.user
+        if (!apiUser) {
+          router.replace('/auth/login')
+          return
+        }
 
-          setUser(parsedUser)
+        const normalizedUser: User = {
+          ...apiUser,
+          role: normalizeRole(apiUser.role) as User['role'],
+        }
 
-          const response = await authorizedRequest('/api/dashboard/stats')
-          if (response.ok) {
-            const data = await response.json()
-            setStats(data.stats)
-          }
+        localStorage.setItem('user', JSON.stringify(normalizedUser))
+
+        if (hasPermission(normalizedUser.role, 'admin.read')) {
+          const isTradingRuntime = resolveTradingRuntime(window.location.hostname, window.location.pathname)
+          router.replace(isTradingRuntime ? TRADING_OPERATOR_HOME : '/admin/dashboard')
+          return
+        }
+
+        setUser(normalizedUser)
+
+        const response = await authorizedRequest('/api/dashboard/stats')
+        if (response.ok) {
+          const data = await response.json()
+          setStats(data.stats)
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error)
@@ -115,7 +131,7 @@ function SMEDashboard({ user, t, stats }: { user: User; t: any; stats: any }) {
   const dashboardStats = [
     { label: t('navigation.profile'), value: stats?.profileCompleteness ? `${stats.profileCompleteness}%` : '75%', icon: Target, color: 'text-blue-500' },
     { label: t('advisory.fundingRequired'), value: stats?.fundingGoal ? `$${(stats.fundingGoal / 1000).toFixed(0)}K` : '$0K', icon: DollarSign, color: 'text-green-500' },
-    { label: t('advisory.certified'), value: stats?.activeBookings > 0 ? 'In Review' : 'Pending', icon: CheckCircle, color: 'text-yellow-500' },
+    { label: t('advisory.certified'), value: stats?.smeStatus || (stats?.activeBookings > 0 ? 'IN_REVIEW' : 'PENDING'), icon: CheckCircle, color: 'text-yellow-500' },
     { label: t('navigation.deals'), value: stats?.totalDeals || '0', icon: TrendingUp, color: 'text-purple-500' },
     { label: 'Active Disputes', value: stats?.activeDisputes || '0', icon: AlertCircle, color: 'text-red-500' }
   ]
@@ -123,6 +139,21 @@ function SMEDashboard({ user, t, stats }: { user: User; t: any; stats: any }) {
   return (
     <div>
       <h1 className="text-3xl font-bold text-white mb-8">{t('dashboard.welcome')}, {user.firstName}!</h1>
+
+      <div className="bg-gray-800 rounded-lg p-6 mb-8 border border-gray-700">
+        <div className="flex items-start justify-between gap-6 flex-col md:flex-row">
+          <div>
+            <p className="text-sm uppercase tracking-wide text-gray-400 mb-2">SME Owner Workspace</p>
+            <h2 className="text-2xl font-semibold text-white">{stats?.smeName || `${user.firstName} ${user.lastName}`}</h2>
+            <p className="text-gray-400 mt-2">
+              {stats?.sector || 'Sector pending'}{stats?.stage ? ` · ${stats.stage}` : ''} · Status: {stats?.smeStatus || 'PENDING'}
+            </p>
+          </div>
+          <div className="text-sm text-gray-300 bg-gray-900 border border-gray-700 rounded-lg px-4 py-3">
+            This dashboard is your SME owner control center for onboarding, documents, deal preparation, and investor readiness.
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {dashboardStats.map((stat: any, index: number) => (
