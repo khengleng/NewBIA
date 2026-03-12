@@ -44,8 +44,10 @@ export default function WalletPage() {
     const [wallet, setWallet] = useState<WalletData | null>(null)
     const [transactions, setTransactions] = useState<Transaction[]>([])
     const [isDepositModalOpen, setIsDepositModalOpen] = useState(false)
+    const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false)
     const [isProcessing, setIsProcessing] = useState(false)
     const [depositAmount, setDepositAmount] = useState('')
+    const [withdrawAmount, setWithdrawAmount] = useState('')
     const [filterType, setFilterType] = useState('ALL')
 
     const fetchWalletData = async () => {
@@ -118,6 +120,41 @@ export default function WalletPage() {
         }
     }
 
+    const handleWithdraw = async () => {
+        const amount = Number(withdrawAmount)
+        if (!amount || amount <= 0) {
+            addToast('error', 'Please enter a valid amount')
+            return
+        }
+
+        if (wallet && amount > wallet.balance) {
+            addToast('error', 'Insufficient balance')
+            return
+        }
+
+        setIsProcessing(true)
+        try {
+            const response = await authorizedRequest('/api/wallet/withdraw', {
+                method: 'POST',
+                body: JSON.stringify({ amount })
+            })
+
+            if (response.ok) {
+                addToast('success', 'Withdrawal successful! Your bank transfer is being processed.')
+                setIsWithdrawModalOpen(false)
+                setWithdrawAmount('')
+                fetchWalletData()
+            } else {
+                const err = await response.json()
+                addToast('error', err?.error || 'Withdrawal failed')
+            }
+        } catch (error) {
+            addToast('error', 'Connection error during withdrawal')
+        } finally {
+            setIsProcessing(false)
+        }
+    }
+
     const filteredTransactions = transactions.filter(tx => {
         if (filterType === 'ALL') return true
         if (filterType === 'TRADES') return tx.type.startsWith('TRADE_')
@@ -146,8 +183,8 @@ export default function WalletPage() {
                             <Download className="w-4 h-4" /> Deposit
                         </button>
                         <button
-                            disabled
-                            className="bg-gray-800 text-gray-400 px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 border border-gray-700 opacity-60 cursor-not-allowed"
+                            onClick={() => setIsWithdrawModalOpen(true)}
+                            className="bg-gray-800 hover:bg-gray-700 text-white px-5 py-2.5 rounded-xl font-medium flex items-center gap-2 border border-gray-700 transition-all shadow-lg"
                         >
                             <Upload className="w-4 h-4" /> Withdraw
                         </button>
@@ -381,6 +418,74 @@ export default function WalletPage() {
                             </button>
                             <button
                                 onClick={() => setIsDepositModalOpen(false)}
+                                disabled={isProcessing}
+                                className="w-full bg-transparent hover:bg-gray-700 text-gray-400 py-2 rounded-xl text-sm transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Withdraw Modal */}
+            {isWithdrawModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => !isProcessing && setIsWithdrawModalOpen(false)} />
+                    <div className="bg-gray-800 border border-gray-700 w-full max-w-md rounded-2xl shadow-2xl relative overflow-hidden transition-all scale-up">
+                        <div className="p-6 border-b border-gray-700">
+                            <h3 className="text-xl font-bold text-white">Withdraw Funds</h3>
+                            <p className="text-gray-400 text-sm mt-1">Transfer funds from your platform wallet to your bank account.</p>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">Amount to Withdraw (USDT)</label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <span className="text-gray-500">$</span>
+                                    </div>
+                                    <input
+                                        type="number"
+                                        autoFocus
+                                        value={withdrawAmount}
+                                        onChange={(e) => setWithdrawAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        className="w-full pl-8 pr-4 py-3 bg-gray-900 border border-gray-700 rounded-xl text-xl font-bold text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                                    />
+                                </div>
+                                <div className="mt-2 flex justify-between items-center text-[10px]">
+                                    <span className="text-gray-500">Available: ${(wallet?.balance || 0).toLocaleString()} USDT</span>
+                                    <button 
+                                        onClick={() => setWithdrawAmount(String(wallet?.balance || 0))}
+                                        className="text-blue-400 hover:text-blue-300 font-medium"
+                                    >
+                                        Withdraw All
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex gap-3">
+                                <AlertCircle className="w-5 h-5 text-yellow-400 shrink-0" />
+                                <div className="text-xs text-yellow-300 leading-relaxed">
+                                    Withdrawals are processed manually via bank transfer. Processing typically takes 1-3 business days.
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-6 bg-gray-900/50 flex flex-col gap-3">
+                            <button
+                                onClick={handleWithdraw}
+                                disabled={isProcessing || !withdrawAmount || Number(withdrawAmount) > (wallet?.balance || 0)}
+                                className="w-full bg-white hover:bg-gray-100 text-gray-900 font-bold py-3 rounded-xl transition-all shadow-lg disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {isProcessing ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-gray-900/30 border-t-gray-900 rounded-full animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : 'Confirm Withdrawal'}
+                            </button>
+                            <button
+                                onClick={() => setIsWithdrawModalOpen(false)}
                                 disabled={isProcessing}
                                 className="w-full bg-transparent hover:bg-gray-700 text-gray-400 py-2 rounded-xl text-sm transition-colors"
                             >

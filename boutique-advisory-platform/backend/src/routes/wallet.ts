@@ -99,4 +99,36 @@ router.post('/deposit', authorize('payment.create'), async (req: AuthenticatedRe
     }
 });
 
+// POST /api/wallet/withdraw - Create a simulated withdrawal
+router.post('/withdraw', authorize('payment.create'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const userId = req.user?.id;
+        const tenantId = req.user?.tenantId || 'default';
+        const { amount, simulate = true } = req.body;
+
+        if (!userId || !amount || amount <= 0) {
+            return res.status(400).json({ error: 'Invalid withdrawal amount' });
+        }
+
+        try {
+            const wallet = await WalletService.updateBalance(
+                userId,
+                -amount,
+                'WITHDRAWAL',
+                'Withdrawal to Bank Account',
+                { tenantId, method: 'SIMULATED' }
+            );
+            return res.json({ success: true, wallet, message: 'Withdrawal successful' });
+        } catch (error: any) {
+            if (error.message === 'Insufficient wallet balance') {
+                return res.status(400).json({ error: 'Insufficient balance' });
+            }
+            throw error;
+        }
+    } catch (error) {
+        console.error('Error in withdrawal:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 export default router;
