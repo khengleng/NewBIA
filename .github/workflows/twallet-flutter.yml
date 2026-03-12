@@ -4,16 +4,19 @@ on:
   push:
     paths:
       - 'twallet-app/**'
+      - '.github/workflows/twallet-flutter.yml'
   pull_request:
     paths:
       - 'twallet-app/**'
+      - '.github/workflows/twallet-flutter.yml'
+  workflow_dispatch:
 
 jobs:
   flutter-build:
     name: Flutter Analyze & Test
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
