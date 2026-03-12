@@ -1147,9 +1147,28 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
         success: true
       });
 
-      // Send password reset email (don't block response if email fails)
-      sendPasswordResetEmail(user.email, resetToken)
-        .catch(error => console.error('Failed to send password reset email:', error));
+      // Send password reset email and surface delivery issues so users are not
+      // misled into thinking a reset mail was sent when the provider failed.
+      const emailResult = await sendPasswordResetEmail(user.email, resetToken);
+      if (!emailResult.success) {
+        console.error('Failed to send password reset email:', emailResult.error);
+        await logAuditEvent({
+          userId: user.id,
+          action: 'PASSWORD_RESET_EMAIL_FAILED',
+          resource: 'auth',
+          details: { email: sanitizedEmail },
+          ipAddress: clientIp,
+          success: false,
+          errorMessage: emailResult.error instanceof Error
+            ? emailResult.error.message
+            : typeof emailResult.error === 'string'
+              ? emailResult.error
+              : 'Password reset email failed'
+        });
+        return res.status(503).json({
+          error: 'Password reset email could not be sent right now. Please try again shortly.'
+        });
+      }
     } else {
       // Log attempt for non-existent user (for security monitoring)
       await logAuditEvent({
