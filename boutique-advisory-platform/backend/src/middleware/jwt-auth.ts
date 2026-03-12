@@ -55,6 +55,15 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
 
         const requestTenantId = getTenantId(req);
         if (requestTenantId !== user.tenantId) {
+            console.warn('[AUTH] Tenant access denied', {
+                path: req.originalUrl || req.url,
+                requestTenantId,
+                userTenantId: user.tenantId,
+                forwardedHost: req.headers['x-forwarded-host'],
+                host: req.headers['host'],
+                hostname: req.hostname,
+                serviceMode: process.env.SERVICE_MODE || 'core',
+            });
             res.status(403).json({ error: 'Tenant access denied' });
             return;
         }
@@ -98,6 +107,15 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
 
         const requestTenantId = getTenantId(req);
         if (requestTenantId !== storedToken.user.tenantId) {
+            console.warn('[AUTH] Tenant access denied during refresh', {
+                path: req.originalUrl || req.url,
+                requestTenantId,
+                userTenantId: storedToken.user.tenantId,
+                forwardedHost: req.headers['x-forwarded-host'],
+                host: req.headers['host'],
+                hostname: req.hostname,
+                serviceMode: process.env.SERVICE_MODE || 'core',
+            });
             res.status(403).json({ error: 'Tenant access denied' });
             return;
         }
