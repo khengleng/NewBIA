@@ -199,7 +199,7 @@ router.post('/register', async (req: Request, res: Response) => {
         firstName,
         lastName,
         tenantId,
-        status: 'ACTIVE', // Require email verification logic if status is PENDING
+        status: 'PENDING', // Require email verification to become ACTIVE
         isEmailVerified: false,
         verificationToken: hashedVerificationToken,
         verificationTokenExpiry: verificationExpires,
@@ -295,6 +295,7 @@ router.post('/verify-email', async (req: Request, res: Response) => {
       where: { id: user.id },
       data: {
         isEmailVerified: true,
+        status: 'ACTIVE',
         verificationToken: null,
         verificationTokenExpiry: null
       }
@@ -493,11 +494,14 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
         details: { email: sanitizedEmail, status: user.status },
         ipAddress: clientIp,
         success: false,
-        errorMessage: 'Account not active'
+        errorMessage: user.status === 'PENDING' ? 'Email not verified' : 'Account not active'
       });
-      return res.status(403).json({
-        error: 'Account is not active. Please contact support.'
-      });
+
+      const message = user.status === 'PENDING'
+        ? 'Please verify your email address before logging in.'
+        : 'Account is not active. Please contact support.';
+
+      return res.status(403).json({ error: message });
     }
 
     // SECURITY: Clear failed attempts on successful login
