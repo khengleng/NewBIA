@@ -35,7 +35,7 @@ const isTradingService = serviceMode === 'trading';
 const coreTenantId = process.env.CORE_TENANT_ID || 'default';
 const ssoTokenTtlSeconds = Number(process.env.SSO_TOKEN_TTL_SECONDS || 120);
 const ssoAllowedRoles = new Set(['INVESTOR']);
-const tradingLocalAllowedRoles = new Set(['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'SUPPORT']);
+const tradingLocalAllowedRoles = new Set(['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'SUPPORT', 'INVESTOR']);
 const defaultCoreSuperadminEmail = 'contact@cambobia.com';
 const defaultTradingSuperadminEmail = 'trading-admin@cambobia.com';
 
@@ -117,6 +117,15 @@ async function findUserForPlatformEmail(req: Request, email: string) {
   if (normalizedEmail === getTradingSuperadminEmail()) {
     user = await prisma.user.findFirst({
       where: { email: normalizedEmail, tenantId: tradingTenantId }
+    });
+    if (user) return user;
+  }
+
+  // Cross-tenant fallback for trading service: Look for investors/users in core tenant
+  // if not found in the dedicated 'trade' tenant.
+  if (isTradingService && tenantId !== coreTenantId) {
+    user = await prisma.user.findFirst({
+      where: { email: normalizedEmail, tenantId: coreTenantId }
     });
     if (user) return user;
   }
