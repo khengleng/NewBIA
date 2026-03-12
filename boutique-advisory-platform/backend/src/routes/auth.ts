@@ -1305,8 +1305,22 @@ router.post('/reset-password', async (req: Request, res: Response) => {
       success: true
     });
 
-    // Clear any failed login attempts for this user
-    await clearFailedAttempts(user.email);
+    // Best-effort cleanup only. A Redis outage must not turn a successful
+    // password reset into an API failure after the password has already been changed.
+    try {
+      await clearFailedAttempts(user.email);
+    } catch (clearError) {
+      console.error('Failed to clear login attempts after password reset:', clearError);
+      await logAuditEvent({
+        userId: user.id,
+        action: 'PASSWORD_RESET_CLEANUP_FAILED',
+        resource: 'auth',
+        details: { email: user.email },
+        ipAddress: clientIp,
+        success: false,
+        errorMessage: clearError instanceof Error ? clearError.message : 'Failed to clear login attempts'
+      });
+    }
 
     return res.json({
       message: 'Password has been reset successfully.',
