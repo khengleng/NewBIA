@@ -590,6 +590,8 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
 
     // Trading runtime accepts only dedicated platform-operator roles via local login.
     // Investors access the trading exchange through core-platform SSO only.
+    // Trading runtime accepts only dedicated platform-operator roles via local login.
+    // Investors access the trading exchange through core-platform SSO or direct login if enabled.
     if (isTradingRequest(req)) {
       if (!tradingLocalAllowedRoles.has(normalizedUserRole)) {
         console.warn(`[AUTH] Login 403: Role ${normalizedUserRole} for ${sanitizedEmail} not allowed on trading platform`);
@@ -603,10 +605,9 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
           errorMessage: 'Role not allowed in trading runtime'
         });
         return res.status(403).json({
-          error: 'DIAGNOSTIC: Access denied. Investor trading accounts must enter via cambobia.com SSO.'
+          error: 'DIAGNOSTIC: Access denied. Your account role is not permitted to sign in on this platform.'
         });
       }
-      // If it's an INVESTOR, we allow them to proceed with local login now (added to tradingLocalAllowedRoles)
     }
 
     // SECURITY: Check if email is verified
