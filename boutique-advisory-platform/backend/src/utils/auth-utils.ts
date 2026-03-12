@@ -58,6 +58,14 @@ function resolveTradingCookieScope(req?: Request | null): boolean {
 }
 
 export function getAuthCookieNames(req?: Request): AuthCookieNames {
+    if (resolveTradingCookieScope(req)) {
+        return {
+            accessToken: 'tr_accessToken',
+            refreshToken: 'tr_refreshToken',
+            token: 'tr_token',
+        };
+    }
+
     return {
         accessToken: 'accessToken',
         refreshToken: 'refreshToken',
@@ -164,7 +172,9 @@ export async function issueTokensAndSetCookies(res: Response, user: any, req: Re
 
     const cookieNames = getAuthCookieNames(req);
 
-    const cookieDomain = process.env.COOKIE_DOMAIN || (process.env.NODE_ENV === 'production' ? '.cambobia.com' : undefined);
+    // Use host-only cookies unless an explicit cookie domain is configured.
+    // This prevents cambobia.com and trade.cambobia.com sessions from bleeding across platforms.
+    const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
 
     // 3. Set Cookies
     // Access Token

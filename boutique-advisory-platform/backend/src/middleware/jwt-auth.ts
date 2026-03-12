@@ -23,9 +23,7 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
     const authHeader = req.headers['authorization'];
     let token = (authHeader && authHeader.split(' ')[1])
         || (req.cookies && req.cookies[cookieNames.accessToken])
-        || (req.cookies && req.cookies[cookieNames.token])
-        || (req.cookies && req.cookies['accessToken'])
-        || (req.cookies && req.cookies['token']);
+        || (req.cookies && req.cookies[cookieNames.token]);
 
     if (!token) {
         // No access token, try refresh token logic immediately?
@@ -56,7 +54,7 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
         }
 
         const requestTenantId = getTenantId(req);
-        if (requestTenantId !== user.tenantId && user.role !== 'SUPER_ADMIN') {
+        if (requestTenantId !== user.tenantId) {
             res.status(403).json({ error: 'Tenant access denied' });
             return;
         }
@@ -78,7 +76,7 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
  */
 async function handleRefresh(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     const cookieNames = getAuthCookieNames(req);
-    let refreshToken = req.cookies[cookieNames.refreshToken] || req.cookies['refreshToken'];
+    let refreshToken = req.cookies[cookieNames.refreshToken];
 
     if (!refreshToken) {
         res.status(401).json({ error: 'Session expired. Please login again.' });
@@ -99,7 +97,7 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
         }
 
         const requestTenantId = getTenantId(req);
-        if (requestTenantId !== storedToken.user.tenantId && storedToken.user.role !== 'SUPER_ADMIN') {
+        if (requestTenantId !== storedToken.user.tenantId) {
             res.status(403).json({ error: 'Tenant access denied' });
             return;
         }

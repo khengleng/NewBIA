@@ -1,15 +1,23 @@
 import 'dart:async';
 
 import 'package:corsac_jwt/corsac_jwt.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_custom_dialog/flutter_custom_dialog.dart';
 import 'package:tw_wallet_ui/common/theme/color.dart';
 import 'package:tw_wallet_ui/models/webview/pincode_dialog/pincode_dialog_style.dart';
 import 'package:tw_wallet_ui/widgets/pin_dialog.dart';
 
-// SECURITY: Do not use hardcoded secrets in production.
-// This should be provided during build via --dart-define=PINCODE_JWT_SECRET=your_secret
-const tokenSecret = String.fromEnvironment('PINCODE_JWT_SECRET', defaultValue: 'dev_token_secret_fallback');
+// SECURITY: A release build must provide a signing secret via --dart-define.
+const String tokenSecret = String.fromEnvironment('PINCODE_JWT_SECRET', defaultValue: '');
+
+String resolveTokenSecret() {
+  if (tokenSecret.isNotEmpty) return tokenSecret;
+  if (kReleaseMode) {
+    throw StateError('PINCODE_JWT_SECRET is required for release builds.');
+  }
+  return 'cambobia_debug_only_secret';
+}
 
 class PincodeService {
   static YYDialog? dialogInstance;
@@ -58,13 +66,13 @@ class PincodeService {
     final builder = JWTBuilder()
       ..expiresAt = DateTime.now().add(const Duration(seconds: 15))
       ..setClaim('name', 'dapp');
-    final signer = JWTHmacSha256Signer(tokenSecret);
+    final signer = JWTHmacSha256Signer(resolveTokenSecret());
     final signedToken = builder.getSignedToken(signer);
     return signedToken.toString();
   }
 
   static bool verifyToken(String stringToken) {
-    final signer = JWTHmacSha256Signer(tokenSecret);
+    final signer = JWTHmacSha256Signer(resolveTokenSecret());
     JWT decodedToken;
     try {
       decodedToken = JWT.parse(stringToken);

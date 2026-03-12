@@ -35,7 +35,7 @@ const isTradingService = serviceMode === 'trading';
 const coreTenantId = process.env.CORE_TENANT_ID || 'default';
 const ssoTokenTtlSeconds = Number(process.env.SSO_TOKEN_TTL_SECONDS || 120);
 const ssoAllowedRoles = new Set(['INVESTOR']);
-const tradingLocalAllowedRoles = new Set(['INVESTOR', ...Array.from(new Set(['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'SUPPORT']))]);
+const tradingLocalAllowedRoles = new Set(['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'SUPPORT']);
 
 router.use((_req: Request, res: Response, next: NextFunction) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -83,6 +83,12 @@ function getTradingFrontendBaseUrl(): string {
 // Register endpoint
 router.post('/register', async (req: Request, res: Response) => {
   try {
+    if (isTradingService) {
+      return res.status(403).json({
+        error: 'Trader self-registration is managed from cambobia.com. Use investor SSO from the core platform.'
+      });
+    }
+
     const { email, password, role, firstName, lastName } = req.body;
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
     const tenantId = getTenantId(req); // Derive tenantId server-side
@@ -170,7 +176,7 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // SECURITY: Restrict roles for public registration to prevent privilege escalation.
     // Administrative roles must still be manually assigned.
-    const allowedPublicRoles = isTradingService ? ['INVESTOR'] : ['SME', 'INVESTOR', 'ADVISOR'];
+    const allowedPublicRoles = ['SME', 'INVESTOR', 'ADVISOR'];
     if (!allowedPublicRoles.includes(role)) {
       await logAuditEvent({
         userId: 'anonymous',
@@ -448,7 +454,8 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       });
     }
 
-    // Trading runtime accepts only investor and designated trading-operator roles.
+    // Trading runtime accepts only dedicated platform-operator roles via local login.
+    // Investors access the trading exchange through core-platform SSO only.
     if (isTradingService) {
       const normalizedUserRole = normalizeRole(user.role);
       if (!tradingLocalAllowedRoles.has(normalizedUserRole)) {
@@ -462,7 +469,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
           errorMessage: 'Role not allowed in trading runtime'
         });
         return res.status(403).json({
-          error: 'Access denied for this platform.'
+          error: 'Access denied. Investor trading accounts must enter via cambobia.com SSO.'
         });
       }
     }
@@ -1638,6 +1645,10 @@ router.post('/delete-account', authenticateToken, async (req: AuthenticatedReque
 // Switch Role Endpoint
 router.post('/switch-role', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    if (isTradingService) {
+      return res.status(403).json({ error: 'Role switching is not available in the trading platform.' });
+    }
+
     const userId = req.user?.id;
     const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
     if (!userId) {

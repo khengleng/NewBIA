@@ -77,21 +77,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 return;
             }
 
-            const isTradingContext = resolveTradingRuntime(window.location.hostname, pathname || window.location.pathname);
-
-            // Optimistic local user is intentionally disabled on trading runtime to avoid stale-role UI.
-            if (!isTradingContext) {
-                const storedUser = localStorage.getItem('user')
-                if (storedUser) {
-                    try {
-                        setUser(JSON.parse(storedUser))
-                        setIsLoading(false)
-                    } catch {
-                        // Invalid JSON, ignore
-                    }
-                }
-            }
-
             try {
                 // Try to get user from API (checks cookies)
                 const response = await authorizedRequest('/api/auth/me')
@@ -276,30 +261,30 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const isTradingOperator = isTradingOperatorRole(normalizedRole)
         || hasUiPermission(normalizedRole, 'admin.read')
         || hasUiPermission(normalizedRole, 'billing.read')
-    const isTradingParticipantView = isTradingRuntime && (normalizedRole === 'INVESTOR' || normalizedRole === 'SME' || normalizedRole === 'ADVISOR') && !isTradingOperator
+    const isTradingParticipantView = isTradingRuntime && normalizedRole === 'INVESTOR' && !isTradingOperator
     const showTradingWidgets = true // Always show widgets for a rich application experience
     const tradingNavSections = isTradingParticipantView
         ? [
             {
                 label: 'Navigation',
-                roles: ['INVESTOR', 'SME', 'ADVISOR'],
+                roles: ['INVESTOR'],
                 items: [
                     {
                         href: typeof window !== 'undefined' && isTradingHostname(window.location.hostname) ? CORE_FRONTEND_URL : '/dashboard',
                         label: 'Back to Main Portal',
                         icon: LayoutDashboard,
-                        roles: ['INVESTOR', 'SME', 'ADVISOR']
+                        roles: ['INVESTOR']
                     }
                 ]
             },
             {
                 label: 'Trading',
-                roles: ['INVESTOR', 'SME', 'ADVISOR'],
+                roles: ['INVESTOR'],
                 items: [
-                    { href: '/trading/launchpad', label: 'Token Launchpad', icon: Rocket, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
-                    { href: '/secondary-trading', label: 'Secondary Market', icon: ArrowLeftRight, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
-                    { href: '/trading/markets', label: 'Markets', icon: BarChart3, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
-                    { href: '/trading/wallet', label: 'My Wallet', icon: Wallet, roles: ['INVESTOR', 'SME', 'ADVISOR'] },
+                    { href: '/trading/launchpad', label: 'Token Launchpad', icon: Rocket, roles: ['INVESTOR'] },
+                    { href: '/secondary-trading', label: 'Secondary Market', icon: ArrowLeftRight, roles: ['INVESTOR'] },
+                    { href: '/trading/markets', label: 'Markets', icon: BarChart3, roles: ['INVESTOR'] },
+                    { href: '/trading/wallet', label: 'My Wallet', icon: Wallet, roles: ['INVESTOR'] },
                     { href: '/trading/portfolio', label: 'My Portfolio', icon: Briefcase, roles: ['INVESTOR'] },
                     { href: '/trading/watchlist', label: 'Watchlist', icon: Sparkles, roles: ['INVESTOR'] },
                     { href: '/trading/profile', label: 'Investor Profile', icon: UserCog, roles: ['INVESTOR'] },
@@ -449,7 +434,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             return
         }
 
-        if (normalizedRole === 'INVESTOR' || normalizedRole === 'SME' || normalizedRole === 'ADVISOR') {
+        if (normalizedRole === 'INVESTOR') {
             const isAllowedParticipantPath = participantAllowedPrefixes.some((path) => pathname.startsWith(path))
             if (!isAllowedParticipantPath) {
                 router.replace('/secondary-trading')

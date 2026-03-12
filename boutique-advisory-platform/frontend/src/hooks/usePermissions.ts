@@ -31,19 +31,7 @@ import { resolveTradingRuntime } from '../lib/platform';
  * Get current user from localStorage
  */
 function getCurrentUser(): User | null {
-    if (typeof window === 'undefined') return null;
-
-    try {
-        const userData = localStorage.getItem('user');
-        if (!userData) return null;
-        const parsed = JSON.parse(userData) as User;
-        return {
-            ...parsed,
-            role: normalizeRole(parsed.role),
-        };
-    } catch {
-        return null;
-    }
+    return null;
 }
 
 /**
@@ -60,9 +48,9 @@ export function usePermissions(): PermissionHelpers & {
     useEffect(() => {
         let isMounted = true;
 
-        const loadUser = async (preferCache: boolean = true, strictFreshIdentity: boolean = false) => {
+        const loadUser = async (strictFreshIdentity: boolean = false) => {
             const cachedUser = getCurrentUser();
-            if (preferCache && cachedUser && isMounted) {
+            if (cachedUser && isMounted) {
                 setUser(cachedUser);
                 setIsLoading(false);
             }
@@ -97,7 +85,7 @@ export function usePermissions(): PermissionHelpers & {
             } catch {
                 // In trading runtime we prefer consistency over optimistic fallback
                 // to prevent stale persona rendering after SSO/session switches.
-                if (!preferCache && strictFreshIdentity && isMounted) {
+                if (strictFreshIdentity && isMounted) {
                     localStorage.removeItem('user');
                     setUser(null);
                 }
@@ -112,18 +100,18 @@ export function usePermissions(): PermissionHelpers & {
             && resolveTradingRuntime(window.location.hostname, window.location.pathname);
 
         // Trading runtime should not optimistically render cached persona data.
-        void loadUser(!isTradingContext, isTradingContext);
+        void loadUser(isTradingContext);
 
         // Listen for storage changes (e.g., login/logout in another tab)
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === 'user') {
-                void loadUser(false, isTradingContext);
+                void loadUser(isTradingContext);
             }
         };
 
         // Listen for same-tab auth changes dispatched after login/logout/SSO
         const handleAuthChanged = () => {
-            void loadUser(false, isTradingContext);
+            void loadUser(isTradingContext);
         };
 
         window.addEventListener('storage', handleStorageChange);

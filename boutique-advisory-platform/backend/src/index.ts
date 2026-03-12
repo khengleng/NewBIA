@@ -141,10 +141,16 @@ import {
 // Helper to ensure admin account is synced with .env
 async function ensureAdminAccount() {
   const legacyAdminEmail = 'admin@boutique-advisory.com';
-  const adminEmail = (process.env.DEFAULT_SUPERADMIN_EMAIL || 'contact@cambobia.com').toLowerCase();
   const coreTenantId = process.env.CORE_TENANT_ID || 'default';
   const tradingTenantId = process.env.TRADING_TENANT_ID || 'trade';
-  let adminPassword = process.env.INITIAL_ADMIN_PASSWORD;
+  const activeTenantId = isTradingService ? tradingTenantId : coreTenantId;
+  const configuredAdminEmail = isTradingService
+    ? process.env.DEFAULT_TRADING_SUPERADMIN_EMAIL
+    : process.env.DEFAULT_SUPERADMIN_EMAIL;
+  const adminEmail = (configuredAdminEmail || 'contact@cambobia.com').toLowerCase();
+  let adminPassword = isTradingService
+    ? process.env.INITIAL_TRADING_ADMIN_PASSWORD || process.env.INITIAL_ADMIN_PASSWORD
+    : process.env.INITIAL_ADMIN_PASSWORD;
 
   if (!adminPassword) {
     // SECURITY: Never use hardcoded fallback passwords in production
@@ -207,10 +213,7 @@ async function ensureAdminAccount() {
   }
 
   try {
-    await syncAdminForTenant(coreTenantId, true);
-    if (tradingTenantId !== coreTenantId) {
-      await syncAdminForTenant(tradingTenantId, false);
-    }
+    await syncAdminForTenant(activeTenantId, !isTradingService);
   } catch (error: any) {
     console.error('❌ FATAL: Could not initialize admin account:', error.message);
   }

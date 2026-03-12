@@ -5,10 +5,15 @@ import 'package:web3dart/credentials.dart';
 
 Future<void> web3authInit() async {
   await Web3AuthFlutter.init(
-    clientId:
-        'BOX6rnr4ryi64ruyL-WBLvHIhu44BzUKwiyETZo0657ubAeer3kC55vzObEjPsn3PAkS_zlz4U42y79u3rw_aRs',
+    clientId: const String.fromEnvironment(
+      'CAMBOBIA_WEB3AUTH_CLIENT_ID',
+      defaultValue: '',
+    ),
     network: Network.testnet,
-    redirectUri: 'com.thoughtworks.flutter.twallet://auth',
+    redirectUri: const String.fromEnvironment(
+      'CAMBOBIA_WEB3AUTH_REDIRECT_URI',
+      defaultValue: 'com.cambobia.mobile://auth',
+    ),
     whiteLabelData: WhiteLabelData(),
   );
 }

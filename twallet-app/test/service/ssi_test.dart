@@ -45,12 +45,12 @@ void main() {
               "validUntil": "",
               "potentialAction": ""
             },
-            "target": {
+              "target": {
               "@type": "EntryPoint",
               "name": "XXXXX后端",
               "identifier": "did:tw:816F81681dC8dd12039c05B0093ccce24B4215f4",
               "url":
-                  "https://wallet.cn.blockchain.thoughtworks.cn/v2/verifier/health-certification/verify"
+                  "https://www.cambobia.com/api-proxy/api/mobile/verifier/health-certification/verify"
             },
             "object": {
               "@type": "ItemList",

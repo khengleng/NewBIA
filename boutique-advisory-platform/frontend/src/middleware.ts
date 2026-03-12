@@ -14,10 +14,6 @@ const tradingSessionCookieNames = [
   'tr_token',
   'tr_accessToken',
   'tr_refreshToken',
-  // Backward compatibility if older cookie names remain.
-  'token',
-  'accessToken',
-  'refreshToken',
 ];
 
 function hasTradingSessionCookie(req: NextRequest): boolean {
@@ -62,11 +58,13 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const mappedAdminPath = mapAdminPathToTradingOperator(pathname);
-  if (mappedAdminPath) {
-    const url = req.nextUrl.clone();
-    url.pathname = mappedAdminPath;
-    return NextResponse.redirect(url);
+  if (runtimeTradingMode) {
+    const mappedAdminPath = mapAdminPathToTradingOperator(pathname);
+    if (mappedAdminPath) {
+      const url = req.nextUrl.clone();
+      url.pathname = mappedAdminPath;
+      return NextResponse.redirect(url);
+    }
   }
 
   const mappedLegacyPath = mapLegacyTradingPath(pathname);

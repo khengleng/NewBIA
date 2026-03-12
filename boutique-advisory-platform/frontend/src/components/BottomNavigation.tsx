@@ -2,38 +2,22 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { Home, Users, FileText, MessageSquare, Settings, ShieldCheck, Briefcase, Wallet } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { IS_TRADING_PLATFORM, resolveTradingRuntime } from '@/lib/platform'
 import { isTradingOperatorRole, normalizeRole } from '@/lib/roles'
+import { usePermissions } from '@/hooks/usePermissions'
 
 export default function BottomNavigation() {
     const pathname = usePathname()
     const router = useRouter()
     const [isVisible, setIsVisible] = useState(true)
     const [lastScrollY, setLastScrollY] = useState(0)
-    const [role, setRole] = useState('')
     const [isTradingRuntime, setIsTradingRuntime] = useState(IS_TRADING_PLATFORM)
+    const { user } = usePermissions()
+    const role = useMemo(() => normalizeRole(user?.role), [user?.role])
 
     useEffect(() => {
         setIsTradingRuntime(resolveTradingRuntime(window.location.hostname, pathname || window.location.pathname))
-
-        const loadRole = () => {
-            try {
-                const stored = localStorage.getItem('user')
-                if (!stored) {
-                    setRole('')
-                    return
-                }
-                const parsed = JSON.parse(stored)
-                setRole(normalizeRole(parsed?.role))
-            } catch {
-                setRole('')
-            }
-        }
-
-        loadRole()
-        window.addEventListener('auth:changed', loadRole)
-        return () => window.removeEventListener('auth:changed', loadRole)
     }, [pathname])
 
     // Hide/show on scroll

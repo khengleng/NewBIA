@@ -1,8 +1,8 @@
 <h1 align="center">
   <br>
-  <a href="https://blockchain.thoughtworks.cn/twallet/"><img src="./assets/images/t-wallet.png" alt="TWallet" width="200"></a>
+  <img src="./assets/images/t-wallet.png" alt="Cambobia Mobile" width="200">
   <br>
-  TWallet
+  Cambobia Mobile
   <br>
   <p align="center">
     <img src="https://img.shields.io/badge/contributions-welcome-orange.svg" alt="Contributions welcome">
@@ -11,13 +11,16 @@
   </p>
 </h1>
 
-<h4 align="center">一个基于区块链的行业领先的数字钱包项目，包含名为 DC/EP 的通证，具备 DID（去中心化身份）和 DApp 浏览器的功能。</h4>
+<h4 align="center">面向 Cambobia 投资人和 SME 业主的原生移动端应用，配合 cambobia.com 与 trade.cambobia.com 使用。</h4>
 
-<p align="center">
-  <img src="https://blockchain.thoughtworks.cn/wp-content/uploads/2020/06/ScreenCut_Pay.svg">
-</p>
+## Cambobia Mobile 简介
 
-## TWallet 四问
+### 包含内容
+
+- Cambobia 平台账号访问
+- 投资组合、持仓与交易相关钱包能力
+- SME 业主在 cambobia.com 上的移动端发行人流程
+- 与 Cambobia 平台联动的 DApp 浏览能力
 
 ### 什么是数字钱包？
 
@@ -26,8 +29,6 @@
 > 数字钱包也称为“电子钱包”，是指一种电子设备、在线服务或软件程序，允许一方与另一方进行电子交易，以数字货币单位交换商品和服务，包括使用计算机在线购买商品或使用智能手机在商店购买商品。用户可以在将钱存入数字钱包，或者把你的个人银行账户链接到数字钱包。用户还可能将他们的驾驶执照、健康卡、会员卡和其他身份证件存储在钱包中，这些个人凭证可以通过近场通信 (NFC) 以无线方式传递信息到商家的终端。越来越多的数字钱包不仅用于基本的金融交易，而且还用于验证持有人的凭据，例如，数字钱包可以在购买酒类时向商店验证买家的年龄，该系统已经在日本流行起来，在日本，数字钱包被称为“wallet mobiles”。加密货币钱包是一种数字钱包，其中存储了比特币等加密货币的私钥。
 
 ### 什么是 DID (去中心化身份)？
-
-<img width="400px" src="https://blockchain.thoughtworks.cn/wp-content/uploads/2020/06/ScreenCut_Identity.svg" align="right">
 
 ***引用自维基百科:***
 
@@ -45,13 +46,13 @@
 
 ## 使用指南
 
-### 如何试用 TWallet
+### 如何试用 Cambobia Mobile
 
-现阶段，我们没有在各大应用市场上架该 App 的计划，如果你有兴趣，[请在此页面发起申请](https://blockchain.thoughtworks.cn/twallet/)。
+当前请使用 GitHub Actions 产出的安装包进行内部测试，正式版本会通过 App Store / Google Play 发布。
 
 ### 反馈收集
 
-请不要吝啬你的任何反馈，你可以[到这个 issue 页面](https://github.com/tw-bc-group/TWallet/issues)提交 issue，记得带上一些 label 以帮助我们识别 issue 类型，我们会尽快处理。
+请通过当前仓库提交 issue 或产品反馈，确保移动端能力与 cambobia.com 和 trade.cambobia.com 保持一致。
 
 ## 如何开发
 
@@ -65,7 +66,7 @@ Engine • revision 3efdf03e73
 Tools • Dart 2.18.0 • DevTools 2.15.0
 ```
 
-2. 使用 `flutter doctor` 检查 `flutter` 环境，并查看是否有已经安装的模拟器可以运行 TWallet
+2. 使用 `flutter doctor` 检查 `flutter` 环境，并查看是否有已经安装的模拟器可以运行 Cambobia Mobile
 
 3. `flutter pub get` 如果是第一次需要安装依赖
 
@@ -75,7 +76,7 @@ Tools • Dart 2.18.0 • DevTools 2.15.0
 
 ### 如何贡献
 
-🎉🎉🎉 TWallet 项目欢迎你的加入！你可以通过以下方式参与进来，帮助我们一起贡献 TWallet：
+欢迎参与 Cambobia Mobile 的建设，你可以通过以下方式贡献：
 
 - 负责一些带有特定标签的 issue 处理
 - 提出新功能或需要提高的地方的建议
@@ -86,4 +87,4 @@ Tools • Dart 2.18.0 • DevTools 2.15.0
 
 ## 注意事项
 
-<p style="color: darkred;">该代码仓库遵循 BSD 3-Clause 许可，请不要随意打包上传此代码到应用市场！</p>
+<p style="color: darkred;">在 Cambobia 自有签名密钥、Firebase 配置和正式环境凭据就绪前，请不要将此应用发布到应用市场。</p>

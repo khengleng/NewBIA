@@ -3,12 +3,13 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { resolveTradingRuntime } from '@/lib/platform'
+import { authorizedRequest } from '@/lib/api'
 
 interface SocketContextType {
     socket: Socket | null
     isConnected: boolean
-    lastNotification: any
-    sendMessage: (conversationId: string, content: string, type?: string, attachments?: any[]) => void
+    lastNotification: unknown
+    sendMessage: (conversationId: string, content: string, type?: string, attachments?: unknown[]) => void
     joinConversation: (conversationId: string) => void
     leaveConversation: (conversationId: string) => void
 }
@@ -27,34 +28,37 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const socketRef = useRef<Socket | null>(null)
     const intentionalDisconnectRef = useRef(false)
     const [isConnected, setIsConnected] = useState(false)
-    const [lastNotification, setLastNotification] = useState<any>(null)
-    const [user, setUser] = useState<any>(null)
+    const [lastNotification, setLastNotification] = useState<unknown>(null)
+    const [user, setUser] = useState<{ id: string; role: string } | null>(null)
 
     useEffect(() => {
-        const syncUserFromStorage = () => {
-            const storedUser = localStorage.getItem('user')
-            if (storedUser) {
-                try {
-                    setUser(JSON.parse(storedUser))
-                } catch {
+        const syncUserFromSession = async () => {
+            try {
+                const response = await authorizedRequest('/api/auth/me')
+                if (!response.ok) {
                     setUser(null)
+                    return
                 }
-            } else {
+                const payload = await response.json()
+                const currentUser = payload?.user
+                if (!currentUser?.id || !currentUser?.role) {
+                    setUser(null)
+                    return
+                }
+                setUser({ id: currentUser.id, role: currentUser.role })
+            } catch {
                 setUser(null)
             }
         }
 
-        // Initial user check
-        syncUserFromStorage()
+        void syncUserFromSession()
 
-        // Listen for storage events (login/logout from other tabs)
-        window.addEventListener('storage', syncUserFromStorage)
-        // Listen for same-tab auth changes
-        window.addEventListener('auth:changed', syncUserFromStorage)
+        window.addEventListener('storage', syncUserFromSession as EventListener)
+        window.addEventListener('auth:changed', syncUserFromSession as EventListener)
 
         return () => {
-            window.removeEventListener('storage', syncUserFromStorage)
-            window.removeEventListener('auth:changed', syncUserFromStorage)
+            window.removeEventListener('storage', syncUserFromSession as EventListener)
+            window.removeEventListener('auth:changed', syncUserFromSession as EventListener)
         }
     }, [])
 
@@ -64,10 +68,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003')
 
         const isAuthRoute = typeof window !== 'undefined' && window.location.pathname.startsWith('/auth/')
-        const isTradingContext = typeof window !== 'undefined'
+        const isTradingRuntime = typeof window !== 'undefined'
             && resolveTradingRuntime(window.location.hostname, window.location.pathname)
 
-        // Enabled for both Core and Trading platforms to support real-time market/notification updates
+        // Enabled for both Core and Trading platforms to support real-time updates.
 
         if (!user) {
             if (socketRef.current) {
@@ -95,6 +99,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                 reconnection: true,
                 reconnectionAttempts: 5,
                 reconnectionDelay: 1000,
+                auth: {
+                    platform: isTradingRuntime ? 'trading' : 'core',
+                },
             })
 
             socketRef.current = socket
@@ -112,20 +119,16 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
                 setIsConnected(false)
             })
 
-            socket.on('connect_error', (error) => {
-                if (!intentionalDisconnectRef.current) {
-
-                }
+            socket.on('connect_error', () => {
+                setIsConnected(false)
             })
 
-            socket.on('notification', (notification) => {
+            socket.on('notification', (notification: unknown) => {
 
                 setLastNotification(notification)
             })
 
-            socket.on('system_alert', (alert) => {
-
-            })
+            socket.on('system_alert', () => {})
 
             socket.connect()
         }
@@ -137,7 +140,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         }
     }, [user])
 
-    const sendMessage = (conversationId: string, content: string, type: string = 'TEXT', attachments: any[] = []) => {
+    const sendMessage = (conversationId: string, content: string, type: string = 'TEXT', attachments: unknown[] = []) => {
         if (socketRef.current) {
             socketRef.current.emit('send_message', { conversationId, content, type, attachments })
         }

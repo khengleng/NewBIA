@@ -1,8 +1,8 @@
 <h1 align="center">
   <br>
-  <a href="https://blockchain.thoughtworks.cn/twallet/"><img src="./assets/images/t-wallet.png" alt="TWallet" width="200"></a>
+  <img src="./assets/images/t-wallet.png" alt="Cambobia Mobile" width="200">
   <br>
-  TWallet
+  Cambobia Mobile
   <br>
   <p align="center">
     <img src="https://img.shields.io/badge/contributions-welcome-orange.svg" alt="Contributions welcome">
@@ -11,13 +11,16 @@
   </p>
 </h1>
 
-<h4 align="center">A leading-edge digital wallet (blockchain-based) project with a token named DC/EP and DID (Decentralized Identifiers) capability and a DApp browser.</h4>
+<h4 align="center">Native mobile companion for Cambobia investors and SME owners across the core platform and trading platform.</h4>
 
-<p align="center">
-  <img src="https://blockchain.thoughtworks.cn/wp-content/uploads/2020/06/ScreenCut_Pay.svg">
-</p>
+## Cambobia Mobile
 
-## TWallet's What-Is
+### What It Includes
+
+- Account access for Cambobia platform users
+- Portfolio, holdings, and trading-linked wallet capabilities
+- SME owner mobile access for issuer-side workflows on cambobia.com
+- DApp browser support for Cambobia-linked web experiences
 
 ### What Is A Digital Wallet
 
@@ -26,8 +29,6 @@
 > A digital wallet also known as "e-Wallet" refers to an electronic device, online service, or software program that allows one party to make electronic transactions with another party bartering digital currency units for goods and services. This can include purchasing items on-line with a computer or using a smartphone to purchase something at a store. Money can be deposited in the digital wallet prior to any transactions or, in other cases, an individual's bank account can be linked to the digital wallet. Users might also have their driver's license, health card, loyalty card(s) and other ID documents stored within the wallet. The credentials can be passed to a merchant's terminal wirelessly via near field communication (NFC). Increasingly, digital wallets are being made not just for basic financial transactions but to also authenticate the holder's credentials. For example, a digital wallet could verify the age of the buyer to the store while purchasing alcohol. The system has already gained popularity in Japan, where digital wallets are known as "wallet mobiles". A cryptocurrency wallet is a digital wallet where private keys are stored for cryptocurrencies like bitcoin.
 
 ### What Is DID (Decentralized Identifiers)
-
-<img width="400px" src="https://blockchain.thoughtworks.cn/wp-content/uploads/2020/06/ScreenCut_Identity.svg" align="right">
 
 ***From wikipedia:***
 
@@ -47,11 +48,11 @@
 
 ### How To Try The App
 
-We don't plan to release this app to the app market at this stage. If you want to try directly, [you can apply here.](https://blockchain.thoughtworks.cn/twallet/)
+Use the GitHub Actions build artifacts for internal testing, or install the native release builds that are generated for App Store / Play Store submission.
 
 ### Welcome Feedbacks
 
-Please don't be stingy to give us feedback. You can go to [issues page](https://github.com/tw-bc-group/TWallet/issues) and submit with the existed labels or a new one. We will deal with it as soon as possible.
+Submit issues and product feedback through this repository so the mobile app stays aligned with cambobia.com and trade.cambobia.com.
 
 ## For Developers
 
@@ -85,6 +86,6 @@ this growing project.
 - Participate in a discussion and help in decision making
 - Send in a Pull Request :-)
 
-## Reminding
+## Release note
 
-<p style="color: darkred;">The codebase follows the BSD 3-Clause License. Please do not package and upload this code to the application market at will!</p>
+<p style="color: darkred;">Do not publish this app to the stores until Cambobia-owned signing keys, Firebase configs, and production credentials are provisioned.</p>

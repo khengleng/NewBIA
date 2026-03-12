@@ -1,4 +1,4 @@
-package com.thoughtworks.tw_wallet_ui
+package com.cambobia.mobile
 
 import android.bluetooth.*
 import android.bluetooth.le.AdvertiseCallback
