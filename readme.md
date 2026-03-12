@@ -215,6 +215,7 @@ mkdir boutique-advisory-backend && cd boutique-advisory-backend && npm init -y
 - Release artifacts are produced in GitHub Actions (`flutter build appbundle --release` and `flutter build apk --release`) and stored as workflow artifacts. Use Fastlane or your chosen tool to sign and upload those binaries to the Google Play Store and Apple App Store. iOS builds require macOS runners (not covered by this workflow) so perform them manually or via a separate macOS job.
 - The mobile app consumes the same Railway-hosted APIs that service cambobia.com and trade.cambobia.com (authentication, listings, portfolios, notifications) so investor/SME data stays consistent between web and mobile.
 - A quick browser preview is available by running `flutter build web --release` in CI and publishing the generated `twallet-app/build/web` output to GitHub Pages. The preview deployment uses `peaceiris/actions-gh-pages` so you can open the UI in a browser without an emulator.
+- CI badge: ![TWallet Flutter](https://github.com/khengleng/BIA/actions/workflows/twallet-flutter.yml/badge.svg)\n
 
 
 ## 📎 Notes for Developers
@@ -226,7 +227,6 @@ mkdir boutique-advisory-backend && cd boutique-advisory-backend && npm init -y
 ---
 Platform description:
 **Boutique Advisory** → Bridging SMEs and Investors with trust, governance, and smart technology.
-
 
 
 

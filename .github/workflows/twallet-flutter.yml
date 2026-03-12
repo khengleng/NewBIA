@@ -63,3 +63,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: twallet-app/build/web
+
+      - name: Print preview URL
+        run: echo "Preview will be available (after Pages is enabled) at https://khengleng.github.io/BIA/"
