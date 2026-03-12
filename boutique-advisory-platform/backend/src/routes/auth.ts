@@ -1206,8 +1206,9 @@ router.post('/reset-password', async (req: Request, res: Response) => {
 
   try {
     const { token, password } = req.body;
+    const normalizedToken = typeof token === 'string' ? token.trim() : '';
 
-    if (!token || !password) {
+    if (!normalizedToken || !password) {
       return res.status(400).json({ error: 'Token and new password are required' });
     }
 
@@ -1225,22 +1226,7 @@ router.post('/reset-password', async (req: Request, res: Response) => {
     }
 
     // Hash the provided token to compare with stored hash
-    const hashedToken = hashToken(token);
-
-    // In production: Look up the hashed token in the database
-    // For now, we'll validate the token format
-    if (token.length !== 64) { // 32 bytes = 64 hex characters
-      await logAuditEvent({
-        userId: 'unknown',
-        action: 'PASSWORD_RESET_INVALID_TOKEN',
-        resource: 'auth',
-        details: { tokenLength: token.length },
-        ipAddress: clientIp,
-        success: false,
-        errorMessage: 'Invalid token format'
-      });
-      return res.status(400).json({ error: 'Invalid or expired reset token' });
-    }
+    const hashedToken = hashToken(normalizedToken);
 
     // Verify token exists and is not expired
     const user = await prisma.user.findFirst({
@@ -1257,7 +1243,10 @@ router.post('/reset-password', async (req: Request, res: Response) => {
         userId: 'unknown',
         action: 'PASSWORD_RESET_INVALID_TOKEN',
         resource: 'auth',
-        details: { tokenHash: hashedToken.substring(0, 10) + '...' },
+        details: {
+          tokenHash: hashedToken.substring(0, 10) + '...',
+          tokenLength: normalizedToken.length
+        },
         ipAddress: clientIp,
         success: false,
         errorMessage: 'Token not found or expired'
