@@ -23,13 +23,28 @@ function readHostFromRequest(req?: Request | null): string {
     const forwardedHost = req.headers['x-forwarded-host'];
     const hostHeader = req.headers['host'];
 
-    const first = (value: string | string[] | undefined): string => {
-        if (Array.isArray(value)) return (value[0] || '').trim().toLowerCase();
-        return (value || '').trim().toLowerCase();
+    const explode = (value: string | string[] | undefined): string[] => {
+        const items = Array.isArray(value) ? value : [value];
+        return items
+            .flatMap((entry) => String(entry || '').split(','))
+            .map((entry) => entry.trim().toLowerCase().replace(/:\d+$/, ''))
+            .filter(Boolean);
     };
 
-    const raw = first(forwardedHost) || first(hostHeader) || String(req.hostname || '').trim().toLowerCase();
-    return raw.replace(/:\d+$/, '');
+    const hostCandidates = [
+        ...explode(forwardedHost),
+        ...explode(hostHeader),
+        ...explode(req.hostname)
+    ];
+
+    const explicitPlatformHost = hostCandidates.find((candidate) =>
+        candidate === 'trade.cambobia.com'
+        || candidate === 'cambobia.com'
+        || candidate === 'www.cambobia.com'
+        || candidate.endsWith('.cambobia.com')
+    );
+
+    return explicitPlatformHost || hostCandidates[0] || '';
 }
 
 function isTradingHostname(hostname: string): boolean {

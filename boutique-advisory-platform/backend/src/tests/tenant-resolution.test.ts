@@ -71,6 +71,34 @@ test('Tenant resolution - local/railway host falls back to default in production
   });
 });
 
+test('Tenant resolution - forwarded host chain prefers public Cambobia host', () => {
+  withEnv({ NODE_ENV: 'production', CORE_TENANT_ID: 'default', TRADING_TENANT_ID: 'trade' }, () => {
+    const req = {
+      hostname: 'backend-production-9d40.up.railway.app',
+      headers: {
+        'x-forwarded-host': 'backend-production-9d40.up.railway.app, www.cambobia.com',
+        host: 'backend-production-9d40.up.railway.app',
+      },
+    } as unknown as MinimalReq;
+
+    assert.strictEqual(getTenantId(req as any), 'default');
+  });
+});
+
+test('Tenant resolution - forwarded host chain prefers public trading host', () => {
+  withEnv({ NODE_ENV: 'production', CORE_TENANT_ID: 'default', TRADING_TENANT_ID: 'trade' }, () => {
+    const req = {
+      hostname: 'trading-production.up.railway.app',
+      headers: {
+        'x-forwarded-host': 'trading-production.up.railway.app, trade.cambobia.com',
+        host: 'trading-production.up.railway.app',
+      },
+    } as unknown as MinimalReq;
+
+    assert.strictEqual(getTenantId(req as any), 'trade');
+  });
+});
+
 test('Tenant resolution - development can use x-tenant-id override', () => {
   withEnv({ NODE_ENV: 'development' }, () => {
     const req = {

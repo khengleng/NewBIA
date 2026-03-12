@@ -1,5 +1,17 @@
 import { Request } from 'express';
 
+function normalizeHostValue(value: string): string {
+  return String(value || '').trim().toLowerCase().replace(/:\d+$/, '');
+}
+
+function extractHostCandidates(value: string | string[] | undefined): string[] {
+  const rawValues = Array.isArray(value) ? value : [value];
+  return rawValues
+    .flatMap((entry) => String(entry || '').split(','))
+    .map(normalizeHostValue)
+    .filter(Boolean);
+}
+
 /**
  * Resolve tenant identity from trusted request context.
  * In production, only hostname-derived tenanting is trusted.
@@ -14,18 +26,21 @@ export function getTenantId(req: Request): string {
 
   const isProduction = process.env.NODE_ENV === 'production';
 
-  // Railway/front-proxy requests can arrive at the backend with an internal hostname
-  // while preserving the original public host in X-Forwarded-Host.
-  const readHeaderValue = (value: string | string[] | undefined): string => {
-    const raw = Array.isArray(value) ? (value[0] || '') : (value || '');
-    return raw.split(',')[0].trim().toLowerCase();
-  };
+  const hostCandidates = [
+    ...extractHostCandidates(req.headers['x-forwarded-host']),
+    ...extractHostCandidates(req.headers['host']),
+    ...extractHostCandidates(req.hostname),
+  ];
 
-  const host = (
-    readHeaderValue(req.headers['x-forwarded-host'])
-    || readHeaderValue(req.headers['host'])
-    || String(req.hostname || '').trim().toLowerCase()
-  ).replace(/:\d+$/, '');
+  // Prefer any explicit public Cambobia host in the forwarded chain.
+  const explicitPlatformHost = hostCandidates.find((candidate) =>
+    candidate === 'cambobia.com'
+    || candidate === 'www.cambobia.com'
+    || candidate === 'trade.cambobia.com'
+    || candidate.endsWith('.cambobia.com')
+  );
+
+  const host = explicitPlatformHost || hostCandidates[0] || '';
 
   // Platform domains map to explicit core/trading tenants.
   if (host === 'cambobia.com' || host === 'www.cambobia.com') {
