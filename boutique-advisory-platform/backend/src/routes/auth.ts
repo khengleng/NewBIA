@@ -123,7 +123,7 @@ async function findUserForPlatformEmail(req: Request, email: string) {
 
   // Cross-tenant fallback for trading service: Look for investors/users in core tenant
   // if not found in the dedicated 'trade' tenant.
-  if (isTradingService && tenantId !== coreTenantId) {
+  if (isTradingRequest(req) && tenantId !== coreTenantId) {
     user = await prisma.user.findFirst({
       where: { email: normalizedEmail, tenantId: coreTenantId }
     });
@@ -581,7 +581,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
 
     // Trading runtime accepts only dedicated platform-operator roles via local login.
     // Investors access the trading exchange through core-platform SSO only.
-    if (isTradingService) {
+    if (isTradingRequest(req)) {
       if (!tradingLocalAllowedRoles.has(normalizedUserRole)) {
         await logAuditEvent({
           userId: user.id,

@@ -1,6 +1,6 @@
 // API Configuration
 // In production, we use a proxy to hide the backend URL
-export const API_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+export const API_URL = typeof window !== 'undefined'
     ? '/api-proxy'
     : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3003');
 
