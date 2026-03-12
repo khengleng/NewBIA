@@ -94,6 +94,36 @@ function getTradingSuperadminEmail(): string {
   return (process.env.DEFAULT_TRADING_SUPERADMIN_EMAIL || defaultTradingSuperadminEmail).toLowerCase();
 }
 
+async function findUserForPlatformEmail(req: Request, email: string) {
+  const tenantId = getTenantId(req);
+  const normalizedEmail = email.toLowerCase();
+
+  let user = await prisma.user.findFirst({
+    where: { email: normalizedEmail, tenantId }
+  });
+
+  if (user) return user;
+
+  const coreTenantId = process.env.CORE_TENANT_ID || 'default';
+  const tradingTenantId = process.env.TRADING_TENANT_ID || 'trade';
+
+  if (normalizedEmail === getCoreSuperadminEmail()) {
+    user = await prisma.user.findFirst({
+      where: { email: normalizedEmail, tenantId: coreTenantId }
+    });
+    if (user) return user;
+  }
+
+  if (normalizedEmail === getTradingSuperadminEmail()) {
+    user = await prisma.user.findFirst({
+      where: { email: normalizedEmail, tenantId: tradingTenantId }
+    });
+    if (user) return user;
+  }
+
+  return null;
+}
+
 function getEmailDeliveryFailureMessage(): string {
   return 'Verification email could not be sent right now. Please try again shortly or contact support.';
 }
@@ -460,11 +490,8 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    const tenantId = getTenantId(req);
     // Find user early so SUPER_ADMIN lockout bypass can be evaluated safely.
-    const user = await prisma.user.findFirst({
-      where: { email: sanitizedEmail, tenantId }
-    });
+    const user = await findUserForPlatformEmail(req, sanitizedEmail);
 
     // SECURITY: Check account-centric lockout (email only).
     // IP abuse protection is enforced by the auth rate limiter in index.ts.
@@ -1113,9 +1140,7 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
     }
 
     const tenantId = getTenantId(req);
-    const user = await prisma.user.findFirst({
-      where: { email: sanitizedEmail, tenantId }
-    });
+    const user = await findUserForPlatformEmail(req, sanitizedEmail);
 
     // SECURITY: Always return success message to prevent email enumeration
     // But only generate token if user exists
@@ -1175,7 +1200,7 @@ router.post('/forgot-password', async (req: Request, res: Response) => {
         userId: 'unknown',
         action: 'PASSWORD_RESET_UNKNOWN_EMAIL',
         resource: 'auth',
-        details: { email: sanitizedEmail },
+        details: { email: sanitizedEmail, tenantId },
         ipAddress: clientIp,
         success: false
       });
