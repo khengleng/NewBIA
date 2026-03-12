@@ -50,3 +50,13 @@ jobs:
           path: |
             twallet-app/build/app/outputs/bundle/release/app-release.aab
             twallet-app/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Build Flutter web preview
+        working-directory: twallet-app
+        run: flutter build web --release
+
+      - name: Deploy web preview to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: twallet-app/build/web
