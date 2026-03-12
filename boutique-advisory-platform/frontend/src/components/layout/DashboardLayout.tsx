@@ -244,16 +244,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         },
         {
             label: 'Security',
-            roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
+            roles: ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
             items: [
-                { href: '/settings/sessions', label: 'Manage Sessions', icon: ShieldCheck, roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'] },
+                { href: '/settings/sessions', label: 'Manage Sessions', icon: ShieldCheck, roles: ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'INVESTOR', 'SME'] },
             ]
         },
         {
             label: 'Preferences',
-            roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
+            roles: ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
             items: [
-                { href: '/settings', label: t('navigation.settings'), icon: Settings, roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'] },
+                { href: '/settings', label: t('navigation.settings'), icon: Settings, roles: ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'INVESTOR', 'SME'] },
             ]
         },
     ]

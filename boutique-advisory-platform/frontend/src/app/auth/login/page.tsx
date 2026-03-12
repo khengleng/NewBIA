@@ -9,6 +9,7 @@ import { apiRequest } from '../../../lib/api'
 import { CORE_FRONTEND_URL, IS_TRADING_PLATFORM, resolveTradingRuntime } from '@/lib/platform'
 import { isTradingOperatorRole, normalizeRole } from '@/lib/roles'
 import { TRADING_OPERATOR_HOME } from '@/lib/tradingOperatorRoutes'
+import { hasPermission } from '@/lib/permissions'
 
 export default function LoginPage() {
   const { t } = useTranslations()
@@ -31,8 +32,11 @@ export default function LoginPage() {
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const getPostLoginPath = (role?: string) => {
-    if (!isTradingRuntime) return '/dashboard'
-    return isTradingOperatorRole(normalizeRole(role)) ? TRADING_OPERATOR_HOME : '/secondary-trading'
+    const normalizedRole = normalizeRole(role)
+    if (!isTradingRuntime) {
+      return hasPermission(normalizedRole, 'admin.read') ? '/admin/dashboard' : '/dashboard'
+    }
+    return isTradingOperatorRole(normalizedRole) ? TRADING_OPERATOR_HOME : '/secondary-trading'
   }
 
   const syncSessionUser = async (fallbackUser?: any, expectedEmail?: string) => {

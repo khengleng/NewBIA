@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { IS_TRADING_PLATFORM, resolveTradingRuntime } from '@/lib/platform'
 import { isTradingOperatorRole, normalizeRole } from '@/lib/roles'
 import { usePermissions } from '@/hooks/usePermissions'
+import { hasPermission } from '@/lib/permissions'
 
 export default function BottomNavigation() {
     const pathname = usePathname()
@@ -46,6 +47,7 @@ export default function BottomNavigation() {
     }
 
     const isTradingOperator = isTradingOperatorRole(role)
+    const isCoreOperator = !isTradingRuntime && hasPermission(role, 'admin.read')
 
     const navItems = isTradingRuntime
         ? isTradingOperator
@@ -63,13 +65,21 @@ export default function BottomNavigation() {
                 { icon: Users, label: 'Portfolio', path: '/trading/portfolio' },
                 { icon: Settings, label: 'Security', path: '/trading/security' },
             ]
-        : [
-            { icon: Home, label: 'Home', path: '/dashboard' },
-            { icon: Users, label: 'Network', path: '/investors' },
-            { icon: FileText, label: 'Deals', path: '/deals' },
-            { icon: MessageSquare, label: 'Messages', path: '/messages' },
-            { icon: Settings, label: 'Settings', path: '/settings' },
-        ]
+        : isCoreOperator
+            ? [
+                { icon: Home, label: 'Admin', path: '/admin/dashboard' },
+                { icon: Users, label: 'Users', path: '/admin/users' },
+                { icon: FileText, label: 'Ops', path: '/admin/business-ops' },
+                { icon: MessageSquare, label: 'Cases', path: '/admin/cases' },
+                { icon: Settings, label: 'Settings', path: '/settings' },
+            ]
+            : [
+                { icon: Home, label: 'Home', path: '/dashboard' },
+                { icon: Users, label: 'Network', path: '/investors' },
+                { icon: FileText, label: 'Deals', path: '/deals' },
+                { icon: MessageSquare, label: 'Messages', path: '/messages' },
+                { icon: Settings, label: 'Settings', path: '/settings' },
+            ]
 
     const handleNavigate = (path: string) => {
         // Haptic feedback
