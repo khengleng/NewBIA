@@ -189,6 +189,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 { href: '/admin/dashboard', label: 'Control Tower', icon: LayoutDashboard, roles: ['SUPER_ADMIN', 'ADMIN', 'AUDITOR'], permission: 'admin.read' },
                 { href: '/trading/launchpad', label: 'Launchpad', icon: Rocket, roles: ['SUPER_ADMIN', 'ADMIN'] },
                 { href: '/admin/users', label: 'User Management', icon: UserCog, roles: ['ADMIN', 'SUPER_ADMIN'] },
+                { href: '/settings', label: 'Account Security', icon: ShieldCheck, roles: ['SUPER_ADMIN', 'ADMIN'] },
                 { href: '/admin/role-lifecycle', label: 'Role Lifecycle', icon: Shield, roles: ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE'], permission: 'role_grant.list' },
                 { href: '/admin/settings/branding', label: 'Platform Branding', icon: Palette, roles: ['ADMIN', 'SUPER_ADMIN'] },
                 { href: '/admin/audit', label: 'System Audit', icon: History, roles: ['SUPER_ADMIN', 'ADMIN', 'AUDITOR', 'COMPLIANCE'] },
