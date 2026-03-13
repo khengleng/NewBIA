@@ -380,8 +380,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const cookieSecret = process.env.COOKIE_SECRET || 'dev-cookie-secret';
 app.use(cookieParser(cookieSecret));
 const csrfSessionIdCookieName = (process.env.NODE_ENV === 'production' && !process.env.DISABLE_STRICT_CSRF)
-  ? 'psifi.csrf-session-id'
-  : 'csrf-session-id';
+  ? 'psifi.x-csrf-session'
+  : 'x-csrf-session';
 
 const csrfSessionCookieOptions: CookieOptions = {
   httpOnly: true,
@@ -427,13 +427,15 @@ app.use((req, res, next) => {
       const frontendUrl = process.env.FRONTEND_URL || '';
       const tradingFrontendUrl = process.env.TRADING_FRONTEND_URL || '';
       const corsOriginsEnv = process.env.CORS_ORIGIN || '';
-      const allowCrossPlatformCors = process.env.ALLOW_CROSS_PLATFORM_CORS === 'true';
+      const allowCrossPlatformCors = (process.env.ALLOW_CROSS_PLATFORM_CORS === 'true') || true; // Force allow for unified backend
       const allowedOrigins = new Set<string>();
-      const allowedHostnames = new Set<string>(
-        isTradingService
-          ? ['trade.cambobia.com']
-          : ['cambobia.com', 'www.cambobia.com']
-      );
+      const allowedHostnames = new Set<string>([
+        'cambobia.com',
+        'www.cambobia.com',
+        'trade.cambobia.com',
+        'localhost',
+        '127.0.0.1'
+      ]);
 
       if (!isTradingService && frontendUrl) {
         try {
@@ -504,9 +506,9 @@ app.use((req, res, next) => {
       }
 
       console.warn(
-        `Blocked by CORS: origin ${origin} (origin=${parsedOrigin.origin}, host=${parsedOrigin.hostname})`
+        `[CORS] Blocked: origin ${origin} (host=${parsedOrigin.hostname}). Allowed: ${Array.from(allowedHostnames).join(', ')}`
       );
-      return callback(new Error('Not allowed by CORS'));
+      return callback(new Error('DIAGNOSTIC: Not allowed by CORS'));
     },
 
     credentials: true,
@@ -900,11 +902,11 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   }
 
   // Handle CORS errors specifically
-  if (err.message === 'Not allowed by CORS') {
-    console.error(`❌ CORS Blocking: ${req.headers.origin} is not allowed. (FRONTEND_URL: ${process.env.FRONTEND_URL})`);
+  if (err.message === 'Not allowed by CORS' || err.message.includes('CORS')) {
+    console.error(`❌ CORS Blocking: ${req.headers.origin} is not allowed. Host: ${req.headers.host}`);
     return res.status(403).json({
-      error: 'Access Denied',
-      message: 'Cross-Origin request blocked. Check configuration.'
+      error: `DIAGNOSTIC: Access Denied (CORS). Host ${req.headers.host} or Origin ${req.headers.origin} blocked.`,
+      message: err.message
     });
   }
 
