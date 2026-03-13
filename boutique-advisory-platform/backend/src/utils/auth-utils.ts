@@ -77,19 +77,23 @@ function resolveTradingCookieScope(req?: Request | null): boolean {
 }
 
 export function getAuthCookieNames(req?: Request): AuthCookieNames {
-    if (resolveTradingCookieScope(req)) {
-        return {
+    const isTrading = resolveTradingCookieScope(req);
+    const names = isTrading ? {
             accessToken: 'tr_accessToken',
             refreshToken: 'tr_refreshToken',
             token: 'tr_token',
+        } : {
+            accessToken: 'accessToken',
+            refreshToken: 'refreshToken',
+            token: 'token',
         };
+    
+    // Low-noise logging for auth debugging
+    if (req && (req.path === '/api/auth/me' || req.path === '/api/auth/login')) {
+        console.log(`[AUTH] Cookie resolution for ${req.path} (Host: ${req.headers.host}): ${names.accessToken}`);
     }
 
-    return {
-        accessToken: 'accessToken',
-        refreshToken: 'refreshToken',
-        token: 'token',
-    };
+    return names;
 }
 
 function getCookieDomainCandidates(_req: Request): string[] {

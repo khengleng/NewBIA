@@ -29,8 +29,13 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
     }
 
     if (!token) {
-        // No access token, try refresh token logic immediately?
-        // Or wait for next block. Let's try refresh if access token is missing.
+        // No access token, try refresh token logic immediately
+        const hasTrRefresh = Boolean(req.cookies?.['tr_refreshToken']);
+        const hasCoreRefresh = Boolean(req.cookies?.['refreshToken']);
+        const hasTrAccess = Boolean(req.cookies?.['tr_accessToken']);
+        const hasCoreAccess = Boolean(req.cookies?.['accessToken']);
+        
+        console.log(`[AUTH] No token found. Cookies: tr_access=${hasTrAccess}, core_access=${hasCoreAccess}, tr_refresh=${hasTrRefresh}, core_refresh=${hasCoreRefresh}`);
         return handleRefresh(req, res, next);
     }
 
@@ -52,7 +57,10 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
         }
 
         if (!decoded.tenantId || decoded.tenantId !== user.tenantId) {
-            res.status(401).json({ error: 'Invalid token tenant context' });
+            res.status(401).json({ 
+                error: 'DIAGNOSTIC: Invalid token tenant context',
+                details: `Token tenant: ${decoded.tenantId}, User tenant: ${user.tenantId}`
+            });
             return;
         }
 
@@ -83,7 +91,7 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
                 hostname: req.hostname,
                 serviceMode,
             });
-            res.status(403).json({ error: 'Tenant access denied' });
+            res.status(403).json({ error: 'DIAGNOSTIC: Tenant access denied. Path: ' + (req.originalUrl || req.url) });
             return;
         }
 
@@ -95,7 +103,11 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
             return handleRefresh(req, res, next);
         }
 
-        res.status(401).json({ error: 'Invalid token' });
+        console.error('[AUTH] Token verification failed:', error.message);
+        res.status(401).json({ 
+            error: 'DIAGNOSTIC: Invalid token',
+            details: error.message 
+        });
     }
 };
 
@@ -111,7 +123,7 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
     }
 
     if (!refreshToken) {
-        res.status(401).json({ error: 'Session expired. Please login again.' });
+        res.status(401).json({ error: 'DIAGNOSTIC: Session expired. No refresh token found.' });
         return;
     }
 
@@ -122,9 +134,19 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
             include: { user: true }
         });
 
-        if (!storedToken || storedToken.revoked || storedToken.expiresAt < new Date()) {
-            if (storedToken) await prisma.refreshToken.delete({ where: { id: storedToken.id } });
-            res.status(401).json({ error: 'Invalid or expired session' });
+        if (!storedToken) {
+            res.status(401).json({ error: 'DIAGNOSTIC: Invalid session. Refresh token not found in database.' });
+            return;
+        }
+
+        if (storedToken.expiresAt < new Date()) {
+            await prisma.refreshToken.delete({ where: { id: storedToken.id } });
+            res.status(401).json({ error: 'DIAGNOSTIC: Session expired. Refresh token expired at ' + storedToken.expiresAt.toISOString() });
+            return;
+        }
+
+        if (storedToken.revoked) {
+            res.status(401).json({ error: 'DIAGNOSTIC: Session revoked. Please login again.' });
             return;
         }
 
@@ -161,9 +183,12 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
         // Attach user and continue
         req.user = storedToken.user;
         next();
-    } catch (err) {
+    } catch (err: any) {
         console.error('Auto-refresh error:', err);
-        res.status(401).json({ error: 'Authentication failed during refresh' });
+        res.status(401).json({ 
+            error: 'DIAGNOSTIC: Authentication failed during refresh',
+            details: err.message 
+        });
     }
 }
 
