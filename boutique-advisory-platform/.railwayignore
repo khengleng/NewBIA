@@ -1,0 +1,34 @@
+# Keep Railway upload payload small for monorepo deploys
+.git
+.git/**
+**/.git
+**/.DS_Store
+
+# Dependencies/build outputs
+**/node_modules
+**/.next
+**/dist
+**/build
+**/.turbo
+**/.cache
+**/coverage
+
+# Logs
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Env files
+**/.env
+**/.env.*
+!.env.example
+
+# Mobile heavy artifacts
+**/android/.gradle
+**/android/app/build
+**/ios/Pods
+**/ios/build
+**/*.apk
+**/*.aab
+**/*.ipa

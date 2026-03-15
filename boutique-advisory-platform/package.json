@@ -16,6 +16,8 @@
         "test:trade": "npm --prefix trade-frontend test",
         "test:smoke": "node scripts/railway-smoke-security.mjs",
         "test:smoke:railway": "node scripts/railway-smoke-security.mjs --base-url $SMOKE_BASE_URL",
-        "test:security:gate": "npm run test:backend && npm run test:core && npm run test:trade"
+        "test:security:gate": "npm run test:backend && npm run test:core && npm run test:trade",
+        "deploy:backend:canary": "bash scripts/deploy-backend-canary.sh",
+        "deploy:backend:canary:local": "bash scripts/deploy-backend-canary.sh \"$HOME/BIA\""
     }
 }

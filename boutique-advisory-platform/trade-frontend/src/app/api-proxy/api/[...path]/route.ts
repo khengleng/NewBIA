@@ -146,6 +146,27 @@ function buildUpstreamHeaders(req: NextRequest): Headers {
   return headers;
 }
 
+
+async function shouldRetryForPlatformNotFound(upstream: Response): Promise<boolean> {
+  if (upstream.status !== 404) return false;
+  const contentType = upstream.headers.get('content-type') || '';
+  if (!contentType.includes('text/html') && !contentType.includes('application/json')) {
+    return false;
+  }
+
+  const bodyText = await upstream.clone().text();
+  const normalized = bodyText.toLowerCase();
+  const hasNotFoundMarker = normalized.includes('application not found');
+  const hasProviderMarker =
+    normalized.includes('railway')
+    || normalized.includes('cloudflare')
+    || normalized.includes('deployment');
+
+  // Retry only when the 404 body clearly looks like provider/platform routing
+  // rather than a legitimate application-level 404 from our backend.
+  return hasNotFoundMarker && hasProviderMarker;
+}
+
 function copyUpstreamHeaders(upstream: Response, response: NextResponse): void {
   upstream.headers.forEach((value, key) => {
     const lower = key.toLowerCase();
@@ -185,9 +206,6 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
   const requestBody =
     method === 'GET' || method === 'HEAD' ? undefined : Buffer.from(await req.arrayBuffer());
 
-  let lastStatus: number | null = null;
-  let lastError: string | null = null;
-
   for (let i = 0; i < targets.length; i += 1) {
     const targetBase = targets[i];
     const upstreamUrl = `${targetBase}${upstreamPath}`;
@@ -195,7 +213,7 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
 
     try {
 
-      console.log(`📡 [Proxy] ${method} -> ${upstreamUrl}`);
+      console.log(`📡 [Proxy] ${method} -> ${targetBase}/api/${pathParts.join('/')}`);
       const upstream = await fetch(upstreamUrl, {
         method,
         headers,
@@ -204,10 +222,10 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
         redirect: 'manual'
       });
 
-      lastStatus = upstream.status;
+      const shouldRetry = TRANSIENT_STATUSES.has(upstream.status)
+        || (await shouldRetryForPlatformNotFound(upstream));
 
-
-      if (!TRANSIENT_STATUSES.has(upstream.status) || isLastTarget) {
+      if (!shouldRetry || isLastTarget) {
         // Read full body buffer to avoid streaming/decoding issues during content forwarding
         const bodyBuffer = await upstream.arrayBuffer();
         const response = new NextResponse(bodyBuffer, { status: upstream.status });
@@ -220,13 +238,11 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
         response.headers.delete('content-length');
         response.headers.delete('transfer-encoding');
 
-        response.headers.set('x-proxy-target', targetBase);
-        response.headers.set('x-proxy-attempt', String(i + 1));
         return response;
       }
     } catch (error: any) {
-      lastError = error?.message || 'Proxy connection failed';
-      console.warn(`⚠️ [Proxy Error] Attempt ${i + 1} failed: ${lastError}`);
+      const errMessage = error?.message || 'Proxy connection failed';
+      console.warn(`⚠️ [Proxy Error] Attempt ${i + 1} failed: ${errMessage}`);
       if (isLastTarget) break;
     }
   }
@@ -234,10 +250,7 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
   console.error(`❌ [Proxy Failed] Exhausted all ${targets.length} targets for ${upstreamPath}`);
   return NextResponse.json(
     {
-      error: 'Service temporarily unavailable. Please try again in a few seconds.',
-      proxyStatus: lastStatus,
-      proxyError: lastError,
-      targetsAttempted: targets.length
+      error: 'Service temporarily unavailable. Please try again in a few seconds.'
     },
     { status: 503 }
   );

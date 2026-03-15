@@ -40,10 +40,30 @@ export function getTenantId(req: Request): string {
 
   const isProduction = process.env.NODE_ENV === 'production';
 
-  const hostCandidates = [
-    ...extractHostCandidates(req.headers['x-forwarded-host']),
-    ...extractHostCandidates(req.headers['host']),
+  // Development/testing override only.
+  const headerTenantId = req.headers['x-tenant-id'];
+  if (!isProduction && headerTenantId && typeof headerTenantId === 'string') {
+    return headerTenantId;
+  }
+
+  const serverHostCandidates = [
     ...extractHostCandidates(req.hostname),
+    ...extractHostCandidates(req.headers['host']),
+  ];
+
+  const primaryServerHost = serverHostCandidates[0] || '';
+  const shouldTrustForwardedHost =
+    !isProduction
+    || !primaryServerHost
+    || primaryServerHost.includes('localhost')
+    || primaryServerHost.includes('127.0.0.1')
+    || primaryServerHost.endsWith('railway.app')
+    || isIpv4Host(primaryServerHost)
+    || isInternalServiceHost(primaryServerHost);
+
+  const hostCandidates = [
+    ...serverHostCandidates,
+    ...(shouldTrustForwardedHost ? extractHostCandidates(req.headers['x-forwarded-host']) : []),
   ];
 
   // Prefer any explicit public Cambobia host in the forwarded chain.
@@ -91,12 +111,6 @@ export function getTenantId(req: Request): string {
         return subdomain;
       }
     }
-  }
-
-  // Development/testing override only.
-  const headerTenantId = req.headers['x-tenant-id'];
-  if (!isProduction && headerTenantId && typeof headerTenantId === 'string') {
-    return headerTenantId;
   }
 
   return coreTenantId;

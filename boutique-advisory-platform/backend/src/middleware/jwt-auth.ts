@@ -29,13 +29,17 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
     }
 
     if (!token) {
-        // No access token, try refresh token logic immediately
-        const hasTrRefresh = Boolean(req.cookies?.['tr_refreshToken']);
-        const hasCoreRefresh = Boolean(req.cookies?.['refreshToken']);
-        const hasTrAccess = Boolean(req.cookies?.['tr_accessToken']);
-        const hasCoreAccess = Boolean(req.cookies?.['accessToken']);
-        
-        console.log(`[AUTH] No token found. Cookies: tr_access=${hasTrAccess}, core_access=${hasCoreAccess}, tr_refresh=${hasTrRefresh}, core_refresh=${hasCoreRefresh}`);
+        // No access token, try refresh token logic immediately.
+        // Keep cookie presence diagnostics behind an explicit debug flag
+        // to avoid noisy auth metadata logs in production.
+        if (process.env.AUTH_DEBUG === 'true') {
+            const hasTrRefresh = Boolean(req.cookies?.['tr_refreshToken']);
+            const hasCoreRefresh = Boolean(req.cookies?.['refreshToken']);
+            const hasTrAccess = Boolean(req.cookies?.['tr_accessToken']);
+            const hasCoreAccess = Boolean(req.cookies?.['accessToken']);
+            console.log(`[AUTH] No token found. Cookies: tr_access=${hasTrAccess}, core_access=${hasCoreAccess}, tr_refresh=${hasTrRefresh}, core_refresh=${hasCoreRefresh}`);
+        }
+
         return handleRefresh(req, res, next);
     }
 
@@ -57,9 +61,17 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
         }
 
         if (!decoded.tenantId || decoded.tenantId !== user.tenantId) {
+            console.warn('[AUTH] Invalid token tenant context', {
+                path: req.originalUrl || req.url,
+                tokenTenantId: decoded.tenantId,
+                userTenantId: user.tenantId,
+                userId: decoded.userId,
+                forwardedHost: req.headers['x-forwarded-host'],
+                host: req.headers['host'],
+                hostname: req.hostname,
+            });
             res.status(401).json({ 
-                error: 'DIAGNOSTIC: Invalid token tenant context',
-                details: `Token tenant: ${decoded.tenantId}, User tenant: ${user.tenantId}`
+                error: 'Invalid token tenant context'
             });
             return;
         }
@@ -91,7 +103,7 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
                 hostname: req.hostname,
                 serviceMode,
             });
-            res.status(403).json({ error: 'DIAGNOSTIC: Tenant access denied. Path: ' + (req.originalUrl || req.url) });
+            res.status(403).json({ error: 'Tenant access denied' });
             return;
         }
 
@@ -105,8 +117,7 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
 
         console.error('[AUTH] Token verification failed:', error.message);
         res.status(401).json({ 
-            error: 'DIAGNOSTIC: Invalid token',
-            details: error.message 
+            error: 'Invalid token'
         });
     }
 };
@@ -123,7 +134,7 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
     }
 
     if (!refreshToken) {
-        res.status(401).json({ error: 'DIAGNOSTIC: Session expired. No refresh token found.' });
+        res.status(401).json({ error: 'Session expired. Please log in again.' });
         return;
     }
 
@@ -135,18 +146,18 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
         });
 
         if (!storedToken) {
-            res.status(401).json({ error: 'DIAGNOSTIC: Invalid session. Refresh token not found in database.' });
+            res.status(401).json({ error: 'Invalid session. Please log in again.' });
             return;
         }
 
         if (storedToken.expiresAt < new Date()) {
             await prisma.refreshToken.delete({ where: { id: storedToken.id } });
-            res.status(401).json({ error: 'DIAGNOSTIC: Session expired. Refresh token expired at ' + storedToken.expiresAt.toISOString() });
+            res.status(401).json({ error: 'Session expired. Please log in again.' });
             return;
         }
 
         if (storedToken.revoked) {
-            res.status(401).json({ error: 'DIAGNOSTIC: Session revoked. Please login again.' });
+            res.status(401).json({ error: 'Session revoked. Please log in again.' });
             return;
         }
 
@@ -186,8 +197,7 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
     } catch (err: any) {
         console.error('Auto-refresh error:', err);
         res.status(401).json({ 
-            error: 'DIAGNOSTIC: Authentication failed during refresh',
-            details: err.message 
+            error: 'Authentication failed during refresh'
         });
     }
 }

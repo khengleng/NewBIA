@@ -3,10 +3,13 @@ import crypto from 'crypto';
 // Use a consistent encryption key from environment in production
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
 
-if (!ENCRYPTION_KEY) {
-    console.warn('⚠️ WARNING: ENCRYPTION_KEY is not defined. Using a dummy key. Data encryption is insecure! Please set ENCRYPTION_KEY in production.');
+const isLocalEnv = ['development', 'test'].includes(process.env.NODE_ENV || 'development');
+
+if (!ENCRYPTION_KEY && !isLocalEnv) {
+    throw new Error('FATAL: ENCRYPTION_KEY environment variable is mandatory for this environment.');
 }
-const ACTIVE_KEY = ENCRYPTION_KEY || '0000000000000000000000000000000000000000000000000000000000000000';
+
+const ACTIVE_KEY = ENCRYPTION_KEY || '1111111111111111111111111111111111111111111111111111111111111111';
 
 
 const ALGORITHM = 'aes-256-gcm';

@@ -123,3 +123,17 @@ test('Tenant resolution - development can use x-tenant-id override', () => {
     assert.strictEqual(getTenantId(req as any), 'dev-tenant');
   });
 });
+
+test('Tenant resolution - production ignores forged x-forwarded-host when host is public', () => {
+  withEnv({ NODE_ENV: 'production', CORE_TENANT_ID: 'default' }, () => {
+    const req = {
+      hostname: 'www.cambobia.com',
+      headers: {
+        host: 'www.cambobia.com',
+        'x-forwarded-host': 'attacker.cambobia.com',
+      },
+    } as unknown as MinimalReq;
+
+    assert.strictEqual(getTenantId(req as any), 'default');
+  });
+});

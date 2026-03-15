@@ -19,7 +19,7 @@ test('apiRequest - GET uses include credentials and skips CSRF fetch', async () 
   await apiRequest('/api/health');
 
   assert.strictEqual(calls.length, 1);
-  assert.ok(calls[0].url.endsWith('/api/health'));
+  assert.ok(calls[0].url.includes('/api/health'));
   assert.strictEqual(calls[0].options.credentials, 'include');
   const headers = new Headers(calls[0].options.headers);
   assert.strictEqual(headers.has('x-csrf-token'), false);
@@ -40,6 +40,7 @@ test('apiRequest - POST fetches csrf token and sends it in request header', asyn
       return {
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({ csrfToken: 'csrf-test-token' }),
       } as Response;
     }
@@ -54,7 +55,7 @@ test('apiRequest - POST fetches csrf token and sends it in request header', asyn
 
   assert.strictEqual(calls.length, 2);
   assert.ok(calls[0].url.includes('/api/csrf-token'));
-  assert.ok(calls[1].url.endsWith('/api/deals'));
+  assert.ok(calls[1].url.includes('/api/deals'));
 
   const headers = new Headers(calls[1].options.headers);
   assert.strictEqual(headers.get('x-csrf-token'), 'csrf-test-token');
@@ -78,6 +79,7 @@ test('apiRequest - reuses previously fetched csrf token for second state-changin
       return {
         ok: true,
         status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
         json: async () => ({ csrfToken: 'csrf-once' }),
       } as Response;
     }

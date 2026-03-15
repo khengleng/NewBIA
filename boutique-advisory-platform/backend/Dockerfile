@@ -35,6 +35,8 @@ RUN adduser --system --uid 1001 expressjs
 
 # Copy built assets and necessary files
 COPY --from=builder --chown=expressjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=expressjs:nodejs /app/src ./src
+COPY --from=builder --chown=expressjs:nodejs /app/tsconfig.json ./tsconfig.json
 COPY --from=builder --chown=expressjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=expressjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=expressjs:nodejs /app/package*.json ./
