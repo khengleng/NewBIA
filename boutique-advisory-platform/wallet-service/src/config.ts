@@ -22,6 +22,7 @@ export const config = {
   redisUrl: requireEnv('REDIS_URL'),
   tradingFrontendUrl: process.env.TRADING_FRONTEND_URL || 'https://trade.cambobia.com',
   corsOrigins: normalizeOrigins(process.env.CORS_ORIGIN || process.env.TRADING_FRONTEND_URL || 'https://trade.cambobia.com'),
+  serviceVersion: process.env.SERVICE_VERSION || '1.0.0-unspecified',
 };
 
 export type WalletServiceConfig = typeof config;

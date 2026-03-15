@@ -20,6 +20,7 @@ const prisma = new PrismaClient({
     }
 });
 const port = process.env.PORT || 3005;
+const SERVICE_VERSION = process.env.SERVICE_VERSION || '1.0.0-unspecified';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-bia';
 
@@ -52,14 +53,21 @@ async function initializeBot(customToken?: string) {
         } catch (e) { }
     }
 
+    const disablePolling = process.env.DISABLE_POLLING === 'true';
     isTokenValid = !!(activeToken && activeToken.includes(':'));
-    bot = new TelegramBot(activeToken, { polling: isTokenValid });
+    
+    // Safety check for Canary: Only poll if intended
+    const shouldPoll = isTokenValid && !disablePolling;
 
-    if (isTokenValid) {
-        console.log('🤖 Telegram Bot Initialized and Polling');
+    bot = new TelegramBot(activeToken, { polling: shouldPoll });
+
+    if (shouldPoll) {
+        console.log(`🤖 Telegram Bot Initialized and Polling (v${SERVICE_VERSION})`);
         setupBotHandlers(bot);
+    } else if (isTokenValid) {
+        console.log(`⚠️ Telegram Bot running in Webhook/Notification-only mode (v${SERVICE_VERSION})`);
     } else {
-        console.warn('⚠️ No valid Telegram Token found. Running in notification-only mode.');
+        console.warn('⚠️ No valid Telegram Token found. Running in basic API mode.');
     }
 }
 
@@ -69,7 +77,8 @@ app.use(cors());
 // Health Check for Railway
 app.get('/health', (req, res) => res.json({
     ok: true,
-    botInstance: isTokenValid ? 'running' : 'api-only',
+    version: SERVICE_VERSION,
+    botInstance: isTokenValid ? (process.env.DISABLE_POLLING === 'true' ? 'notification-only' : 'polling') : 'api-only',
     hasToken: isTokenValid
 }));
 
@@ -252,7 +261,37 @@ app.post('/api/internal/notify', async (req, res) => {
     }
 });
 
-app.listen(port, async () => {
-    console.log(`✅ Mobile Bot Service listening on port ${port}`);
+const server = app.listen(port, async () => {
+    console.log(`✅ Mobile Bot Service (v${SERVICE_VERSION}) listening on port ${port}`);
     await initializeBot();
 });
+
+// Graceful Shutdown
+const shutdown = async (signal: string) => {
+    console.log(`\nReceived ${signal}. Shutting down gracefully...`);
+    
+    if (bot) {
+        try {
+            console.log('Stopping Telegram polling...');
+            await bot.stopPolling();
+        } catch (e) {
+            console.error('Error stopping bot:', e);
+        }
+    }
+
+    server.close(async () => {
+        console.log('HTTP server closed.');
+        await prisma.$disconnect();
+        console.log('Database disconnected.');
+        process.exit(0);
+    });
+
+    // Forced exit after 10s
+    setTimeout(() => {
+        console.error('Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+    }, 10000);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

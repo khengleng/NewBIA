@@ -40,6 +40,7 @@ export function createApp(config: WalletServiceConfig) {
     res.json({
       status: 'ok',
       service: config.serviceName,
+      version: config.serviceVersion,
       mode: process.env.SERVICE_MODE || 'trading'
     });
   });
@@ -47,14 +48,16 @@ export function createApp(config: WalletServiceConfig) {
   app.get('/ready', (_req, res) => {
     res.json({
       status: 'ready',
-      service: config.serviceName
+      service: config.serviceName,
+      version: config.serviceVersion
     });
   });
 
   app.get('/live', (_req, res) => {
     res.json({
       status: 'alive',
-      service: config.serviceName
+      service: config.serviceName,
+      version: config.serviceVersion
     });
   });
 
