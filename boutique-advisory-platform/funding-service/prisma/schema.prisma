@@ -21,39 +21,39 @@ model Tenant {
   updatedAt DateTime @updatedAt
 
   // Relations
-  users                    User["debian-openssl-3.0.x", ]
-  smes                     SME["debian-openssl-3.0.x", ]
-  investors                Investor["debian-openssl-3.0.x", ]
-  advisors                 Advisor["debian-openssl-3.0.x", ]
-  deals                    Deal["debian-openssl-3.0.x", ]
-  workflows                Workflow["debian-openssl-3.0.x", ]
-  documents                Document["debian-openssl-3.0.x", ]
-  notifications            Notification["debian-openssl-3.0.x", ]
-  pushSubscriptions        PushSubscription["debian-openssl-3.0.x", ]
-  conversations            Conversation["debian-openssl-3.0.x", ]
-  matches                  Match["debian-openssl-3.0.x", ]
-  payments                 Payment["debian-openssl-3.0.x", ]
-  subscriptions            Subscription["debian-openssl-3.0.x", ]
-  invoices                 Invoice["debian-openssl-3.0.x", ]
-  supportTickets           SupportTicket["debian-openssl-3.0.x", ]
-  disputes                 Dispute["debian-openssl-3.0.x", ]
-  cases                    AdminCase["debian-openssl-3.0.x", ]
-  onboardingTemplates      OnboardingTemplate["debian-openssl-3.0.x", ]
-  onboardingTasks          OnboardingTask["debian-openssl-3.0.x", ]
-  roleChangeRequests       RoleChangeRequest["debian-openssl-3.0.x", ]
-  temporaryRoleGrants      TemporaryRoleGrant["debian-openssl-3.0.x", ]
-  advisorCapacities        AdvisorCapacity["debian-openssl-3.0.x", ]
-  advisorAssignments       AdvisorAssignment["debian-openssl-3.0.x", ]
-  advisorConflicts         AdvisorConflictDeclaration["debian-openssl-3.0.x", ]
-  retentionRules           DataRetentionRule["debian-openssl-3.0.x", ]
-  legalHolds               LegalHold["debian-openssl-3.0.x", ]
-  reconciliationRuns       ReconciliationRun["debian-openssl-3.0.x", ]
-  reconciliationExceptions ReconciliationException["debian-openssl-3.0.x", ]
-  activityLogs             ActivityLog["debian-openssl-3.0.x", ]
-  wallets                  Wallet["debian-openssl-3.0.x", ]
-  walletTransactions       WalletTransaction["debian-openssl-3.0.x", ]
-  LaunchpadOffering        LaunchpadOffering["debian-openssl-3.0.x", ]
-  LaunchpadCommitment      LaunchpadCommitment["debian-openssl-3.0.x", ]
+  users                    User[]
+  smes                     SME[]
+  investors                Investor[]
+  advisors                 Advisor[]
+  deals                    Deal[]
+  workflows                Workflow[]
+  documents                Document[]
+  notifications            Notification[]
+  pushSubscriptions        PushSubscription[]
+  conversations            Conversation[]
+  matches                  Match[]
+  payments                 Payment[]
+  subscriptions            Subscription[]
+  invoices                 Invoice[]
+  supportTickets           SupportTicket[]
+  disputes                 Dispute[]
+  cases                    AdminCase[]
+  onboardingTemplates      OnboardingTemplate[]
+  onboardingTasks          OnboardingTask[]
+  roleChangeRequests       RoleChangeRequest[]
+  temporaryRoleGrants      TemporaryRoleGrant[]
+  advisorCapacities        AdvisorCapacity[]
+  advisorAssignments       AdvisorAssignment[]
+  advisorConflicts         AdvisorConflictDeclaration[]
+  retentionRules           DataRetentionRule[]
+  legalHolds               LegalHold[]
+  reconciliationRuns       ReconciliationRun[]
+  reconciliationExceptions ReconciliationException[]
+  activityLogs             ActivityLog[]
+  wallets                  Wallet[]
+  walletTransactions       WalletTransaction[]
+  LaunchpadOffering        LaunchpadOffering[]
+  LaunchpadCommitment      LaunchpadCommitment[]
 
   @@map("tenants")
 }
@@ -76,7 +76,7 @@ model User {
   // Two-Factor Authentication
   twoFactorSecret      String?
   twoFactorEnabled     Boolean  @default(false)
-  twoFactorBackupCodes String["debian-openssl-3.0.x", ] @default(["debian-openssl-3.0.x", ])
+  twoFactorBackupCodes String[] @default([])
 
   // Email Verification
   isEmailVerified         Boolean   @default(false)
@@ -88,46 +88,46 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  tenant                           Tenant                       @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  tenant                           Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   sme                              SME?                         @relation("SMEUser")
   investor                         Investor?                    @relation("InvestorUser")
   advisor                          Advisor?                     @relation("AdvisorUser")
-  notifications                    Notification["debian-openssl-3.0.x", ]
-  pushSubscriptions                PushSubscription["debian-openssl-3.0.x", ]
-  messageParticipants              ConversationParticipant["debian-openssl-3.0.x", ]
-  sentMessages                     Message["debian-openssl-3.0.x", ]
-  bookings                         Booking["debian-openssl-3.0.x", ]
-  matchInterests                   MatchInterest["debian-openssl-3.0.x", ]
-  payments                         Payment["debian-openssl-3.0.x", ]
-  initiatedDisputes                Dispute["debian-openssl-3.0.x", ]                    @relation("DisputeInitiator")
-  resolvedDisputes                 Dispute["debian-openssl-3.0.x", ]                    @relation("DisputeResolver")
-  activityLogs                     ActivityLog["debian-openssl-3.0.x", ]
-  agreementSignatures              AgreementSigner["debian-openssl-3.0.x", ]
-  requestedSupportTickets          SupportTicket["debian-openssl-3.0.x", ]              @relation("TicketRequester")
-  assignedSupportTickets           SupportTicket["debian-openssl-3.0.x", ]              @relation("TicketAssignee")
-  requestedCases                   AdminCase["debian-openssl-3.0.x", ]                  @relation("CaseRequester")
-  assignedCases                    AdminCase["debian-openssl-3.0.x", ]                  @relation("CaseAssignee")
-  createdCases                     AdminCase["debian-openssl-3.0.x", ]                  @relation("CaseCreator")
-  caseEvents                       AdminCaseEvent["debian-openssl-3.0.x", ]             @relation("CaseEventActor")
-  onboardingTemplates              OnboardingTemplate["debian-openssl-3.0.x", ]         @relation("OnboardingTemplateCreator")
-  onboardingTasks                  OnboardingTask["debian-openssl-3.0.x", ]             @relation("OnboardingTaskUser")
-  assignedOnboardingTasks          OnboardingTask["debian-openssl-3.0.x", ]             @relation("OnboardingTaskAssignee")
-  requestedRoleChanges             RoleChangeRequest["debian-openssl-3.0.x", ]          @relation("RoleChangeRequester")
-  reviewedRoleChanges              RoleChangeRequest["debian-openssl-3.0.x", ]          @relation("RoleChangeReviewer")
-  roleGrants                       TemporaryRoleGrant["debian-openssl-3.0.x", ]         @relation("RoleGrantTarget")
-  grantedRolePrivileges            TemporaryRoleGrant["debian-openssl-3.0.x", ]         @relation("RoleGrantIssuer")
-  advisorAssignmentCreator         AdvisorAssignment["debian-openssl-3.0.x", ]          @relation("AdvisorAssignmentCreator")
-  advisorConflictReviewer          AdvisorConflictDeclaration["debian-openssl-3.0.x", ] @relation("AdvisorConflictReviewer")
-  createdLegalHolds                LegalHold["debian-openssl-3.0.x", ]                  @relation("LegalHoldCreator")
-  releasedLegalHolds               LegalHold["debian-openssl-3.0.x", ]                  @relation("LegalHoldReleaser")
-  createdReconciliationRuns        ReconciliationRun["debian-openssl-3.0.x", ]          @relation("ReconciliationRunCreator")
-  assignedReconciliationExceptions ReconciliationException["debian-openssl-3.0.x", ]    @relation("ReconciliationExceptionAssignee")
-  invoices                         Invoice["debian-openssl-3.0.x", ]                    @relation("InvoiceCustomer")
+  notifications                    Notification[]
+  pushSubscriptions                PushSubscription[]
+  messageParticipants              ConversationParticipant[]
+  sentMessages                     Message[]
+  bookings                         Booking[]
+  matchInterests                   MatchInterest[]
+  payments                         Payment[]
+  initiatedDisputes                Dispute[]                    @relation("DisputeInitiator")
+  resolvedDisputes                 Dispute[]                    @relation("DisputeResolver")
+  activityLogs                     ActivityLog[]
+  agreementSignatures              AgreementSigner[]
+  requestedSupportTickets          SupportTicket[]              @relation("TicketRequester")
+  assignedSupportTickets           SupportTicket[]              @relation("TicketAssignee")
+  requestedCases                   AdminCase[]                  @relation("CaseRequester")
+  assignedCases                    AdminCase[]                  @relation("CaseAssignee")
+  createdCases                     AdminCase[]                  @relation("CaseCreator")
+  caseEvents                       AdminCaseEvent[]             @relation("CaseEventActor")
+  onboardingTemplates              OnboardingTemplate[]         @relation("OnboardingTemplateCreator")
+  onboardingTasks                  OnboardingTask[]             @relation("OnboardingTaskUser")
+  assignedOnboardingTasks          OnboardingTask[]             @relation("OnboardingTaskAssignee")
+  requestedRoleChanges             RoleChangeRequest[]          @relation("RoleChangeRequester")
+  reviewedRoleChanges              RoleChangeRequest[]          @relation("RoleChangeReviewer")
+  roleGrants                       TemporaryRoleGrant[]         @relation("RoleGrantTarget")
+  grantedRolePrivileges            TemporaryRoleGrant[]         @relation("RoleGrantIssuer")
+  advisorAssignmentCreator         AdvisorAssignment[]          @relation("AdvisorAssignmentCreator")
+  advisorConflictReviewer          AdvisorConflictDeclaration[] @relation("AdvisorConflictReviewer")
+  createdLegalHolds                LegalHold[]                  @relation("LegalHoldCreator")
+  releasedLegalHolds               LegalHold[]                  @relation("LegalHoldReleaser")
+  createdReconciliationRuns        ReconciliationRun[]          @relation("ReconciliationRunCreator")
+  assignedReconciliationExceptions ReconciliationException[]    @relation("ReconciliationExceptionAssignee")
+  invoices                         Invoice[]                    @relation("InvoiceCustomer")
 
   wallet        Wallet?
-  refreshTokens RefreshToken["debian-openssl-3.0.x", ]
+  refreshTokens RefreshToken[]
 
-  @@unique(["debian-openssl-3.0.x", tenantId, email])
+  @@unique([tenantId, email])
   @@map("users")
 }
 
@@ -135,7 +135,7 @@ model RefreshToken {
   id              String   @id @default(cuid())
   token           String   @unique
   userId          String
-  user            User     @relation(fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt       DateTime
   revoked         Boolean  @default(false)
   replacedByToken String?
@@ -145,7 +145,7 @@ model RefreshToken {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt // Added updateddAt for good measure
 
-  @@index(["debian-openssl-3.0.x", userId])
+  @@index([userId])
   @@map("refresh_tokens")
 }
 
@@ -169,14 +169,14 @@ model SME {
   updatedAt         DateTime  @updatedAt
 
   // Relations
-  tenant         Tenant          @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  user           User            @relation("SMEUser", fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  documents      Document["debian-openssl-3.0.x", ]
-  deals          Deal["debian-openssl-3.0.x", ]
-  certifications Certification["debian-openssl-3.0.x", ]
-  workflows      Workflow["debian-openssl-3.0.x", ]
-  dueDiligences  DueDiligence["debian-openssl-3.0.x", ] // New: Due diligence assessments
-  matches        Match["debian-openssl-3.0.x", ]
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user           User            @relation("SMEUser", fields: [userId], references: [id], onDelete: Cascade)
+  documents      Document[]
+  deals          Deal[]
+  certifications Certification[]
+  workflows      Workflow[]
+  dueDiligences  DueDiligence[] // New: Due diligence assessments
+  matches        Match[]
 
   @@map("smes")
 }
@@ -191,27 +191,27 @@ model Investor {
   kycStatus   KYCStatus      @default(PENDING)
   status      InvestorStatus @default(ACTIVE)
   preferences Json           @default("{}")
-  portfolio   Json           @default("["debian-openssl-3.0.x", ]")
+  portfolio   Json           @default("[]")
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
   // Relations
-  tenant               Tenant             @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  user                 User               @relation("InvestorUser", fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  dealInvestments      DealInvestor["debian-openssl-3.0.x", ]
-  workflows            Workflow["debian-openssl-3.0.x", ]
-  leadSyndicates       Syndicate["debian-openssl-3.0.x", ]        @relation("LeadInvestor") // New: Syndicates led
-  syndicateMemberships SyndicateMember["debian-openssl-3.0.x", ] // New: Syndicate memberships
-  secondaryListings    SecondaryListing["debian-openssl-3.0.x", ] @relation("ListingSeller")
-  tradesAsBuyer        SecondaryTrade["debian-openssl-3.0.x", ]   @relation("TradeBuyer")
-  tradesAsSeller       SecondaryTrade["debian-openssl-3.0.x", ]   @relation("TradeSeller")
-  matches              Match["debian-openssl-3.0.x", ]
+  tenant               Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                 User               @relation("InvestorUser", fields: [userId], references: [id], onDelete: Cascade)
+  dealInvestments      DealInvestor[]
+  workflows            Workflow[]
+  leadSyndicates       Syndicate[]        @relation("LeadInvestor") // New: Syndicates led
+  syndicateMemberships SyndicateMember[] // New: Syndicate memberships
+  secondaryListings    SecondaryListing[] @relation("ListingSeller")
+  tradesAsBuyer        SecondaryTrade[]   @relation("TradeBuyer")
+  tradesAsSeller       SecondaryTrade[]   @relation("TradeSeller")
+  matches              Match[]
 
   // Token Trading
-  tokenListings       SyndicateTokenListing["debian-openssl-3.0.x", ]
-  tokenTradesAsBuyer  SyndicateTokenTrade["debian-openssl-3.0.x", ]   @relation("TokenTradeBuyer")
-  tokenTradesAsSeller SyndicateTokenTrade["debian-openssl-3.0.x", ]   @relation("TokenTradeSeller")
-  LaunchpadCommitment LaunchpadCommitment["debian-openssl-3.0.x", ]
+  tokenListings       SyndicateTokenListing[]
+  tokenTradesAsBuyer  SyndicateTokenTrade[]   @relation("TokenTradeBuyer")
+  tokenTradesAsSeller SyndicateTokenTrade[]   @relation("TokenTradeSeller")
+  LaunchpadCommitment LaunchpadCommitment[]
 
   @@map("investors")
 }
@@ -222,23 +222,23 @@ model Advisor {
   tenantId          String
   userId            String        @unique
   name              String
-  specialization    String["debian-openssl-3.0.x", ]
-  certificationList String["debian-openssl-3.0.x", ]
+  specialization    String[]
+  certificationList String[]
   status            AdvisorStatus @default(ACTIVE)
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
   // Relations
-  tenant               Tenant                       @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  user                 User                         @relation("AdvisorUser", fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  certifications       Certification["debian-openssl-3.0.x", ]
-  workflows            Workflow["debian-openssl-3.0.x", ]
-  dueDiligences        DueDiligence["debian-openssl-3.0.x", ] // New: Due diligence conducted
-  services             AdvisoryService["debian-openssl-3.0.x", ]
-  bookings             Booking["debian-openssl-3.0.x", ]
-  capacities           AdvisorCapacity["debian-openssl-3.0.x", ]
-  assignments          AdvisorAssignment["debian-openssl-3.0.x", ]
-  conflictDeclarations AdvisorConflictDeclaration["debian-openssl-3.0.x", ]
+  tenant               Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                 User                         @relation("AdvisorUser", fields: [userId], references: [id], onDelete: Cascade)
+  certifications       Certification[]
+  workflows            Workflow[]
+  dueDiligences        DueDiligence[] // New: Due diligence conducted
+  services             AdvisoryService[]
+  bookings             Booking[]
+  capacities           AdvisorCapacity[]
+  assignments          AdvisorAssignment[]
+  conflictDeclarations AdvisorConflictDeclaration[]
 
   @@map("advisors")
 }
@@ -260,18 +260,18 @@ model Deal {
   updatedAt        DateTime   @updatedAt
 
   // Relations
-  tenant            Tenant                       @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  sme               SME                          @relation(fields: ["debian-openssl-3.0.x", smeId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  investors         DealInvestor["debian-openssl-3.0.x", ]
-  documents         Document["debian-openssl-3.0.x", ]
-  workflows         Workflow["debian-openssl-3.0.x", ]
-  syndicates        Syndicate["debian-openssl-3.0.x", ] // New: Syndicates for this deal
-  conversations     Conversation["debian-openssl-3.0.x", ]
-  disputes          Dispute["debian-openssl-3.0.x", ]
-  dueDiligenceItems DueDiligenceItem["debian-openssl-3.0.x", ]
+  tenant            Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sme               SME                          @relation(fields: [smeId], references: [id], onDelete: Cascade)
+  investors         DealInvestor[]
+  documents         Document[]
+  workflows         Workflow[]
+  syndicates        Syndicate[] // New: Syndicates for this deal
+  conversations     Conversation[]
+  disputes          Dispute[]
+  dueDiligenceItems DueDiligenceItem[]
   escrowAccount     EscrowAccount?
-  agreements        Agreement["debian-openssl-3.0.x", ]
-  advisorConflicts  AdvisorConflictDeclaration["debian-openssl-3.0.x", ]
+  agreements        Agreement[]
+  advisorConflicts  AdvisorConflictDeclaration[]
   launchpadOffering LaunchpadOffering?
 
   @@map("deals")
@@ -288,12 +288,12 @@ model DealInvestor {
   updatedAt  DateTime         @updatedAt
 
   // Relations
-  deal              Deal               @relation(fields: ["debian-openssl-3.0.x", dealId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  investor          Investor           @relation(fields: ["debian-openssl-3.0.x", investorId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  secondaryListings SecondaryListing["debian-openssl-3.0.x", ]
-  payments          Payment["debian-openssl-3.0.x", ]
+  deal              Deal               @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  investor          Investor           @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  secondaryListings SecondaryListing[]
+  payments          Payment[]
 
-  @@unique(["debian-openssl-3.0.x", dealId, investorId])
+  @@unique([dealId, investorId])
   @@map("deal_investors")
 }
 
@@ -317,9 +317,9 @@ model Document {
   updatedAt DateTime @updatedAt
 
   // Relations
-  tenant Tenant @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  sme    SME?   @relation(fields: ["debian-openssl-3.0.x", smeId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  deal   Deal?  @relation(fields: ["debian-openssl-3.0.x", dealId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sme    SME?   @relation(fields: [smeId], references: [id], onDelete: Cascade)
+  deal   Deal?  @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
   @@map("documents")
 }
@@ -336,8 +336,8 @@ model Certification {
   updatedAt DateTime            @updatedAt
 
   // Relations
-  sme     SME     @relation(fields: ["debian-openssl-3.0.x", smeId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  advisor Advisor @relation(fields: ["debian-openssl-3.0.x", advisorId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  sme     SME     @relation(fields: [smeId], references: [id], onDelete: Cascade)
+  advisor Advisor @relation(fields: [advisorId], references: [id], onDelete: Cascade)
 
   @@map("certifications")
 }
@@ -358,11 +358,11 @@ model Workflow {
   updatedAt     DateTime       @updatedAt
 
   // Relations
-  tenant   Tenant    @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  sme      SME?      @relation(fields: ["debian-openssl-3.0.x", smeId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  investor Investor? @relation(fields: ["debian-openssl-3.0.x", investorId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  advisor  Advisor?  @relation(fields: ["debian-openssl-3.0.x", advisorId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  deal     Deal?     @relation(fields: ["debian-openssl-3.0.x", dealId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sme      SME?      @relation(fields: [smeId], references: [id], onDelete: Cascade)
+  investor Investor? @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  advisor  Advisor?  @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  deal     Deal?     @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
   @@map("workflows")
 }
@@ -397,10 +397,10 @@ model Syndicate {
   updatedAt   DateTime        @updatedAt
 
   // Relations
-  leadInvestor  Investor                @relation("LeadInvestor", fields: ["debian-openssl-3.0.x", leadInvestorId], references: ["debian-openssl-3.0.x", id])
-  deal          Deal?                   @relation(fields: ["debian-openssl-3.0.x", dealId], references: ["debian-openssl-3.0.x", id])
-  members       SyndicateMember["debian-openssl-3.0.x", ]
-  tokenListings SyndicateTokenListing["debian-openssl-3.0.x", ]
+  leadInvestor  Investor                @relation("LeadInvestor", fields: [leadInvestorId], references: [id])
+  deal          Deal?                   @relation(fields: [dealId], references: [id])
+  members       SyndicateMember[]
+  tokenListings SyndicateTokenListing[]
 
   @@map("syndicates")
 }
@@ -415,10 +415,10 @@ model SyndicateMember {
   joinedAt    DateTime              @default(now())
 
   // Relations
-  syndicate Syndicate @relation(fields: ["debian-openssl-3.0.x", syndicateId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  investor  Investor  @relation(fields: ["debian-openssl-3.0.x", investorId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  syndicate Syndicate @relation(fields: [syndicateId], references: [id], onDelete: Cascade)
+  investor  Investor  @relation(fields: [investorId], references: [id], onDelete: Cascade)
 
-  @@unique(["debian-openssl-3.0.x", syndicateId, investorId])
+  @@unique([syndicateId, investorId])
   @@map("syndicate_members")
 }
 
@@ -439,9 +439,9 @@ model SyndicateTokenListing {
   updatedAt DateTime @updatedAt
 
   // Relations
-  syndicate Syndicate             @relation(fields: ["debian-openssl-3.0.x", syndicateId], references: ["debian-openssl-3.0.x", id])
-  seller    Investor              @relation(fields: ["debian-openssl-3.0.x", sellerId], references: ["debian-openssl-3.0.x", id])
-  trades    SyndicateTokenTrade["debian-openssl-3.0.x", ]
+  syndicate Syndicate             @relation(fields: [syndicateId], references: [id])
+  seller    Investor              @relation(fields: [sellerId], references: [id])
+  trades    SyndicateTokenTrade[]
 
   @@map("syndicate_token_listings")
 }
@@ -464,9 +464,9 @@ model SyndicateTokenTrade {
   updatedAt DateTime @updatedAt
 
   // Relations
-  listing SyndicateTokenListing @relation(fields: ["debian-openssl-3.0.x", listingId], references: ["debian-openssl-3.0.x", id])
-  buyer   Investor              @relation("TokenTradeBuyer", fields: ["debian-openssl-3.0.x", buyerId], references: ["debian-openssl-3.0.x", id])
-  seller  Investor              @relation("TokenTradeSeller", fields: ["debian-openssl-3.0.x", sellerId], references: ["debian-openssl-3.0.x", id])
+  listing SyndicateTokenListing @relation(fields: [listingId], references: [id])
+  buyer   Investor              @relation("TokenTradeBuyer", fields: [buyerId], references: [id])
+  seller  Investor              @relation("TokenTradeSeller", fields: [sellerId], references: [id])
 
   @@map("syndicate_token_trades")
 }
@@ -490,10 +490,10 @@ model DueDiligence {
   riskLevel    RiskLevel @default(MEDIUM)
 
   // Detailed assessments
-  strengths       String["debian-openssl-3.0.x", ]
-  weaknesses      String["debian-openssl-3.0.x", ]
-  recommendations String["debian-openssl-3.0.x", ]
-  redFlags        String["debian-openssl-3.0.x", ]
+  strengths       String[]
+  weaknesses      String[]
+  recommendations String[]
+  redFlags        String[]
 
   status      AssessmentStatus @default(PENDING)
   completedAt DateTime?
@@ -503,8 +503,8 @@ model DueDiligence {
   updatedAt DateTime @updatedAt
 
   // Relations
-  sme     SME      @relation(fields: ["debian-openssl-3.0.x", smeId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  advisor Advisor? @relation(fields: ["debian-openssl-3.0.x", advisorId], references: ["debian-openssl-3.0.x", id])
+  sme     SME      @relation(fields: [smeId], references: [id], onDelete: Cascade)
+  advisor Advisor? @relation(fields: [advisorId], references: [id])
 
   @@map("due_diligences")
 }
@@ -534,7 +534,7 @@ model CommunityPost {
   updatedAt DateTime   @updatedAt
 
   // Relations
-  comments Comment["debian-openssl-3.0.x", ]
+  comments Comment[]
 
   @@map("community_posts")
 }
@@ -550,9 +550,9 @@ model Comment {
   updatedAt DateTime @updatedAt
 
   // Relations
-  post    CommunityPost @relation(fields: ["debian-openssl-3.0.x", postId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  parent  Comment?      @relation("CommentReplies", fields: ["debian-openssl-3.0.x", parentId], references: ["debian-openssl-3.0.x", id])
-  replies Comment["debian-openssl-3.0.x", ]     @relation("CommentReplies")
+  post    CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent  Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[]     @relation("CommentReplies")
 
   @@map("comments")
 }
@@ -577,9 +577,9 @@ model SecondaryListing {
   updatedAt DateTime @updatedAt
 
   // Relations
-  seller       Investor         @relation("ListingSeller", fields: ["debian-openssl-3.0.x", sellerId], references: ["debian-openssl-3.0.x", id])
-  dealInvestor DealInvestor     @relation(fields: ["debian-openssl-3.0.x", dealInvestorId], references: ["debian-openssl-3.0.x", id])
-  trades       SecondaryTrade["debian-openssl-3.0.x", ]
+  seller       Investor         @relation("ListingSeller", fields: [sellerId], references: [id])
+  dealInvestor DealInvestor     @relation(fields: [dealInvestorId], references: [id])
+  trades       SecondaryTrade[]
 
   @@map("secondary_listings")
 }
@@ -600,8 +600,8 @@ model EscrowAccount {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  deal         Deal                @relation(fields: ["debian-openssl-3.0.x", dealId], references: ["debian-openssl-3.0.x", id])
-  transactions EscrowTransaction["debian-openssl-3.0.x", ]
+  deal         Deal                @relation(fields: [dealId], references: [id])
+  transactions EscrowTransaction[]
 
   @@map("escrow_accounts")
 }
@@ -626,7 +626,7 @@ model EscrowTransaction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  escrowAccount EscrowAccount @relation(fields: ["debian-openssl-3.0.x", escrowAccountId], references: ["debian-openssl-3.0.x", id])
+  escrowAccount EscrowAccount @relation(fields: [escrowAccountId], references: [id])
 
   @@map("escrow_transactions")
 }
@@ -666,8 +666,8 @@ model Agreement {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  deal    Deal              @relation(fields: ["debian-openssl-3.0.x", dealId], references: ["debian-openssl-3.0.x", id])
-  signers AgreementSigner["debian-openssl-3.0.x", ]
+  deal    Deal              @relation(fields: [dealId], references: [id])
+  signers AgreementSigner[]
 
   @@map("agreements")
 }
@@ -688,10 +688,10 @@ model AgreementSigner {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  agreement Agreement @relation(fields: ["debian-openssl-3.0.x", agreementId], references: ["debian-openssl-3.0.x", id])
-  user      User      @relation(fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id])
+  agreement Agreement @relation(fields: [agreementId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
 
-  @@unique(["debian-openssl-3.0.x", agreementId, userId]) // One signature per user per agreement
+  @@unique([agreementId, userId]) // One signature per user per agreement
   @@map("agreement_signers")
 }
 
@@ -727,7 +727,7 @@ model DueDiligenceItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  deal Deal @relation(fields: ["debian-openssl-3.0.x", dealId], references: ["debian-openssl-3.0.x", id])
+  deal Deal @relation(fields: [dealId], references: [id])
 
   @@map("deal_checklist_items")
 }
@@ -757,9 +757,9 @@ model SecondaryTrade {
   updatedAt DateTime @updatedAt
 
   // Relations
-  listing SecondaryListing @relation(fields: ["debian-openssl-3.0.x", listingId], references: ["debian-openssl-3.0.x", id])
-  buyer   Investor         @relation("TradeBuyer", fields: ["debian-openssl-3.0.x", buyerId], references: ["debian-openssl-3.0.x", id])
-  seller  Investor         @relation("TradeSeller", fields: ["debian-openssl-3.0.x", sellerId], references: ["debian-openssl-3.0.x", id])
+  listing SecondaryListing @relation(fields: [listingId], references: [id])
+  buyer   Investor         @relation("TradeBuyer", fields: [buyerId], references: [id])
+  seller  Investor         @relation("TradeSeller", fields: [sellerId], references: [id])
 
   @@map("secondary_trades")
 }
@@ -778,8 +778,8 @@ model Notification {
   updatedAt DateTime         @updatedAt
 
   // Relations
-  tenant Tenant @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  user   User   @relation(fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
@@ -942,10 +942,10 @@ model Dispute {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  deal      Deal   @relation(fields: ["debian-openssl-3.0.x", dealId], references: ["debian-openssl-3.0.x", id])
-  tenant    Tenant @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  initiator User   @relation("DisputeInitiator", fields: ["debian-openssl-3.0.x", initiatorId], references: ["debian-openssl-3.0.x", id])
-  resolver  User?  @relation("DisputeResolver", fields: ["debian-openssl-3.0.x", resolverId], references: ["debian-openssl-3.0.x", id])
+  deal      Deal   @relation(fields: [dealId], references: [id])
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  initiator User   @relation("DisputeInitiator", fields: [initiatorId], references: [id])
+  resolver  User?  @relation("DisputeResolver", fields: [resolverId], references: [id])
 
   @@map("disputes")
 }
@@ -1026,10 +1026,10 @@ model Conversation {
   tenantId String
   dealId   String?
 
-  tenant       Tenant                    @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  deal         Deal?                     @relation(fields: ["debian-openssl-3.0.x", dealId], references: ["debian-openssl-3.0.x", id])
-  messages     Message["debian-openssl-3.0.x", ]
-  participants ConversationParticipant["debian-openssl-3.0.x", ]
+  tenant       Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deal         Deal?                     @relation(fields: [dealId], references: [id])
+  messages     Message[]
+  participants ConversationParticipant[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1042,13 +1042,13 @@ model ConversationParticipant {
   conversationId String
   userId         String
 
-  conversation Conversation @relation(fields: ["debian-openssl-3.0.x", conversationId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  user         User         @relation(fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   lastReadAt DateTime @default(now())
   joinedAt   DateTime @default(now())
 
-  @@unique(["debian-openssl-3.0.x", conversationId, userId])
+  @@unique([conversationId, userId])
   @@map("conversation_participants")
 }
 
@@ -1058,11 +1058,11 @@ model Message {
   senderId       String
   content        String
   type           String  @default("TEXT") // TEXT, IMAGE, FILE
-  attachments    Json? // ["debian-openssl-3.0.x", { name, url, type, size }]
+  attachments    Json? // [{ name, url, type, size }]
   read           Boolean @default(false)
 
-  conversation Conversation @relation(fields: ["debian-openssl-3.0.x", conversationId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  sender       User         @relation(fields: ["debian-openssl-3.0.x", senderId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1080,14 +1080,14 @@ model AdvisoryService {
   description String?
   price       Float
   duration    String // e.g., "1 hour", "4 weeks"
-  features    String["debian-openssl-3.0.x", ] // What's included
+  features    String[] // What's included
   status      String   @default("ACTIVE")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  advisor  Advisor   @relation(fields: ["debian-openssl-3.0.x", advisorId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  bookings Booking["debian-openssl-3.0.x", ]
+  advisor  Advisor   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  bookings Booking[]
 
   @@map("advisory_services")
 }
@@ -1107,10 +1107,10 @@ model Booking {
   updatedAt     DateTime      @updatedAt
 
   // Relations
-  user     User             @relation(fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  advisor  Advisor?         @relation(fields: ["debian-openssl-3.0.x", advisorId], references: ["debian-openssl-3.0.x", id])
-  service  AdvisoryService? @relation(fields: ["debian-openssl-3.0.x", serviceId], references: ["debian-openssl-3.0.x", id])
-  payments Payment["debian-openssl-3.0.x", ]
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  advisor  Advisor?         @relation(fields: [advisorId], references: [id])
+  service  AdvisoryService? @relation(fields: [serviceId], references: [id])
+  payments Payment[]
 
   @@map("bookings")
 }
@@ -1133,12 +1133,12 @@ model Match {
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 
-  tenant    Tenant          @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  sme       SME             @relation(fields: ["debian-openssl-3.0.x", smeId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  investor  Investor        @relation(fields: ["debian-openssl-3.0.x", investorId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  interests MatchInterest["debian-openssl-3.0.x", ]
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sme       SME             @relation(fields: [smeId], references: [id], onDelete: Cascade)
+  investor  Investor        @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  interests MatchInterest[]
 
-  @@unique(["debian-openssl-3.0.x", smeId, investorId])
+  @@unique([smeId, investorId])
   @@map("matches")
 }
 
@@ -1149,10 +1149,10 @@ model MatchInterest {
   interest  Boolean // true = like, false = dislike
   createdAt DateTime @default(now())
 
-  match Match @relation(fields: ["debian-openssl-3.0.x", matchId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  user  User  @relation(fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique(["debian-openssl-3.0.x", matchId, userId])
+  @@unique([matchId, userId])
   @@map("match_interests")
 }
 
@@ -1171,10 +1171,10 @@ model PushSubscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant Tenant @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  user   User   @relation(fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique(["debian-openssl-3.0.x", userId, endpoint])
+  @@unique([userId, endpoint])
   @@map("push_subscriptions")
 }
 
@@ -1201,10 +1201,10 @@ model Payment {
   updatedAt DateTime @updatedAt
 
   // Relations
-  tenant         Tenant        @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  user           User          @relation(fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  dealInvestment DealInvestor? @relation(fields: ["debian-openssl-3.0.x", dealInvestorId], references: ["debian-openssl-3.0.x", id])
-  booking        Booking?      @relation(fields: ["debian-openssl-3.0.x", bookingId], references: ["debian-openssl-3.0.x", id])
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dealInvestment DealInvestor? @relation(fields: [dealInvestorId], references: [id])
+  booking        Booking?      @relation(fields: [bookingId], references: [id])
 
   @@map("payments")
 }
@@ -1225,8 +1225,8 @@ model Subscription {
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 
-  tenant   Tenant    @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  invoices Invoice["debian-openssl-3.0.x", ]
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
 
   @@map("subscriptions")
 }
@@ -1253,13 +1253,13 @@ model Invoice {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
-  tenant       Tenant            @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  customer     User?             @relation("InvoiceCustomer", fields: ["debian-openssl-3.0.x", customerUserId], references: ["debian-openssl-3.0.x", id])
-  subscription Subscription?     @relation(fields: ["debian-openssl-3.0.x", subscriptionId], references: ["debian-openssl-3.0.x", id])
-  lineItems    InvoiceLineItem["debian-openssl-3.0.x", ]
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer     User?             @relation("InvoiceCustomer", fields: [customerUserId], references: [id])
+  subscription Subscription?     @relation(fields: [subscriptionId], references: [id])
+  lineItems    InvoiceLineItem[]
 
-  @@index(["debian-openssl-3.0.x", tenantId, monthStart, monthEnd])
-  @@index(["debian-openssl-3.0.x", customerUserId])
+  @@index([tenantId, monthStart, monthEnd])
+  @@index([customerUserId])
   @@map("invoices")
 }
 
@@ -1273,7 +1273,7 @@ model InvoiceLineItem {
   metadata    Json?    @default("{}")
   createdAt   DateTime @default(now())
 
-  invoice Invoice @relation(fields: ["debian-openssl-3.0.x", invoiceId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@map("invoice_line_items")
 }
@@ -1295,11 +1295,11 @@ model SupportTicket {
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
 
-  tenant    Tenant @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  requester User   @relation("TicketRequester", fields: ["debian-openssl-3.0.x", requesterId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  assignee  User?  @relation("TicketAssignee", fields: ["debian-openssl-3.0.x", assigneeId], references: ["debian-openssl-3.0.x", id])
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requester User   @relation("TicketRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  assignee  User?  @relation("TicketAssignee", fields: [assigneeId], references: [id])
 
-  @@index(["debian-openssl-3.0.x", tenantId, status, priority])
+  @@index([tenantId, status, priority])
   @@map("support_tickets")
 }
 
@@ -1326,14 +1326,14 @@ model AdminCase {
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
-  tenant    Tenant           @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  requester User?            @relation("CaseRequester", fields: ["debian-openssl-3.0.x", requesterUserId], references: ["debian-openssl-3.0.x", id])
-  assignee  User?            @relation("CaseAssignee", fields: ["debian-openssl-3.0.x", assigneeId], references: ["debian-openssl-3.0.x", id])
-  createdBy User             @relation("CaseCreator", fields: ["debian-openssl-3.0.x", createdById], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  events    AdminCaseEvent["debian-openssl-3.0.x", ]
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requester User?            @relation("CaseRequester", fields: [requesterUserId], references: [id])
+  assignee  User?            @relation("CaseAssignee", fields: [assigneeId], references: [id])
+  createdBy User             @relation("CaseCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  events    AdminCaseEvent[]
 
-  @@index(["debian-openssl-3.0.x", tenantId, status, priority])
-  @@index(["debian-openssl-3.0.x", tenantId, assigneeId, status])
+  @@index([tenantId, status, priority])
+  @@index([tenantId, assigneeId, status])
   @@map("admin_cases")
 }
 
@@ -1346,10 +1346,10 @@ model AdminCaseEvent {
   metadata    Json     @default("{}")
   createdAt   DateTime @default(now())
 
-  case  AdminCase @relation(fields: ["debian-openssl-3.0.x", caseId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  actor User?     @relation("CaseEventActor", fields: ["debian-openssl-3.0.x", actorUserId], references: ["debian-openssl-3.0.x", id])
+  case  AdminCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  actor User?     @relation("CaseEventActor", fields: [actorUserId], references: [id])
 
-  @@index(["debian-openssl-3.0.x", caseId, createdAt])
+  @@index([caseId, createdAt])
   @@map("admin_case_events")
 }
 
@@ -1366,11 +1366,11 @@ model OnboardingTemplate {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant    Tenant           @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  createdBy User?            @relation("OnboardingTemplateCreator", fields: ["debian-openssl-3.0.x", createdById], references: ["debian-openssl-3.0.x", id])
-  tasks     OnboardingTask["debian-openssl-3.0.x", ]
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy User?            @relation("OnboardingTemplateCreator", fields: [createdById], references: [id])
+  tasks     OnboardingTask[]
 
-  @@index(["debian-openssl-3.0.x", tenantId, role, isActive])
+  @@index([tenantId, role, isActive])
   @@map("onboarding_templates")
 }
 
@@ -1394,13 +1394,13 @@ model OnboardingTask {
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
 
-  tenant   Tenant             @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  template OnboardingTemplate @relation(fields: ["debian-openssl-3.0.x", templateId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  user     User               @relation("OnboardingTaskUser", fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  assignee User?              @relation("OnboardingTaskAssignee", fields: ["debian-openssl-3.0.x", assigneeId], references: ["debian-openssl-3.0.x", id])
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template OnboardingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  user     User               @relation("OnboardingTaskUser", fields: [userId], references: [id], onDelete: Cascade)
+  assignee User?              @relation("OnboardingTaskAssignee", fields: [assigneeId], references: [id])
 
-  @@index(["debian-openssl-3.0.x", tenantId, status, dueAt])
-  @@index(["debian-openssl-3.0.x", tenantId, userId, status])
+  @@index([tenantId, status, dueAt])
+  @@index([tenantId, userId, status])
   @@map("onboarding_tasks")
 }
 
@@ -1418,12 +1418,12 @@ model RoleChangeRequest {
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
-  tenant     Tenant @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  requester  User   @relation("RoleChangeRequester", fields: ["debian-openssl-3.0.x", requesterId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  reviewedBy User?  @relation("RoleChangeReviewer", fields: ["debian-openssl-3.0.x", reviewedById], references: ["debian-openssl-3.0.x", id])
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requester  User   @relation("RoleChangeRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  reviewedBy User?  @relation("RoleChangeReviewer", fields: [reviewedById], references: [id])
 
-  @@index(["debian-openssl-3.0.x", tenantId, status, createdAt])
-  @@index(["debian-openssl-3.0.x", tenantId, requesterId, status])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, requesterId, status])
   @@map("role_change_requests")
 }
 
@@ -1443,12 +1443,12 @@ model TemporaryRoleGrant {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
-  tenant    Tenant @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  user      User   @relation("RoleGrantTarget", fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  grantedBy User   @relation("RoleGrantIssuer", fields: ["debian-openssl-3.0.x", grantedById], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User   @relation("RoleGrantTarget", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy User   @relation("RoleGrantIssuer", fields: [grantedById], references: [id], onDelete: Cascade)
 
-  @@index(["debian-openssl-3.0.x", tenantId, userId, status, expiresAt])
-  @@index(["debian-openssl-3.0.x", tenantId, status, expiresAt])
+  @@index([tenantId, userId, status, expiresAt])
+  @@index([tenantId, status, expiresAt])
   @@map("temporary_role_grants")
 }
 
@@ -1463,11 +1463,11 @@ model AdvisorCapacity {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  tenant  Tenant  @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  advisor Advisor @relation(fields: ["debian-openssl-3.0.x", advisorId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  advisor Advisor @relation(fields: [advisorId], references: [id], onDelete: Cascade)
 
-  @@unique(["debian-openssl-3.0.x", tenantId, advisorId])
-  @@index(["debian-openssl-3.0.x", tenantId, utilizationPct])
+  @@unique([tenantId, advisorId])
+  @@index([tenantId, utilizationPct])
   @@map("advisor_capacities")
 }
 
@@ -1489,12 +1489,12 @@ model AdvisorAssignment {
   createdAt   DateTime                  @default(now())
   updatedAt   DateTime                  @updatedAt
 
-  tenant    Tenant  @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  advisor   Advisor @relation(fields: ["debian-openssl-3.0.x", advisorId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  createdBy User    @relation("AdvisorAssignmentCreator", fields: ["debian-openssl-3.0.x", createdById], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  advisor   Advisor @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("AdvisorAssignmentCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
-  @@index(["debian-openssl-3.0.x", tenantId, status, dueAt])
-  @@index(["debian-openssl-3.0.x", tenantId, advisorId, status])
+  @@index([tenantId, status, dueAt])
+  @@index([tenantId, advisorId, status])
   @@map("advisor_assignments")
 }
 
@@ -1513,13 +1513,13 @@ model AdvisorConflictDeclaration {
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
 
-  tenant     Tenant  @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  advisor    Advisor @relation(fields: ["debian-openssl-3.0.x", advisorId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  reviewedBy User?   @relation("AdvisorConflictReviewer", fields: ["debian-openssl-3.0.x", reviewedById], references: ["debian-openssl-3.0.x", id])
-  deal       Deal?   @relation(fields: ["debian-openssl-3.0.x", dealId], references: ["debian-openssl-3.0.x", id], onDelete: SetNull)
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  advisor    Advisor @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  reviewedBy User?   @relation("AdvisorConflictReviewer", fields: [reviewedById], references: [id])
+  deal       Deal?   @relation(fields: [dealId], references: [id], onDelete: SetNull)
 
-  @@index(["debian-openssl-3.0.x", tenantId, status, createdAt])
-  @@index(["debian-openssl-3.0.x", tenantId, advisorId, status])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, advisorId, status])
   @@map("advisor_conflict_declarations")
 }
 
@@ -1534,10 +1534,10 @@ model DataRetentionRule {
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 
-  tenant Tenant @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@unique(["debian-openssl-3.0.x", tenantId, module])
-  @@index(["debian-openssl-3.0.x", tenantId, status, module])
+  @@unique([tenantId, module])
+  @@index([tenantId, status, module])
   @@map("data_retention_rules")
 }
 
@@ -1555,11 +1555,11 @@ model LegalHold {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
-  tenant     Tenant @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  createdBy  User   @relation("LegalHoldCreator", fields: ["debian-openssl-3.0.x", createdById], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  releasedBy User?  @relation("LegalHoldReleaser", fields: ["debian-openssl-3.0.x", releasedById], references: ["debian-openssl-3.0.x", id])
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy  User   @relation("LegalHoldCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  releasedBy User?  @relation("LegalHoldReleaser", fields: [releasedById], references: [id])
 
-  @@index(["debian-openssl-3.0.x", tenantId, status, createdAt])
+  @@index([tenantId, status, createdAt])
   @@map("legal_holds")
 }
 
@@ -1580,12 +1580,12 @@ model ReconciliationRun {
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
 
-  tenant     Tenant                    @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  createdBy  User                      @relation("ReconciliationRunCreator", fields: ["debian-openssl-3.0.x", createdById], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  exceptions ReconciliationException["debian-openssl-3.0.x", ]
+  tenant     Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy  User                      @relation("ReconciliationRunCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  exceptions ReconciliationException[]
 
-  @@index(["debian-openssl-3.0.x", tenantId, createdAt])
-  @@index(["debian-openssl-3.0.x", tenantId, status])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, status])
   @@map("reconciliation_runs")
 }
 
@@ -1607,12 +1607,12 @@ model ReconciliationException {
   createdAt      DateTime                      @default(now())
   updatedAt      DateTime                      @updatedAt
 
-  tenant     Tenant            @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  run        ReconciliationRun @relation(fields: ["debian-openssl-3.0.x", runId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  assignedTo User?             @relation("ReconciliationExceptionAssignee", fields: ["debian-openssl-3.0.x", assignedToId], references: ["debian-openssl-3.0.x", id])
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  run        ReconciliationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  assignedTo User?             @relation("ReconciliationExceptionAssignee", fields: [assignedToId], references: [id])
 
-  @@index(["debian-openssl-3.0.x", tenantId, status, severity])
-  @@index(["debian-openssl-3.0.x", runId, status])
+  @@index([tenantId, status, severity])
+  @@index([runId, status])
   @@map("reconciliation_exceptions")
 }
 
@@ -1804,8 +1804,8 @@ model ActivityLog {
   metadata   Json? // Additional info (IP, Browser, etc.)
   timestamp  DateTime @default(now())
 
-  tenant Tenant @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  user   User?  @relation(fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("activity_logs")
 }
@@ -1833,11 +1833,11 @@ model Wallet {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user         User                @relation(fields: ["debian-openssl-3.0.x", userId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  tenant       Tenant              @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  transactions WalletTransaction["debian-openssl-3.0.x", ]
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
 
-  @@index(["debian-openssl-3.0.x", tenantId, userId])
+  @@index([tenantId, userId])
   @@map("wallets")
 }
 
@@ -1859,11 +1859,11 @@ model WalletTransaction {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  wallet Wallet @relation(fields: ["debian-openssl-3.0.x", walletId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  tenant Tenant @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
-  @@index(["debian-openssl-3.0.x", walletId, createdAt])
-  @@index(["debian-openssl-3.0.x", tenantId, type, status])
+  @@index([walletId, createdAt])
+  @@index([tenantId, type, status])
   @@map("wallet_transactions")
 }
 
@@ -1909,9 +1909,9 @@ model LaunchpadOffering {
   endTime       DateTime
 
   // Relations
-  deal        Deal                  @relation(fields: ["debian-openssl-3.0.x", dealId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  tenant      Tenant                @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  commitments LaunchpadCommitment["debian-openssl-3.0.x", ]
+  deal        Deal                  @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  tenant      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  commitments LaunchpadCommitment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1932,9 +1932,9 @@ model LaunchpadCommitment {
   updatedAt DateTime @updatedAt
 
   // Relations
-  offering LaunchpadOffering @relation(fields: ["debian-openssl-3.0.x", offeringId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  investor Investor          @relation(fields: ["debian-openssl-3.0.x", investorId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
-  tenant   Tenant            @relation(fields: ["debian-openssl-3.0.x", tenantId], references: ["debian-openssl-3.0.x", id], onDelete: Cascade)
+  offering LaunchpadOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  investor Investor          @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("launchpad_commitments")
 }
