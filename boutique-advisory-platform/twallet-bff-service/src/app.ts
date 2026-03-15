@@ -389,6 +389,65 @@ export function createApp(config: TWalletBffConfig) {
     relayJson(res, upstream)
   }))
 
+  // ==========================================
+  // LEGACY COMPATIBILITY (Flutter App v1/v2)
+  // ==========================================
+  
+  // V1 Token & Balance
+  app.get('/v1/token/:address', asyncRoute(async (req, res) => {
+    const upstream = await forwardJson(config.walletServiceUrl, `/api/wallet/balance/${req.params.address}`, {
+      method: 'GET',
+      headers: jsonHeaders(getForwardHeaders(req)),
+    })
+    relayJson(res, upstream)
+  }))
+
+  app.post('/v1/token/transfer', asyncRoute(async (req, res) => {
+    const upstream = await forwardJson(config.walletServiceUrl, '/api/wallet/transfer', {
+      method: 'POST',
+      headers: jsonHeaders(getForwardHeaders(req)),
+      body: JSON.stringify(req.body || {}),
+    })
+    relayJson(res, upstream)
+  }))
+
+  // V1 Transactions
+  app.get('/v1/transactions', asyncRoute(async (req, res) => {
+    const address = req.query.from_addr
+    const upstream = await forwardJson(config.walletServiceUrl, `/api/wallet/history?address=${address}`, {
+      method: 'GET',
+      headers: jsonHeaders(getForwardHeaders(req)),
+    })
+    relayJson(res, upstream)
+  }))
+
+  app.get('/v1/transactions/:hash', asyncRoute(async (req, res) => {
+    const upstream = await forwardJson(config.walletServiceUrl, `/api/wallet/transaction/${req.params.hash}`, {
+      method: 'GET',
+      headers: jsonHeaders(getForwardHeaders(req)),
+    })
+    relayJson(res, upstream)
+  }))
+
+  // V1 Health Certifications (Mapping to BIA Identity/Advisory if needed, or keeping plumbing for now)
+  app.post('/v1/health-certifications', asyncRoute(async (req, res) => {
+    const upstream = await forwardJson(config.identityServiceUrl, '/api/kyc/submit', {
+      method: 'POST',
+      headers: jsonHeaders(getForwardHeaders(req)),
+      body: JSON.stringify(req.body || {}),
+    })
+    relayJson(res, upstream)
+  }))
+
+  // V2 Market Compatibility
+  app.get('/v2/vc-market/issuers', asyncRoute(async (req, res) => {
+    const upstream = await forwardJson(config.identityServiceUrl, '/api/issuers', {
+      method: 'GET',
+      headers: jsonHeaders(getForwardHeaders(req)),
+    })
+    relayJson(res, upstream)
+  }))
+
   app.use((req, res) => {
     res.status(404).json({
       error: 'Not found',
