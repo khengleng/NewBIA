@@ -11,7 +11,7 @@ const redis = new Redis(REDIS_URL, {
     commandTimeout: 3000, // 3 seconds per command
     enableOfflineQueue: false, // Fail immediately if not connected
     lazyConnect: isTest,
-    retryStrategy(times) {
+    retryStrategy(times: number) {
         if (times > maxRetryAttempts) {
             return null;
         }
@@ -21,7 +21,7 @@ const redis = new Redis(REDIS_URL, {
 });
 
 
-redis.on('error', (err) => {
+redis.on('error', (err: Error) => {
     if (isTest) return;
     console.error('Redis connection error:', err);
 });

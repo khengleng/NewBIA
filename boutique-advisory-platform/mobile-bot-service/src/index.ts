@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { type Request, type Response } from 'express';
 import TelegramBot from 'node-telegram-bot-api';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
@@ -167,6 +167,7 @@ async function handlePortfolio(msg: any, botInstance: TelegramBot) {
     }
 
     const user = users[0];
+    if (!user) return;
     const investor = await prisma.investor.findUnique({
         where: { userId: user.id },
         include: { dealInvestments: { include: { deal: true } } }
