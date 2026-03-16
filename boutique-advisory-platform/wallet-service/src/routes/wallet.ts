@@ -7,7 +7,7 @@ import { WalletService } from '../services/wallet';
 const router = Router();
 
 // GET /api/wallet - Get current user wallet and recent transactions
-router.get('/', authorize('wallet.read', { getOwnerId: (req) => req.user?.id }), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/', authorize('wallet.read', { getOwnerId: (req: AuthenticatedRequest) => req.user?.id }), async (req: AuthenticatedRequest, res: Response) => {
     try {
         const userId = req.user?.id;
         const tenantId = req.user?.tenantId || 'default';
@@ -33,7 +33,7 @@ router.get('/', authorize('wallet.read', { getOwnerId: (req) => req.user?.id }),
 });
 
 // GET /api/wallet/history - Paged transaction history
-router.get('/history', authorize('wallet.read', { getOwnerId: (req) => req.user?.id }), async (req: AuthenticatedRequest, res: Response) => {
+router.get('/history', authorize('wallet.read', { getOwnerId: (req: AuthenticatedRequest) => req.user?.id }), async (req: AuthenticatedRequest, res: Response) => {
     try {
         const userId = req.user?.id;
         const { type, limit = 50, offset = 0 } = req.query;
