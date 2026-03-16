@@ -63,19 +63,48 @@ router.post('/:dealId', authorize('deal.update'), validateBody(createAgreementSc
         const { dealId } = req.params;
         const { title, content, signerIds } = req.body;
         const tenantId = req.user?.tenantId || 'default';
+        const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
         const createdBy = req.user?.id;
         const sanitizedTitle = sanitizeAgreementContent(title);
         const sanitizedContent = sanitizeAgreementContent(content);
 
-        // Verify Deal
-        const deal = await prisma.deal.findUnique({ where: { id: dealId } });
+        // Verify deal within tenant scope (unless super admin)
+        const deal = await prisma.deal.findFirst({
+            where: isSuperAdmin ? { id: dealId } : { id: dealId, tenantId },
+            include: {
+                sme: { select: { userId: true } },
+                investors: { include: { investor: { select: { userId: true } } } }
+            }
+        });
         if (!deal) return res.status(404).json({ error: 'Deal not found' });
+
+        // Ensure signer accounts exist in same tenant to prevent cross-tenant association.
+        const signerUsers = await prisma.user.findMany({
+            where: isSuperAdmin
+                ? { id: { in: signerIds as string[] } }
+                : { id: { in: signerIds as string[] }, tenantId },
+            select: { id: true }
+        });
+        if (signerUsers.length !== (signerIds as string[]).length) {
+            return res.status(400).json({ error: 'One or more signerIds are invalid for this tenant' });
+        }
+
+        // Restrict signers to participants in this deal (SME owner, investors) plus agreement creator.
+        const allowedSignerIds = new Set<string>([
+            deal.sme.userId,
+            ...(deal.investors || []).map((entry: any) => entry.investor.userId),
+            ...(createdBy ? [createdBy] : [])
+        ]);
+        const invalidSigners = (signerIds as string[]).filter((id) => !allowedSignerIds.has(id));
+        if (invalidSigners.length > 0) {
+            return res.status(400).json({ error: 'Signer list includes users that are not participants in this deal' });
+        }
 
         // Create Agreement
         const agreement = await (prisma as any).agreement.create({
             data: {
                 dealId,
-                tenantId,
+                tenantId: deal.tenantId,
                 title: sanitizedTitle,
                 content: sanitizedContent,
                 status: 'PENDING_SIGNATURES',
@@ -106,13 +135,17 @@ router.post('/:agreementId/sign', authorize('deal.read'), validateBody(signAgree
         const { agreementId } = req.params;
         const { signature } = req.body;
         const userId = req.user?.id;
+        const tenantId = req.user?.tenantId || 'default';
+        const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
         const ipAddress = req.ip;
         const userAgent = req.headers['user-agent'];
         const sanitizedSignature = sanitizeAgreementContent(signature);
 
         // Find Signer Record
         const signerRecord = await (prisma as any).agreementSigner.findFirst({
-            where: { agreementId, userId }
+            where: isSuperAdmin
+                ? { agreementId, userId }
+                : { agreementId, userId, agreement: { tenantId } }
         });
 
         if (!signerRecord) {
@@ -140,6 +173,9 @@ router.post('/:agreementId/sign', authorize('deal.read'), validateBody(signAgree
             where: { id: agreementId },
             include: { signers: true }
         });
+        if (!agreement || (!isSuperAdmin && agreement.tenantId !== tenantId)) {
+            return res.status(404).json({ error: 'Agreement not found' });
+        }
 
         const allSigned = agreement.signers.every((s: any) => s.status === 'SIGNED' || s.status === 'REJECTED'); // Handle rejection logic if needed
 
@@ -148,8 +184,7 @@ router.post('/:agreementId/sign', authorize('deal.read'), validateBody(signAgree
                 where: { id: agreementId },
                 data: { status: 'COMPLETED' }
             });
-            // TODO: Notify all parties
-            // TODO: Update Deal Status if this was the final requirement
+
         }
 
         return res.json({ success: true, message: 'Agreement signed successfully.' });
@@ -165,9 +200,11 @@ router.post('/:agreementId/sign', authorize('deal.read'), validateBody(signAgree
 router.get('/:agreementId/verify', authorize('deal.read'), async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { agreementId } = req.params;
+        const tenantId = req.user?.tenantId || 'default';
+        const isSuperAdmin = req.user?.role === 'SUPER_ADMIN';
 
-        const agreement = await (prisma as any).agreement.findUnique({
-            where: { id: agreementId },
+        const agreement = await (prisma as any).agreement.findFirst({
+            where: isSuperAdmin ? { id: agreementId } : { id: agreementId, tenantId },
             include: {
                 signers: {
                     include: {

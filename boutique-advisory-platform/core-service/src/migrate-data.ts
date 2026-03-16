@@ -27,7 +27,7 @@ async function migrateData() {
     const users = [
       {
         id: 'admin_1',
-        email: 'admin@boutique-advisory.com',
+        email: 'contact@cambobia.com',
         password: hashedPassword,
         role: 'ADMIN' as const,
         firstName: 'Admin',
@@ -299,5 +299,4 @@ if (require.main === module) {
 }
 
 export { migrateData }
-
 

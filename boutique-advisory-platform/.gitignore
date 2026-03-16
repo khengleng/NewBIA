@@ -5,6 +5,7 @@ node_modules/
 # Build outputs
 dist/
 build/
+!mobile_app/build/web/
 .next/
 
 # Environment files

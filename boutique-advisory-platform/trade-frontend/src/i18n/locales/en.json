@@ -1,0 +1,241 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "view": "View",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "actions": "Actions",
+    "status": "Status",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "smes": "SMEs",
+    "investors": "Investors",
+    "deals": "Deals",
+    "advisory": "Advisory",
+    "reports": "Reports",
+    "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Logout"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "forgotPassword": "Forgot Password?",
+    "rememberMe": "Remember Me",
+    "loginSuccess": "Login successful",
+    "loginError": "Login failed",
+    "registerSuccess": "Registration successful",
+    "registerError": "Registration failed"
+  },
+  "sme": {
+    "title": "Small & Medium Enterprises",
+    "addSME": "Add SME",
+    "editSME": "Edit SME",
+    "name": "Company Name",
+    "sector": "Sector",
+    "stage": "Stage",
+    "fundingRequired": "Funding Required",
+    "description": "Description",
+    "website": "Website",
+    "location": "Location",
+    "score": "Score",
+    "certified": "Certified",
+    "certificationDate": "Certification Date",
+    "status": "Status",
+    "documents": "Documents",
+    "uploadDocument": "Upload Document",
+    "pitchDeck": "Pitch Deck",
+    "financialStatement": "Financial Statement",
+    "businessPlan": "Business Plan",
+    "legalDocument": "Legal Document",
+    "certification": "Certification",
+    "certifySME": "Certify SME",
+    "certificationScore": "Certification Score",
+    "certificationComments": "Certification Comments"
+  },
+  "investor": {
+    "title": "Investors",
+    "addInvestor": "Add Investor",
+    "editInvestor": "Edit Investor",
+    "name": "Investor Name",
+    "type": "Investor Type",
+    "kycStatus": "KYC Status",
+    "preferences": "Investment Preferences",
+    "portfolio": "Portfolio",
+    "sector": "Preferred Sector",
+    "ticketSize": "Ticket Size",
+    "geography": "Geography",
+    "investmentStage": "Investment Stage",
+    "kycVerification": "KYC Verification",
+    "kycPending": "KYC Pending",
+    "kycVerified": "KYC Verified",
+    "kycRejected": "KYC Rejected"
+  },
+  "deal": {
+    "title": "Deals",
+    "addDeal": "Add Deal",
+    "editDeal": "Edit Deal",
+    "dealTitle": "Deal Title",
+    "description": "Description",
+    "amount": "Amount",
+    "equity": "Equity (%)",
+    "status": "Status",
+    "successFee": "Success Fee",
+    "investors": "Investors",
+    "matchmaking": "Matchmaking",
+    "dealRoom": "Deal Room",
+    "termSheet": "Term Sheet",
+    "valuation": "Valuation",
+    "dueDiligence": "Due Diligence",
+    "funding": "Funding",
+    "postFunding": "Post-Funding Support"
+  },
+  "advisor": {
+    "title": "Advisory Services",
+    "dashboard": "Advisor Dashboard",
+    "pipeline": "SME Pipeline",
+    "certificationTasks": "Certification Tasks",
+    "workflowChecklists": "Workflow Checklists",
+    "gapAnalysis": "Gap Analysis",
+    "automatedReminders": "Automated Reminders",
+    "approvals": "Approvals",
+    "makerChecker": "Maker-Checker Logic",
+    "specialization": "Specialization",
+    "certifications": "Certifications",
+    "advisoryTools": "Advisory Tools"
+  },
+  "workflow": {
+    "title": "Workflows",
+    "smeOnboarding": "SME Onboarding",
+    "smeCertification": "SME Certification",
+    "investorOnboarding": "Investor Onboarding",
+    "dealApproval": "Deal Approval",
+    "kycVerification": "KYC Verification",
+    "status": "Status",
+    "pending": "Pending",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "admin": {
+    "title": "Administration",
+    "multiTenantManagement": "Multi-Tenant Management",
+    "userManagement": "User Management",
+    "roleManagement": "Role Management",
+    "compliance": "Compliance",
+    "auditLogs": "Audit Logs",
+    "systemSettings": "System Settings",
+    "tenantIsolation": "Tenant Isolation",
+    "branding": "Branding",
+    "languageSettings": "Language Settings"
+  },
+  "reporting": {
+    "title": "Reports & Analytics",
+    "dashboard": "Dashboard",
+    "kpis": "KPIs",
+    "roi": "ROI",
+    "quarterlyReports": "Quarterly Reports",
+    "investorDashboard": "Investor Dashboard",
+    "smePerformance": "SME Performance",
+    "dealMetrics": "Deal Metrics",
+    "advisoryMetrics": "Advisory Metrics",
+    "complianceReports": "Compliance Reports"
+  },
+  "integrations": {
+    "did": "DID Infrastructure",
+    "cm": "Case Management",
+    "rwa": "Real World Assets",
+    "kyc": "KYC/AML",
+    "blockchain": "Blockchain",
+    "escrow": "Escrow",
+    "payment": "Payment Processing"
+  },
+  "status": {
+    "draft": "Draft",
+    "submitted": "Submitted",
+    "underReview": "Under Review",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "active": "Active",
+    "inactive": "Inactive",
+    "suspended": "Suspended",
+    "pending": "Pending",
+    "verified": "Verified",
+    "funded": "Funded",
+    "closed": "Closed",
+    "cancelled": "Cancelled"
+  },
+  "stages": {
+    "seed": "Seed",
+    "growth": "Growth",
+    "expansion": "Expansion",
+    "mature": "Mature"
+  },
+  "investorTypes": {
+    "angel": "Angel Investor",
+    "ventureCapital": "Venture Capital",
+    "privateEquity": "Private Equity",
+    "corporate": "Corporate",
+    "institutional": "Institutional"
+  },
+  "documentTypes": {
+    "pitchDeck": "Pitch Deck",
+    "financialStatement": "Financial Statement",
+    "businessPlan": "Business Plan",
+    "legalDocument": "Legal Document",
+    "other": "Other"
+  },
+  "home": {
+    "hero": {
+      "title": "Bridging",
+      "sme": "SMEs",
+      "and": "and",
+      "investors": "Investors",
+      "description": "A comprehensive platform connecting Small and Medium Enterprises with qualified investors, featuring advanced DID integration, multi-tenant architecture, and professional advisory services.",
+      "getStarted": "Get Started",
+      "viewDemo": "View Demo"
+    },
+    "features": {
+      "sme": {
+        "title": "SME Platform",
+        "description": "Connect SMEs with investors through our comprehensive platform"
+      },
+      "investor": {
+        "title": "Investor Portal",
+        "description": "Find and invest in verified SMEs with transparent processes"
+      },
+      "advisory": {
+        "title": "Advisory Services",
+        "description": "Professional advisory services for investment readiness"
+      },
+      "security": {
+        "title": "Security & Compliance",
+        "description": "Multi-tenant architecture with DID-based authentication"
+      },
+      "analytics": {
+        "title": "Analytics & Reporting",
+        "description": "Comprehensive dashboards and performance tracking"
+      }
+    }
+  }
+}

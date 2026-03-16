@@ -1,0 +1,73 @@
+name: Build TWallet Flutter App
+
+on:
+  push:
+    paths:
+      - 'twallet-app/**'
+      - '.github/workflows/twallet-flutter.yml'
+  pull_request:
+    paths:
+      - 'twallet-app/**'
+      - '.github/workflows/twallet-flutter.yml'
+  workflow_dispatch:
+
+jobs:
+  flutter-build:
+    name: Flutter Analyze & Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.14.0'
+          channel: stable
+          cache: pub
+
+      - name: Install dependencies
+        working-directory: twallet-app
+        run: flutter pub get
+
+      - name: Run Flutter analyze
+        working-directory: twallet-app
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        working-directory: twallet-app
+        run: flutter test --no-codesign
+
+      - name: Build Android release artifacts
+        working-directory: twallet-app
+        run: |
+          flutter build appbundle --release
+          flutter build apk --release
+
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: twallet-android-release
+          path: |
+            twallet-app/build/app/outputs/bundle/release/app-release.aab
+            twallet-app/build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Build Flutter web preview
+        working-directory: twallet-app
+        run: flutter build web --release
+
+      - name: Upload web artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: twallet-app/build/web
+
+      - name: Deploy web preview to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Print preview URL
+        run: echo "Preview will be available at ${{ steps.deploy.outputs.page_url }}"

@@ -1,0 +1,241 @@
+{
+  "common": {
+    "loading": "កំពុងផ្ទុក...",
+    "error": "កំហុស",
+    "success": "ជោគជ័យ",
+    "save": "រក្សាទុក",
+    "cancel": "បោះបង់",
+    "delete": "លុប",
+    "edit": "កែប្រែ",
+    "view": "មើល",
+    "submit": "ដាក់ស្នើ",
+    "back": "ត្រឡប់",
+    "next": "បន្ទាប់",
+    "previous": "មុន",
+    "search": "ស្វែងរក",
+    "filter": "ត្រង",
+    "sort": "តម្រៀប",
+    "actions": "សកម្មភាព",
+    "status": "ស្ថានភាព",
+    "createdAt": "បង្កើតនៅថ្ងៃទី",
+    "updatedAt": "ធ្វើបច្ចុប្បន្នភាពនៅថ្ងៃទី"
+  },
+  "navigation": {
+    "dashboard": "ផ្ទាំងគ្រប់គ្រង",
+    "smes": "សហគ្រាសតូចនិងមធ្យម",
+    "investors": "អ្នកវិនិយោគ",
+    "deals": "កិច្ចព្រមព្រៀង",
+    "advisory": "ការណែនាំ",
+    "reports": "របាយការណ៍",
+    "settings": "ការកំណត់",
+    "profile": "ប្រវត្តិរូប",
+    "logout": "ចាកចេញ"
+  },
+  "auth": {
+    "login": "ចូល",
+    "register": "ចុះឈ្មោះ",
+    "email": "អ៊ីមែល",
+    "password": "ពាក្យសម្ងាត់",
+    "confirmPassword": "បញ្ជាក់ពាក្យសម្ងាត់",
+    "firstName": "ឈ្មោះ",
+    "lastName": "នាមត្រកូល",
+    "forgotPassword": "ភ្លេចពាក្យសម្ងាត់?",
+    "rememberMe": "ចងចាំខ្ញុំ",
+    "loginSuccess": "ចូលបានជោគជ័យ",
+    "loginError": "ចូលបរាជ័យ",
+    "registerSuccess": "ចុះឈ្មោះបានជោគជ័យ",
+    "registerError": "ចុះឈ្មោះបរាជ័យ"
+  },
+  "sme": {
+    "title": "សហគ្រាសតូចនិងមធ្យម",
+    "addSME": "បន្ថែមសហគ្រាសតូចនិងមធ្យម",
+    "editSME": "កែប្រែសហគ្រាសតូចនិងមធ្យម",
+    "name": "ឈ្មោះក្រុមហ៊ុន",
+    "sector": "វិស័យ",
+    "stage": "ដំណាក់កាល",
+    "fundingRequired": "មូលនិធិដែលត្រូវការ",
+    "description": "ការពិពណ៌នា",
+    "website": "គេហទំព័រ",
+    "location": "ទីតាំង",
+    "score": "ពិន្ទុ",
+    "certified": "បានផ្ទៀងផ្ទាត់",
+    "certificationDate": "កាលបរិច្ឆេទផ្ទៀងផ្ទាត់",
+    "status": "ស្ថានភាព",
+    "documents": "ឯកសារ",
+    "uploadDocument": "ផ្ទុកឯកសារឡើង",
+    "pitchDeck": "ការណែនាំអាជីវកម្ម",
+    "financialStatement": "របាយការណ៍ហិរញ្ញវត្ថុ",
+    "businessPlan": "ផែនការអាជីវកម្ម",
+    "legalDocument": "ឯកសារផ្នែកច្បាប់",
+    "certification": "ការផ្ទៀងផ្ទាត់",
+    "certifySME": "ផ្ទៀងផ្ទាត់សហគ្រាសតូចនិងមធ្យម",
+    "certificationScore": "ពិន្ទុផ្ទៀងផ្ទាត់",
+    "certificationComments": "មតិត្រួតពិនិត្យផ្ទៀងផ្ទាត់"
+  },
+  "investor": {
+    "title": "អ្នកវិនិយោគ",
+    "addInvestor": "បន្ថែមអ្នកវិនិយោគ",
+    "editInvestor": "កែប្រែអ្នកវិនិយោគ",
+    "name": "ឈ្មោះអ្នកវិនិយោគ",
+    "type": "ប្រភេទអ្នកវិនិយោគ",
+    "kycStatus": "ស្ថានភាព KYC",
+    "preferences": "ចំណូលចិត្តវិនិយោគ",
+    "portfolio": "ផលប័ត្រ",
+    "sector": "វិស័យដែលចូលចិត្ត",
+    "ticketSize": "ទំហំវិនិយោគ",
+    "geography": "ភូមិសាស្ត្រ",
+    "investmentStage": "ដំណាក់កាលវិនិយោគ",
+    "kycVerification": "ការផ្ទៀងផ្ទាត់ KYC",
+    "kycPending": "KYC កំពុងរង់ចាំ",
+    "kycVerified": "KYC បានផ្ទៀងផ្ទាត់",
+    "kycRejected": "KYC ត្រូវបានបដិសេធ"
+  },
+  "deal": {
+    "title": "កិច្ចព្រមព្រៀង",
+    "addDeal": "បន្ថែមកិច្ចព្រមព្រៀង",
+    "editDeal": "កែប្រែកិច្ចព្រមព្រៀង",
+    "dealTitle": "ចំណងជើងកិច្ចព្រមព្រៀង",
+    "description": "ការពិពណ៌នា",
+    "amount": "ចំនួនទឹកប្រាក់",
+    "equity": "ភាគហ៊ុន (%)",
+    "status": "ស្ថានភាព",
+    "successFee": "ថ្លៃជោគជ័យ",
+    "investors": "អ្នកវិនិយោគ",
+    "matchmaking": "ការផ្គូផ្គង",
+    "dealRoom": "បន្ទប់កិច្ចព្រមព្រៀង",
+    "termSheet": "ឯកសារលក្ខខណ្ឌ",
+    "valuation": "ការវាយតម្លៃ",
+    "dueDiligence": "ការពិនិត្យយ៉ាងល្អិតល្អន់",
+    "funding": "មូលនិធិ",
+    "postFunding": "ការគាំទ្រក្រោយមូលនិធិ"
+  },
+  "advisor": {
+    "title": "សេវាកម្មណែនាំ",
+    "dashboard": "ផ្ទាំងគ្រប់គ្រងអ្នកណែនាំ",
+    "pipeline": "បំពង់សហគ្រាសតូចនិងមធ្យម",
+    "certificationTasks": "ភារកិច្ចផ្ទៀងផ្ទាត់",
+    "workflowChecklists": "បញ្ជីត្រួតពិនិត្យលំហូរការងារ",
+    "gapAnalysis": "ការវិភាគគម្លាត",
+    "automatedReminders": "ការរំលឹកដោយស្វ័យប្រវត្តិ",
+    "approvals": "ការអនុម័ត",
+    "makerChecker": "អ្នកធ្វើ-អ្នកត្រួតពិនិត្យ",
+    "specialization": "ឯកទេស",
+    "certifications": "វិញ្ញាបនបត្រ",
+    "advisoryTools": "ឧបករណ៍ណែនាំ"
+  },
+  "workflow": {
+    "title": "លំហូរការងារ",
+    "smeOnboarding": "ការចូលរួមសហគ្រាសតូចនិងមធ្យម",
+    "smeCertification": "ការផ្ទៀងផ្ទាត់សហគ្រាសតូចនិងមធ្យម",
+    "investorOnboarding": "ការចូលរួមអ្នកវិនិយោគ",
+    "dealApproval": "ការអនុម័តកិច្ចព្រមព្រៀង",
+    "kycVerification": "ការផ្ទៀងផ្ទាត់ KYC",
+    "status": "ស្ថានភាព",
+    "pending": "កំពុងរង់ចាំ",
+    "inProgress": "កំពុងដំណើរការ",
+    "completed": "បានបញ្ចប់",
+    "failed": "បរាជ័យ",
+    "cancelled": "បានលុបចោល"
+  },
+  "admin": {
+    "title": "ការគ្រប់គ្រង",
+    "multiTenantManagement": "ការគ្រប់គ្រងអតិថិជនច្រើន",
+    "userManagement": "ការគ្រប់គ្រងអ្នកប្រើប្រាស់",
+    "roleManagement": "ការគ្រប់គ្រងតួនាទី",
+    "compliance": "ការអនុលោមតាម",
+    "auditLogs": "កំណត់ហេតុសុវត្ថិភាព",
+    "systemSettings": "ការកំណត់ប្រព័ន្ធ",
+    "tenantIsolation": "ការញែកអតិថិជន",
+    "branding": "ម៉ាក",
+    "languageSettings": "ការកំណត់ភាសា"
+  },
+  "reporting": {
+    "title": "របាយការណ៍ និងការវិភាគ",
+    "dashboard": "ផ្ទាំងគ្រប់គ្រង",
+    "kpis": "សូចនាករដែលវាស់វែងបាន",
+    "roi": "ផលចំណេញលើការវិនិយោគ",
+    "quarterlyReports": "របាយការណ៍ត្រីមាស",
+    "investorDashboard": "ផ្ទាំងគ្រប់គ្រងអ្នកវិនិយោគ",
+    "smePerformance": "ដំណើរការសហគ្រាសតូចនិងមធ្យម",
+    "dealMetrics": "វិធានការកិច្ចព្រមព្រៀង",
+    "advisoryMetrics": "វិធានការណែនាំ",
+    "complianceReports": "របាយការណ៍ការអនុលោមតាម"
+  },
+  "integrations": {
+    "did": "ហេដ្ឋារចនាសម្ព័ន្ធ DID",
+    "cm": "ការគ្រប់គ្រងករណី",
+    "rwa": "ទ្រព្យសកម្មពិត",
+    "kyc": "KYC/AML",
+    "blockchain": "ប្លុកឈែន",
+    "escrow": "គណនីដាក់ប្រាក់ជាមធ្យម",
+    "payment": "ការដំណើរការទូទាត់"
+  },
+  "status": {
+    "draft": "សេចក្តីព្រាង",
+    "submitted": "បានដាក់ស្នើ",
+    "underReview": "កំពុងត្រួតពិនិត្យ",
+    "approved": "បានអនុម័ត",
+    "rejected": "ត្រូវបានបដិសេធ",
+    "active": "សកម្ម",
+    "inactive": "អសកម្ម",
+    "suspended": "ត្រូវបានផ្អាក",
+    "pending": "កំពុងរង់ចាំ",
+    "verified": "បានផ្ទៀងផ្ទាត់",
+    "funded": "បានផ្តល់មូលនិធិ",
+    "closed": "បានបិទ",
+    "cancelled": "បានលុបចោល"
+  },
+  "stages": {
+    "seed": "គ្រាប់ពូជ",
+    "growth": "ការលូតលាស់",
+    "expansion": "ការពង្រីក",
+    "mature": "ចម្រើន"
+  },
+  "investorTypes": {
+    "angel": "អ្នកវិនិយោគទេវតា",
+    "ventureCapital": "មូលនិធិវិនិយោគហ៊ុនចាប់ផ្តើម",
+    "privateEquity": "ភាគហ៊ុនឯកជន",
+    "corporate": "ក្រុមហ៊ុន",
+    "institutional": "ស្ថាប័ន"
+  },
+  "documentTypes": {
+    "pitchDeck": "ការណែនាំអាជីវកម្ម",
+    "financialStatement": "របាយការណ៍ហិរញ្ញវត្ថុ",
+    "businessPlan": "ផែនការអាជីវកម្ម",
+    "legalDocument": "ឯកសារផ្នែកច្បាប់",
+    "other": "ផ្សេងទៀត"
+  },
+  "home": {
+    "hero": {
+      "title": "ការតភ្ជាប់",
+      "sme": "សហគ្រាសតូចនិងមធ្យម",
+      "and": "និង",
+      "investors": "អ្នកវិនិយោគ",
+      "description": "វេទិកាប្រកបដោយភាពទូលំទូលសម្រាប់ភ្ជាប់សហគ្រាសតូចនិងមធ្យមជាមួយអ្នកវិនិយោគដែលមានលក្ខណៈសម្បត្តិ ដែលមានការតភ្ជាប់ DID កម្រិតខ្ពស់ នីតិវិធីអតិថិជនច្រើន និងសេវាកម្មណែនាំវិជ្ជាជីវៈ។",
+      "getStarted": "ចាប់ផ្តើម",
+      "viewDemo": "មើលឧទាហរណ៍"
+    },
+    "features": {
+      "sme": {
+        "title": "វេទិកាសហគ្រាសតូចនិងមធ្យម",
+        "description": "ភ្ជាប់សហគ្រាសតូចនិងមធ្យមជាមួយអ្នកវិនិយោគតាមរយៈវេទិកាប្រកបដោយភាពទូលំទូលរបស់យើង"
+      },
+      "investor": {
+        "title": "វិបផតថលអ្នកវិនិយោគ",
+        "description": "ស្វែងរកនិងវិនិយោគក្នុងសហគ្រាសតូចនិងមធ្យមដែលបានផ្ទៀងផ្ទាត់ជាមួយនីតិវិធីភាពថ្លា"
+      },
+      "advisory": {
+        "title": "សេវាកម្មណែនាំ",
+        "description": "សេវាកម្មណែនាំវិជ្ជាជីវៈសម្រាប់ការត្រៀមខ្លួនវិនិយោគ"
+      },
+      "security": {
+        "title": "សុវត្ថិភាព និងការអនុលោមតាម",
+        "description": "នីតិវិធីអតិថិជនច្រើនជាមួយការផ្ទៀងផ្ទាត់អត្តសញ្ញាណ៍ផ្អែកលើ DID"
+      },
+      "analytics": {
+        "title": "ការវិភាគ និងរបាយការណ៍",
+        "description": "ផ្ទាំងគ្រប់គ្រងប្រកបដោយភាពទូលំទូល និងការតាមដានដំណើរការ"
+      }
+    }
+  }
+}

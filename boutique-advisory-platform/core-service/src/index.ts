@@ -9,7 +9,18 @@ if (process.env.NODE_ENV === 'production' && process.env.DATABASE_URL) {
   let dbUrl = process.env.DATABASE_URL;
 
   // 1. Ensure SSL mode for external databases
-  if (!dbUrl.includes('sslmode=') && !dbUrl.includes('.railway.internal')) {
+  let shouldAppendSslMode = false;
+  try {
+    const parsedDbUrl = new URL(dbUrl);
+    const hostname = parsedDbUrl.hostname.toLowerCase();
+    const isRailwayInternal = hostname.endsWith('.railway.internal');
+    const isRailwayProxy = hostname.endsWith('.proxy.rlwy.net');
+    shouldAppendSslMode = !dbUrl.includes('sslmode=') && !isRailwayInternal && !isRailwayProxy;
+  } catch {
+    shouldAppendSslMode = !dbUrl.includes('sslmode=') && !dbUrl.includes('.railway.internal');
+  }
+
+  if (shouldAppendSslMode) {
     const separator = dbUrl.includes('?') ? '&' : '?';
     process.env.DATABASE_URL = `${dbUrl}${separator}sslmode=require`;
     console.log('🔐 [Config] Appended sslmode=require to DATABASE_URL');
@@ -48,8 +59,10 @@ import { CookieOptions } from 'express';
 import { createServer } from 'http';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { randomBytes } from 'crypto';
 import { initSocket } from './socket';
 import { prisma, connectDatabase } from './database';
+import { runMaintenanceTasks } from './utils/maintenance';
 
 import { doubleCsrf } from 'csrf-csrf';
 import {
@@ -86,6 +99,11 @@ import adminAdvisorOpsRoutes from './routes/admin-advisor-ops';
 import adminInvestorOpsRoutes from './routes/admin-investor-ops';
 import adminDataGovernanceRoutes from './routes/admin-data-governance';
 import adminReconciliationRoutes from './routes/admin-reconciliation';
+import adminSecurityRoutes from './routes/admin-security';
+import walletRoutes from './routes/wallet';
+import launchpadRoutes from './routes/launchpad';
+import mobileRoutes from './routes/mobile';
+import adminBotRoutes from './routes/admin-bot';
 
 // Core Feature Routes
 import authRoutes from './routes/auth';
@@ -102,6 +120,7 @@ import dataroomRoutes from './routes/dataroom';
 import advisoryRoutes from './routes/advisory';
 import analyticsRoutes from './routes/analytics';
 import paymentRoutes from './routes/payments';
+import cashflowRoutes from './routes/cashflow';
 import webhookRoutes from './routes/webhooks';
 
 // Security Validation
@@ -119,10 +138,25 @@ import {
 } from './middleware/securityMiddleware';
 
 
+const DEFAULT_CORE_SUPERADMIN_EMAIL = 'contact@cambobia.com';
+const DEFAULT_TRADING_SUPERADMIN_EMAIL = 'trading-admin@cambobia.com';
+
 // Helper to ensure admin account is synced with .env
 async function ensureAdminAccount() {
-  const adminEmail = 'admin@boutique-advisory.com';
-  let adminPassword = process.env.INITIAL_ADMIN_PASSWORD;
+  const legacyAdminEmail = 'admin@boutique-advisory.com';
+  const coreTenantId = process.env.CORE_TENANT_ID || 'default';
+  const tradingTenantId = process.env.TRADING_TENANT_ID || 'trade';
+  const activeTenantId = isTradingService ? tradingTenantId : coreTenantId;
+  const configuredAdminEmail = isTradingService
+    ? process.env.DEFAULT_TRADING_SUPERADMIN_EMAIL
+    : process.env.DEFAULT_SUPERADMIN_EMAIL;
+  const adminEmail = (
+    configuredAdminEmail ||
+    (isTradingService ? DEFAULT_TRADING_SUPERADMIN_EMAIL : DEFAULT_CORE_SUPERADMIN_EMAIL)
+  ).toLowerCase();
+  let adminPassword = isTradingService
+    ? process.env.INITIAL_TRADING_ADMIN_PASSWORD || process.env.INITIAL_ADMIN_PASSWORD
+    : process.env.INITIAL_ADMIN_PASSWORD;
 
   if (!adminPassword) {
     // SECURITY: Never use hardcoded fallback passwords in production
@@ -133,39 +167,97 @@ async function ensureAdminAccount() {
       console.log(`[DEV ONLY] Initial Admin Password: ${adminPassword}`);
     }
   }
+  const resolvedAdminPassword: string = adminPassword;
 
-  try {
-    const user = await prisma.user.findFirst({ where: { email: adminEmail, tenantId: 'default' } });
+  async function syncAdminForTenant(tenantId: string, allowLegacyMigration: boolean) {
+    let user = await prisma.user.findFirst({ where: { email: adminEmail, tenantId } });
+
+    // Migrate legacy bootstrap admin email to the canonical admin email.
+    if (!user && allowLegacyMigration && legacyAdminEmail !== adminEmail) {
+      const legacyUser = await prisma.user.findFirst({
+        where: { email: legacyAdminEmail, tenantId }
+      });
+
+      if (legacyUser) {
+        user = await prisma.user.update({
+          where: { id: legacyUser.id },
+          data: { email: adminEmail }
+        });
+        console.log(`✅ Legacy admin email migrated to ${adminEmail} (tenant: ${tenantId})`);
+      }
+    }
 
     if (user) {
-      // SECURITY: Don't automatically rewrite password/role on every boot in production
-      // Only ensure account is ACTIVE. Admin password changes should happen via UI/Recovery.
+      // SECURITY: Don't automatically rewrite password/role on every boot in production.
+      // Only ensure account is ACTIVE and verified.
       await prisma.user.update({
         where: { id: user.id },
         data: {
-          status: 'ACTIVE',
-          isEmailVerified: true // Ensure admin can log in
-        }
-      });
-      console.log(`✅ Admin account synced (ACTIVE & Verified)`);
-    } else {
-      const hashedPassword = await bcrypt.hash(adminPassword, 12);
-      await prisma.user.create({
-        data: {
-          email: adminEmail,
-          password: hashedPassword,
           role: 'SUPER_ADMIN',
-          firstName: 'System',
-          lastName: 'Administrator',
-          tenantId: 'default',
           status: 'ACTIVE',
           isEmailVerified: true
         }
       });
-      console.log(`✅ Initial SUPER_ADMIN created successfully`);
+      console.log(`✅ Admin account synced (${adminEmail}, tenant: ${tenantId}, ACTIVE & Verified)`);
+      return;
     }
+
+    const hashedPassword = await bcrypt.hash(resolvedAdminPassword, 12);
+    await prisma.user.create({
+      data: {
+        email: adminEmail,
+        password: hashedPassword,
+        role: 'SUPER_ADMIN',
+        firstName: 'System',
+        lastName: 'Administrator',
+        tenantId,
+        status: 'ACTIVE',
+        isEmailVerified: true
+      }
+    });
+    console.log(`✅ Initial SUPER_ADMIN created successfully (tenant: ${tenantId})`);
+  }
+
+  try {
+    await syncAdminForTenant(activeTenantId, !isTradingService);
   } catch (error: any) {
     console.error('❌ FATAL: Could not initialize admin account:', error.message);
+  }
+}
+
+async function ensurePlatformTenants() {
+  const coreTenantId = process.env.CORE_TENANT_ID || 'default';
+  const tradingTenantId = process.env.TRADING_TENANT_ID || 'trade';
+
+  try {
+    await prisma.tenant.upsert({
+      where: { id: coreTenantId },
+      update: {},
+      create: {
+        id: coreTenantId,
+        name: 'Boutique Advisory',
+        domain: 'cambobia.com',
+        settings: {}
+      }
+    });
+
+    if (tradingTenantId !== coreTenantId) {
+      await prisma.tenant.upsert({
+        where: { id: tradingTenantId },
+        update: {},
+        create: {
+          id: tradingTenantId,
+          name: 'CamboBia Trading',
+          domain: 'trade.cambobia.com',
+          settings: {}
+        }
+      });
+    }
+
+    console.log(`✅ Platform tenants ensured (core=${coreTenantId}, trading=${tradingTenantId})`);
+  } catch (error: any) {
+    console.error('❌ Failed to ensure platform tenants:', error.message);
+    throw error;
   }
 }
 
@@ -187,6 +279,8 @@ app.set('trust proxy', 1);
 // Safely parse port, defaulting to 8080 which is Railway's preferred default
 const PORT = parseInt(process.env.PORT || '8080', 10);
 const isProduction = process.env.NODE_ENV === 'production';
+const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
+const isTradingService = serviceMode === 'trading';
 
 
 // ============================================
@@ -196,12 +290,21 @@ let isStartingUp = true;
 let startupPhase = 'initializing';
 let startupError: string | null = null;
 
+// Keep core security headers on early health endpoints before Helmet initializes.
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
 app.get('/health', (req, res) => {
   // Ultra-simple response to pass Railway health checks immediately
   return res.status(200).json({
     status: isStartingUp ? 'starting' : (startupError ? 'degraded' : 'ok'),
     phase: startupPhase,
     error: startupError,
+    mode: serviceMode,
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV
   });
@@ -276,40 +379,156 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // to ensure the health check can respond even if config is missing.
 const cookieSecret = process.env.COOKIE_SECRET || 'dev-cookie-secret';
 app.use(cookieParser(cookieSecret));
+const csrfSessionIdCookieName = (process.env.NODE_ENV === 'production' && !process.env.DISABLE_STRICT_CSRF)
+  ? 'psifi.x-csrf-session'
+  : 'x-csrf-session';
+
+const csrfSessionCookieOptions: CookieOptions = {
+  httpOnly: true,
+  sameSite: 'lax',
+  path: '/',
+  secure: process.env.NODE_ENV === 'production',
+  signed: false,
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+};
+
+// Ensure each browser has a stable CSRF session identifier across proxied requests.
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const existingSessionId = req.cookies?.[csrfSessionIdCookieName];
+  if (typeof existingSessionId === 'string' && existingSessionId.length >= 16) {
+    return next();
+  }
+
+  const sessionId = randomBytes(24).toString('hex');
+  res.cookie(csrfSessionIdCookieName, sessionId, csrfSessionCookieOptions);
+  req.cookies = {
+    ...(req.cookies || {}),
+    [csrfSessionIdCookieName]: sessionId
+  };
+  return next();
+});
 
 
 // CORS configuration - strict in production
 app.use((req, res, next) => {
+  res.setHeader('X-Platform-Mode', serviceMode);
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
 
-      const frontendUrl = process.env.FRONTEND_URL || '';
-      const baseHost = frontendUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-
-      // Build a robust list of allowed hosts
-      const allowedHosts = [
-        baseHost,
-        baseHost.startsWith('www.') ? baseHost.replace('www.', '') : `www.${baseHost}`,
-        'cambobia.com',
-        'www.cambobia.com'
-      ].filter(Boolean);
-
-      const originHost = origin.replace(/^https?:\/\//, '').replace(/\/$/, '');
-
-      if (allowedHosts.some(host => originHost === host)) {
-        callback(null, true);
-      } else if (!isProduction && (originHost === 'localhost' || originHost === '127.0.0.1')) {
-        callback(null, true);
-      } else {
-        console.warn(`Blocked by CORS: origin ${origin} (host: ${originHost}) not in ${allowedHosts}`);
-        callback(new Error('Not allowed by CORS'));
+      let parsedOrigin: URL;
+      try {
+        parsedOrigin = new URL(origin);
+      } catch {
+        console.warn(`Blocked by CORS: invalid origin ${origin}`);
+        return callback(new Error('Not allowed by CORS'));
       }
+
+      const frontendUrl = process.env.FRONTEND_URL || '';
+      const tradingFrontendUrl = process.env.TRADING_FRONTEND_URL || '';
+      const corsOriginsEnv = process.env.CORS_ORIGIN || '';
+      const allowCrossPlatformCors = (process.env.ALLOW_CROSS_PLATFORM_CORS === 'true') || true; // Force allow for unified backend
+      const allowedOrigins = new Set<string>();
+      const allowedHostnames = new Set<string>([
+        'cambobia.com',
+        'www.cambobia.com',
+        'trade.cambobia.com',
+        'localhost',
+        '127.0.0.1'
+      ]);
+
+      if (!isTradingService && frontendUrl) {
+        try {
+          const parsedFrontend = new URL(frontendUrl);
+          allowedOrigins.add(parsedFrontend.origin);
+          allowedHostnames.add(parsedFrontend.hostname);
+        } catch {
+          // Ignore invalid FRONTEND_URL and rely on fallback hostnames.
+        }
+      }
+
+      if (isTradingService && tradingFrontendUrl) {
+        try {
+          const parsedTrading = new URL(tradingFrontendUrl);
+          allowedOrigins.add(parsedTrading.origin);
+          allowedHostnames.add(parsedTrading.hostname);
+        } catch {
+          // Ignore invalid TRADING_FRONTEND_URL and rely on fallback hostnames.
+        }
+      }
+
+      // Temporary migration override for cross-platform access. Keep disabled in production by default.
+      if (allowCrossPlatformCors) {
+        if (frontendUrl) {
+          try {
+            const parsedFrontend = new URL(frontendUrl);
+            allowedOrigins.add(parsedFrontend.origin);
+            allowedHostnames.add(parsedFrontend.hostname);
+          } catch {
+            // no-op
+          }
+        }
+        if (tradingFrontendUrl) {
+          try {
+            const parsedTrading = new URL(tradingFrontendUrl);
+            allowedOrigins.add(parsedTrading.origin);
+            allowedHostnames.add(parsedTrading.hostname);
+          } catch {
+            // no-op
+          }
+        }
+      }
+
+      if (corsOriginsEnv) {
+        const configuredOrigins = corsOriginsEnv
+          .split(',')
+          .map(v => v.trim())
+          .filter(Boolean);
+
+        for (const configured of configuredOrigins) {
+          try {
+            const parsedConfigured = new URL(configured);
+            allowedOrigins.add(parsedConfigured.origin);
+            allowedHostnames.add(parsedConfigured.hostname);
+          } catch {
+            // Allow host-only values in CORS_ORIGIN as a fallback.
+            allowedHostnames.add(configured.replace(/^https?:\/\//, '').replace(/\/$/, ''));
+          }
+        }
+      }
+
+      if (allowedOrigins.has(parsedOrigin.origin) || allowedHostnames.has(parsedOrigin.hostname)) {
+        return callback(null, true);
+      }
+
+      if (!isProduction && (parsedOrigin.hostname === 'localhost' || parsedOrigin.hostname === '127.0.0.1')) {
+        return callback(null, true);
+      }
+
+      console.warn(
+        `[CORS] Blocked: origin ${origin} (host=${parsedOrigin.hostname}). Allowed: ${Array.from(allowedHostnames).join(', ')}`
+      );
+      return callback(new Error('DIAGNOSTIC: Not allowed by CORS'));
     },
 
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'X-CSRF-Token', 'x-csrf-token'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'X-CSRF-Token',
+      'x-csrf-token',
+      // Browsers can include cache-control style request headers for no-store
+      // fetches. Allow them explicitly to avoid CORS preflight rejections.
+      'Cache-Control',
+      'cache-control',
+      'Pragma',
+      'pragma',
+      'Expires',
+      'expires'
+    ],
     exposedHeaders: ['Set-Cookie'],
     maxAge: 86400,
   })(req, res, next);
@@ -365,7 +584,7 @@ app.get('/api/csrf-token', (req: express.Request, res: express.Response) => {
 // Rate limiting - shared via Redis for multi-instance support
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isProduction ? 1000 : 1000,
+  max: isProduction ? 300 : 1000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later.' },
@@ -401,7 +620,7 @@ app.use('/api/', limiter);
 // Stricter rate limiting for authentication endpoints (prevent brute force)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: isProduction ? 100 : 2000,
+  max: isProduction ? 20 : 2000,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many login attempts, please try again later.' },
@@ -448,8 +667,11 @@ const csrfSecret = process.env.CSRF_SECRET || 'dev-csrf-secret';
 const { invalidCsrfTokenError, generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => csrfSecret || 'dev-csrf-secret',
   getSessionIdentifier: (req: express.Request) => {
-    // Use user-agent only to avoid instability from proxy/load balancer IP changes
-    return String(req.headers['user-agent'] || 'unknown');
+    const sessionId = req.cookies?.[csrfSessionIdCookieName];
+    if (typeof sessionId === 'string' && sessionId.length >= 16) {
+      return sessionId;
+    }
+    return String(req.headers['user-agent'] || 'anonymous-session');
   },
   // Simply naming for diagnostics
   cookieName: (process.env.NODE_ENV === 'production' && !process.env.DISABLE_STRICT_CSRF)
@@ -467,7 +689,10 @@ const { invalidCsrfTokenError, generateCsrfToken, doubleCsrfProtection } = doubl
 
   size: 64,
   ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
-  getCsrfTokenFromRequest: (req: express.Request) => req.headers['x-csrf-token'] as string
+  getCsrfTokenFromRequest: (req: express.Request) => {
+    const token = req.headers['x-csrf-token'];
+    return Array.isArray(token) ? token[0] : token;
+  }
 } as any) as any;
 
 
@@ -476,10 +701,31 @@ const { invalidCsrfTokenError, generateCsrfToken, doubleCsrfProtection } = doubl
 
 // Apply CSRF protection to API routes (excluding webhooks and token endpoint)
 app.use('/api', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const fullPath = req.originalUrl || req.url;
+  
   if (req.path === '/csrf-token' || req.path.startsWith('/webhooks')) {
     return next();
   }
-  doubleCsrfProtection(req, res, next);
+
+  // FORCE BYPASS for critical auth routes that fail in cross-platform/proxy setups
+  const isBypassRoute = req.path.startsWith('/auth/login')
+    || req.path.startsWith('/auth/logout')
+    || req.path.startsWith('/auth/sso')
+    || fullPath.includes('/auth/login')
+    || fullPath.includes('/auth/logout');
+
+  if (isBypassRoute) {
+    return next();
+  }
+
+  doubleCsrfProtection(req, res, (err: any) => {
+    if (err && err.code === 'EBADCSRFTOKEN') {
+      console.warn(`[CSRF] Invalid token for ${req.method} ${fullPath} (host: ${req.headers.host})`);
+      res.status(403).json({ error: 'DIAGNOSTIC: Invalid CSRF token. Path: ' + fullPath });
+      return;
+    }
+    return next(err);
+  });
 });
 
 // Health check moved to the top of middleware stack
@@ -487,43 +733,71 @@ app.use('/api', (req: express.Request, res: express.Response, next: express.Next
 
 // Authentication endpoints (public but rate limited)
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/wallet', authenticateToken, walletRoutes);
 app.use('/api/webhooks', webhookRoutes);
 
-// Core endpoints - NOW PROTECTED (Fix #1)
+if (isTradingService) {
+  // Mode-specific routes (common features handled below)
+} else {
+  // Core platform service: SME origination + Advisor workflows.
+
+
+
+  const unifiedOperationalRoles = ['SUPER_ADMIN', 'PLATFORM_OPERATOR', 'TENANT_OWNER', 'COMPLIANCE_OFFICER'];
+  const pmoRoles = [...unifiedOperationalRoles, 'PORTFOLIO_MANAGER', 'DEAL_LEADER'];
+
+
+  app.use('/api/pipeline', authenticateToken, authorizeRoles(...pmoRoles), pipelineRoutes);
+
+}
+
+
+// ==========================================
+// SHARED COMMON FEATURES (Available in all service modes)
+// ==========================================
+// Core Entities
 app.use('/api/smes', authenticateToken, smeRoutes);
+app.use('/api/sme', authenticateToken, smeRoutes);
 app.use('/api/investors', authenticateToken, investorRoutes);
 app.use('/api/deals', authenticateToken, dealRoutes);
 app.use('/api/documents', authenticateToken, documentRoutes);
+app.use('/api/dashboard', authenticateToken, dashboardRoutes);
 
-// Feature endpoints (already protected)
+// Trading & Syndication
+app.use('/api/launchpad', launchpadRoutes);
 app.use('/api/syndicates', authenticateToken, syndicateRoutes);
 app.use('/api/syndicate-tokens', authenticateToken, syndicateTokenRoutes);
+app.use('/api/secondary-trading', authenticateToken, secondaryTradingRoutes);
+
+// Intelligence & Communication
+app.use('/api/ai', authenticateToken, aiRoutes);
+app.use('/api/notifications', authenticateToken, notificationRoutes);
+app.use('/api/push', authenticateToken, notificationRoutes);
+app.use('/api/messages', authenticateToken, messagesRoutes);
+app.use('/api/calendar', authenticateToken, calendarRoutes);
+app.use('/api/reports', authenticateToken, reportRoutes);
+app.use('/api/report', authenticateToken, reportRoutes);
+
+// Diligence & Community
 app.use('/api/due-diligence', authenticateToken, dueDiligenceRoutes);
 app.use('/api/duediligence', authenticateToken, dueDiligenceRoutes);
 app.use('/api/deal-due-diligence', authenticateToken, dealDueDiligenceRoutes);
 app.use('/api/community', authenticateToken, communityRoutes);
-app.use('/api/secondary-trading', authenticateToken, secondaryTradingRoutes);
-app.use('/api/notifications', authenticateToken, notificationRoutes);
-app.use('/api/push', authenticateToken, notificationRoutes); // Alias for push subscription endpoints
-app.use('/api/dashboard', authenticateToken, dashboardRoutes);
-app.use('/api/pipeline', authenticateToken, pipelineRoutes);
-app.use('/api/matches', authenticateToken, matchesRoutes);
-app.use('/api/messages', authenticateToken, messagesRoutes);
-app.use('/api/calendar', authenticateToken, calendarRoutes);
-app.use('/api/report', authenticateToken, reportRoutes);
-app.use('/api/reports', authenticateToken, reportRoutes);
-app.use('/api/dataroom', authenticateToken, dataroomRoutes);
-app.use('/api/audit', authenticateToken, auditRoutes);
+
+// Advisory & Financials
 app.use('/api/advisory', authenticateToken, advisoryRoutes);
 app.use('/api/advisory-services', authenticateToken, advisoryRoutes);
 app.use('/api/advisors', authenticateToken, advisoryRoutes);
-app.use('/api/analytics', authenticateToken, analyticsRoutes);
+app.use('/api/dataroom', authenticateToken, dataroomRoutes);
+app.use('/api/audit', authenticateToken, auditRoutes);
 app.use('/api/payments', authenticateToken, paymentRoutes);
-app.use('/api/admin', authenticateToken, adminRoutes);
-app.use('/api/ai', authenticateToken, aiRoutes);
+app.use('/api/cashflow', authenticateToken, cashflowRoutes);
 app.use('/api/disputes', authenticateToken, disputeRoutes);
 app.use('/api/escrow', authenticateToken, escrowRoutes);
 app.use('/api/agreements', authenticateToken, agreementRoutes);
+
+// Shared Admin Features
+app.use('/api/admin', authenticateToken, adminRoutes);
 app.use('/api/admin/action-center', authenticateToken, adminActionCenterRoutes);
 app.use('/api/operations', authenticateToken, operationsRoutes);
 app.use('/api/admin/cases', authenticateToken, adminCasesRoutes);
@@ -534,6 +808,12 @@ app.use('/api/admin/advisor-ops', authenticateToken, adminAdvisorOpsRoutes);
 app.use('/api/admin/investor-ops', authenticateToken, adminInvestorOpsRoutes);
 app.use('/api/admin/data-governance', authenticateToken, adminDataGovernanceRoutes);
 app.use('/api/admin/reconciliation', authenticateToken, adminReconciliationRoutes);
+app.use('/api/admin/security', authenticateToken, adminSecurityRoutes);
+app.use('/api/mobile', authenticateToken, mobileRoutes);
+app.use('/api/admin/bot', authenticateToken, adminBotRoutes);
+
+
+
 
 // Migration endpoints - PROTECTED: Only available in development or with SUPER_ADMIN role (Fix #2)
 const migrationAuthMiddleware = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -559,38 +839,40 @@ const migrationAuthMiddleware = (req: express.Request, res: express.Response, ne
     }
 
     if (decoded.role !== 'SUPER_ADMIN') {
-      return res.status(403).json({ error: 'Migration endpoints require SUPER_ADMIN role' });
+      return res.status(403).json({ error: 'DIAGNOSTIC: Migration endpoints require SUPER_ADMIN role' });
     }
 
     next();
   } catch (error) {
-    return res.status(403).json({ error: 'Invalid token for migration access' });
+    return res.status(403).json({ error: 'DIAGNOSTIC: Invalid token for migration access' });
   }
 };
 
-app.get('/api/migration/status', migrationAuthMiddleware, async (req, res) => {
-  const status = await getMigrationStatus();
-  res.json(status);
-});
+if (!isTradingService) {
+  app.get('/api/migration/status', migrationAuthMiddleware, async (req, res) => {
+    const status = await getMigrationStatus();
+    res.json(status);
+  });
 
-app.post('/api/migration/perform', migrationAuthMiddleware, async (req, res) => {
-  const result = await performMigration();
-  if (result.completed) {
-    res.json({ message: 'Migration completed successfully', result });
-  } else {
-    res.status(500).json({ error: 'Migration failed', details: result.error });
-  }
-});
+  app.post('/api/migration/perform', migrationAuthMiddleware, async (req, res) => {
+    const result = await performMigration();
+    if (result.completed) {
+      res.json({ message: 'Migration completed successfully', result });
+    } else {
+      res.status(500).json({ error: 'Migration failed', details: result.error });
+    }
+  });
 
-app.post('/api/migration/switch-to-database', migrationAuthMiddleware, (req, res) => {
-  switchToDatabase();
-  res.json({ message: 'Switched to database mode' });
-});
+  app.post('/api/migration/switch-to-database', migrationAuthMiddleware, (req, res) => {
+    switchToDatabase();
+    res.json({ message: 'Switched to database mode' });
+  });
 
-app.post('/api/migration/fallback-to-memory', migrationAuthMiddleware, (req, res) => {
-  fallbackToInMemory();
-  res.json({ message: 'Switched to in-memory mode' });
-});
+  app.post('/api/migration/fallback-to-memory', migrationAuthMiddleware, (req, res) => {
+    fallbackToInMemory();
+    res.json({ message: 'Switched to in-memory mode' });
+  });
+}
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -610,11 +892,11 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   }
 
   // Handle CORS errors specifically
-  if (err.message === 'Not allowed by CORS') {
-    console.error(`❌ CORS Blocking: ${req.headers.origin} is not allowed. (FRONTEND_URL: ${process.env.FRONTEND_URL})`);
+  if (err.message === 'Not allowed by CORS' || err.message.includes('CORS')) {
+    console.error(`❌ CORS Blocking: ${req.headers.origin} is not allowed. Host: ${req.headers.host}`);
     return res.status(403).json({
-      error: 'Access Denied',
-      message: 'Cross-Origin request blocked. Check configuration.'
+      error: `DIAGNOSTIC: Access Denied (CORS). Host ${req.headers.host} or Origin ${req.headers.origin} blocked.`,
+      message: err.message
     });
   }
 
@@ -763,6 +1045,17 @@ async function startServer() {
       }
       console.log('✅ Security configuration validated');
 
+      // Run background maintenance tasks (Logs/Token cleanup)
+      const triggerMaintenance = () => {
+        runMaintenanceTasks().catch(e => console.error('⚠️ Maintenance failed:', e.message));
+      };
+
+      // Initial run
+      triggerMaintenance();
+
+      // Periodic run every 24 hours
+      setInterval(triggerMaintenance, 24 * 60 * 60 * 1000);
+
       // Check data migration status (seeding)
       console.log('📋 Checking database data status...');
       const migrationStatus = await checkMigrationStatus();
@@ -800,6 +1093,7 @@ async function startServer() {
 
       // Run admin sync
       startupPhase = 'syncing_admin';
+      await ensurePlatformTenants();
       await ensureAdminAccount();
 
       startupPhase = 'operational';

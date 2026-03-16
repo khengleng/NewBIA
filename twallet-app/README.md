@@ -1,8 +1,14 @@
 <h1 align="center">
   <br>
+<<<<<<< HEAD
   <a href="https://blockchain.thoughtworks.cn/twallet/"><img src="./assets/images/t-wallet.png" alt="TWallet" width="200"></a>
   <br>
   TWallet
+=======
+  <img src="./assets/images/t-wallet.png" alt="Cambobia Mobile" width="200">
+  <br>
+  Cambobia Mobile
+>>>>>>> origin/codex/review-source-code-3e131v
   <br>
   <p align="center">
     <img src="https://img.shields.io/badge/contributions-welcome-orange.svg" alt="Contributions welcome">
@@ -11,6 +17,7 @@
   </p>
 </h1>
 
+<<<<<<< HEAD
 <h4 align="center">A leading-edge digital wallet (blockchain-based) project with a token named DC/EP and DID (Decentralized Identifiers) capability and a DApp browser.</h4>
 
 <p align="center">
@@ -18,6 +25,18 @@
 </p>
 
 ## TWallet's What-Is
+=======
+<h4 align="center">Native mobile companion for Cambobia investors and SME owners across the core platform and trading platform.</h4>
+
+## Cambobia Mobile
+
+### What It Includes
+
+- Account access for Cambobia platform users
+- Portfolio, holdings, and trading-linked wallet capabilities
+- SME owner mobile access for issuer-side workflows on cambobia.com
+- DApp browser support for Cambobia-linked web experiences
+>>>>>>> origin/codex/review-source-code-3e131v
 
 ### What Is A Digital Wallet
 
@@ -27,8 +46,11 @@
 
 ### What Is DID (Decentralized Identifiers)
 
+<<<<<<< HEAD
 <img width="400px" src="https://blockchain.thoughtworks.cn/wp-content/uploads/2020/06/ScreenCut_Identity.svg" align="right">
 
+=======
+>>>>>>> origin/codex/review-source-code-3e131v
 ***From wikipedia:***
 
 > Decentralized identifiers (DIDs) are a type of identifier that enables a verifiable, decentralized digital identity. They are based on the Self-sovereign identity paradigm. A DID identifies any subject (e.g., a person, organization, thing, data model, abstract entity, etc.) that the controller of the DID decides that it identifies. These identifiers are designed to enable the controller of a DID to prove control over it and to be implemented independently of any centralized registry, identity provider, or certificate authority. DIDs are URLs that associate a DID subject with a DID document allowing trustable interactions associated with that subject. Each DID document can express cryptographic material, verification methods, or service endpoints, which provide a set of mechanisms enabling a DID controller to prove control of the DID. Service endpoints enable trusted interactions associated with the DID subject. A DID document might contain semantics about the subject that it identifies. A DID document might contain the DID subject itself (e.g. a data model).
@@ -47,11 +69,19 @@
 
 ### How To Try The App
 
+<<<<<<< HEAD
 We don't plan to release this app to the app market at this stage. If you want to try directly, [you can apply here.](https://blockchain.thoughtworks.cn/twallet/)
 
 ### Welcome Feedbacks
 
 Please don't be stingy to give us feedback. You can go to [issues page](https://github.com/tw-bc-group/TWallet/issues) and submit with the existed labels or a new one. We will deal with it as soon as possible.
+=======
+Use the GitHub Actions build artifacts for internal testing, or install the native release builds that are generated for App Store / Play Store submission.
+
+### Welcome Feedbacks
+
+Submit issues and product feedback through this repository so the mobile app stays aligned with cambobia.com and trade.cambobia.com.
+>>>>>>> origin/codex/review-source-code-3e131v
 
 ## For Developers
 
@@ -85,6 +115,12 @@ this growing project.
 - Participate in a discussion and help in decision making
 - Send in a Pull Request :-)
 
+<<<<<<< HEAD
 ## Reminding
 
 <p style="color: darkred;">The codebase follows the BSD 3-Clause License. Please do not package and upload this code to the application market at will!</p>
+=======
+## Release note
+
+<p style="color: darkred;">Do not publish this app to the stores until Cambobia-owned signing keys, Firebase configs, and production credentials are provisioned.</p>
+>>>>>>> origin/codex/review-source-code-3e131v

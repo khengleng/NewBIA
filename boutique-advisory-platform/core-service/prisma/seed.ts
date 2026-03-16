@@ -33,12 +33,12 @@ async function main() {
         where: {
             tenantId_email: {
                 tenantId: 'default',
-                email: 'admin@boutique-advisory.com'
+                email: 'contact@cambobia.com'
             }
         },
         update: {},
         create: {
-            email: 'admin@boutique-advisory.com',
+            email: 'contact@cambobia.com',
             password: passwordHash,
             firstName: 'Admin',
             lastName: 'User',
@@ -53,12 +53,12 @@ async function main() {
         where: {
             tenantId_email: {
                 tenantId: 'default',
-                email: 'advisor@boutique-advisory.com'
+                email: 'advisor@cambobia.com'
             }
         },
         update: {},
         create: {
-            email: 'advisor@boutique-advisory.com',
+            email: 'advisor@cambobia.com',
             password: advisorHash,
             firstName: 'Expert',
             lastName: 'Advisor',
@@ -73,12 +73,12 @@ async function main() {
         where: {
             tenantId_email: {
                 tenantId: 'default',
-                email: 'investor@boutique-advisory.com'
+                email: 'investor@cambobia.com'
             }
         },
         update: {},
         create: {
-            email: 'investor@boutique-advisory.com',
+            email: 'investor@cambobia.com',
             password: investorHash,
             firstName: 'John',
             lastName: 'Smith',
@@ -93,12 +93,12 @@ async function main() {
         where: {
             tenantId_email: {
                 tenantId: 'default',
-                email: 'sme@boutique-advisory.com'
+                email: 'sme@cambobia.com'
             }
         },
         update: {},
         create: {
-            email: 'sme@boutique-advisory.com',
+            email: 'sme@cambobia.com',
             password: smeHash,
             firstName: 'TechCorp',
             lastName: 'Cambodia',
@@ -114,12 +114,12 @@ async function main() {
         where: {
             tenantId_email: {
                 tenantId: 'default',
-                email: 'investor2@boutique-advisory.com'
+                email: 'investor2@cambobia.com'
             }
         },
         update: {},
         create: {
-            email: 'investor2@boutique-advisory.com',
+            email: 'investor2@cambobia.com',
             password: investor2Hash,
             firstName: 'Sarah',
             lastName: 'Chen',
@@ -154,12 +154,12 @@ async function main() {
         where: {
             tenantId_email: {
                 tenantId: 'default',
-                email: 'sme2@boutique-advisory.com'
+                email: 'sme2@cambobia.com'
             }
         },
         update: {},
         create: {
-            email: 'sme2@boutique-advisory.com',
+            email: 'sme2@cambobia.com',
             password: sme2Hash,
             firstName: 'AgriSmart',
             lastName: 'Cambodia',
@@ -558,10 +558,10 @@ async function main() {
 
     console.log('\n🎉 Database seeding completed successfully!');
     console.log('\n📋 Login credentials:');
-    console.log(`   Admin:     admin@boutique-advisory.com / ${initialAdminPassword}`);
-    console.log('   Advisor:   advisor@boutique-advisory.com / advisor123');
-    console.log('   Investor:  investor@boutique-advisory.com / investor123');
-    console.log('   SME:       sme@boutique-advisory.com / sme123');
+    console.log(`   Admin:     contact@cambobia.com / ${initialAdminPassword}`);
+    console.log('   Advisor:   advisor@cambobia.com / advisor123');
+    console.log('   Investor:  investor@cambobia.com / investor123');
+    console.log('   SME:       sme@cambobia.com / sme123');
     console.log('\n📊 Seeded Data Summary:');
     console.log('   - 2 SMEs');
     console.log('   - 2 Investors');
@@ -580,4 +580,3 @@ main()
     .finally(async () => {
         await prisma.$disconnect();
     });
-

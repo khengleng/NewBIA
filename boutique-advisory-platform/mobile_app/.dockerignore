@@ -1,0 +1,18 @@
+# Docker ignore for Flutter Web
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.idea/
+.metadata
+# build/
+ios/
+android/
+linux/
+macos/
+windows/
+test/
+*.iml
+*.lock
+.gitignore
+# Dockerfile
+# .dockerignore

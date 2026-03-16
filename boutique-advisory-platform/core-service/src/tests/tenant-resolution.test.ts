@@ -44,7 +44,7 @@ test('Tenant resolution - production uses hostname and ignores x-tenant-id', () 
 });
 
 test('Tenant resolution - local/railway host falls back to default in production', () => {
-  withEnv({ NODE_ENV: 'production' }, () => {
+  withEnv({ NODE_ENV: 'production', CORE_TENANT_ID: 'default', TRADING_TENANT_ID: 'trade' }, () => {
     const railwayReq = {
       hostname: 'my-app.up.railway.app',
       headers: {},
@@ -56,6 +56,60 @@ test('Tenant resolution - local/railway host falls back to default in production
       headers: {},
     } as unknown as MinimalReq;
     assert.strictEqual(getTenantId(localhostReq as any), 'default');
+
+    const coreHostReq = {
+      hostname: 'www.cambobia.com',
+      headers: {},
+    } as unknown as MinimalReq;
+    assert.strictEqual(getTenantId(coreHostReq as any), 'default');
+
+    const tradingHostReq = {
+      hostname: 'trade.cambobia.com',
+      headers: {},
+    } as unknown as MinimalReq;
+    assert.strictEqual(getTenantId(tradingHostReq as any), 'trade');
+  });
+});
+
+test('Tenant resolution - forwarded host chain prefers public Cambobia host', () => {
+  withEnv({ NODE_ENV: 'production', CORE_TENANT_ID: 'default', TRADING_TENANT_ID: 'trade' }, () => {
+    const req = {
+      hostname: 'backend-production-9d40.up.railway.app',
+      headers: {
+        'x-forwarded-host': 'backend-production-9d40.up.railway.app, www.cambobia.com',
+        host: 'backend-production-9d40.up.railway.app',
+      },
+    } as unknown as MinimalReq;
+
+    assert.strictEqual(getTenantId(req as any), 'default');
+  });
+});
+
+test('Tenant resolution - forwarded host chain prefers public trading host', () => {
+  withEnv({ NODE_ENV: 'production', CORE_TENANT_ID: 'default', TRADING_TENANT_ID: 'trade' }, () => {
+    const req = {
+      hostname: 'trading-production.up.railway.app',
+      headers: {
+        'x-forwarded-host': 'trading-production.up.railway.app, trade.cambobia.com',
+        host: 'trading-production.up.railway.app',
+      },
+    } as unknown as MinimalReq;
+
+    assert.strictEqual(getTenantId(req as any), 'trade');
+  });
+});
+
+test('Tenant resolution - internal and IP hosts fall back to core tenant in production', () => {
+  withEnv({ NODE_ENV: 'production', CORE_TENANT_ID: 'default', TRADING_TENANT_ID: 'trade' }, () => {
+    const internalReq = {
+      hostname: '0.0.0.0',
+      headers: {
+        'x-forwarded-host': '0.0.0.0:8080',
+        host: 'backend.railway.internal:8080',
+      },
+    } as unknown as MinimalReq;
+
+    assert.strictEqual(getTenantId(internalReq as any), 'default');
   });
 });
 
@@ -67,5 +121,19 @@ test('Tenant resolution - development can use x-tenant-id override', () => {
     } as unknown as MinimalReq;
 
     assert.strictEqual(getTenantId(req as any), 'dev-tenant');
+  });
+});
+
+test('Tenant resolution - production ignores forged x-forwarded-host when host is public', () => {
+  withEnv({ NODE_ENV: 'production', CORE_TENANT_ID: 'default' }, () => {
+    const req = {
+      hostname: 'www.cambobia.com',
+      headers: {
+        host: 'www.cambobia.com',
+        'x-forwarded-host': 'attacker.cambobia.com',
+      },
+    } as unknown as MinimalReq;
+
+    assert.strictEqual(getTenantId(req as any), 'default');
   });
 });

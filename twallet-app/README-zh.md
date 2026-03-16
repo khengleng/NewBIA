@@ -1,8 +1,14 @@
 <h1 align="center">
   <br>
+<<<<<<< HEAD
   <a href="https://blockchain.thoughtworks.cn/twallet/"><img src="./assets/images/t-wallet.png" alt="TWallet" width="200"></a>
   <br>
   TWallet
+=======
+  <img src="./assets/images/t-wallet.png" alt="Cambobia Mobile" width="200">
+  <br>
+  Cambobia Mobile
+>>>>>>> origin/codex/review-source-code-3e131v
   <br>
   <p align="center">
     <img src="https://img.shields.io/badge/contributions-welcome-orange.svg" alt="Contributions welcome">
@@ -11,6 +17,7 @@
   </p>
 </h1>
 
+<<<<<<< HEAD
 <h4 align="center">一个基于区块链的行业领先的数字钱包项目，包含名为 DC/EP 的通证，具备 DID（去中心化身份）和 DApp 浏览器的功能。</h4>
 
 <p align="center">
@@ -18,6 +25,18 @@
 </p>
 
 ## TWallet 四问
+=======
+<h4 align="center">面向 Cambobia 投资人和 SME 业主的原生移动端应用，配合 cambobia.com 与 trade.cambobia.com 使用。</h4>
+
+## Cambobia Mobile 简介
+
+### 包含内容
+
+- Cambobia 平台账号访问
+- 投资组合、持仓与交易相关钱包能力
+- SME 业主在 cambobia.com 上的移动端发行人流程
+- 与 Cambobia 平台联动的 DApp 浏览能力
+>>>>>>> origin/codex/review-source-code-3e131v
 
 ### 什么是数字钱包？
 
@@ -27,8 +46,11 @@
 
 ### 什么是 DID (去中心化身份)？
 
+<<<<<<< HEAD
 <img width="400px" src="https://blockchain.thoughtworks.cn/wp-content/uploads/2020/06/ScreenCut_Identity.svg" align="right">
 
+=======
+>>>>>>> origin/codex/review-source-code-3e131v
 ***引用自维基百科:***
 
 > 去中心化身份 (DID) 是一种用来实现可验证的去中心化数字身份的标识符，它们基于自我主权身份规范。DID 可以标识任何主体（例如，人、组织、事物、数据模型、抽象实体等），这些标识旨在使 DID 的控制者能够证明对其的控制，并独立于任何集中式注册机构、身份提供者或证书颁发机构。DID 的表现形式是 URL，它将 DID 主题（Subject）与 DID 文档（Document）相关联以实现可信的交互方式。每个 DID 文档都含有加密内容、验证方式或服务端点，它们提供了一组机制，使 DID 控制器能够证明它拥有对该 DID 的控制权。服务端点可以与 DID 主题进行可信交互。DID 文档可能包含有关它所标识的主题的语义，也可能包含 DID 主题本身（例如数据模型）。
@@ -45,6 +67,7 @@
 
 ## 使用指南
 
+<<<<<<< HEAD
 ### 如何试用 TWallet
 
 现阶段，我们没有在各大应用市场上架该 App 的计划，如果你有兴趣，[请在此页面发起申请](https://blockchain.thoughtworks.cn/twallet/)。
@@ -52,6 +75,15 @@
 ### 反馈收集
 
 请不要吝啬你的任何反馈，你可以[到这个 issue 页面](https://github.com/tw-bc-group/TWallet/issues)提交 issue，记得带上一些 label 以帮助我们识别 issue 类型，我们会尽快处理。
+=======
+### 如何试用 Cambobia Mobile
+
+当前请使用 GitHub Actions 产出的安装包进行内部测试，正式版本会通过 App Store / Google Play 发布。
+
+### 反馈收集
+
+请通过当前仓库提交 issue 或产品反馈，确保移动端能力与 cambobia.com 和 trade.cambobia.com 保持一致。
+>>>>>>> origin/codex/review-source-code-3e131v
 
 ## 如何开发
 
@@ -65,7 +97,11 @@ Engine • revision 3efdf03e73
 Tools • Dart 2.18.0 • DevTools 2.15.0
 ```
 
+<<<<<<< HEAD
 2. 使用 `flutter doctor` 检查 `flutter` 环境，并查看是否有已经安装的模拟器可以运行 TWallet
+=======
+2. 使用 `flutter doctor` 检查 `flutter` 环境，并查看是否有已经安装的模拟器可以运行 Cambobia Mobile
+>>>>>>> origin/codex/review-source-code-3e131v
 
 3. `flutter pub get` 如果是第一次需要安装依赖
 
@@ -75,7 +111,11 @@ Tools • Dart 2.18.0 • DevTools 2.15.0
 
 ### 如何贡献
 
+<<<<<<< HEAD
 🎉🎉🎉 TWallet 项目欢迎你的加入！你可以通过以下方式参与进来，帮助我们一起贡献 TWallet：
+=======
+欢迎参与 Cambobia Mobile 的建设，你可以通过以下方式贡献：
+>>>>>>> origin/codex/review-source-code-3e131v
 
 - 负责一些带有特定标签的 issue 处理
 - 提出新功能或需要提高的地方的建议
@@ -86,4 +126,8 @@ Tools • Dart 2.18.0 • DevTools 2.15.0
 
 ## 注意事项
 
+<<<<<<< HEAD
 <p style="color: darkred;">该代码仓库遵循 BSD 3-Clause 许可，请不要随意打包上传此代码到应用市场！</p>
+=======
+<p style="color: darkred;">在 Cambobia 自有签名密钥、Firebase 配置和正式环境凭据就绪前，请不要将此应用发布到应用市场。</p>
+>>>>>>> origin/codex/review-source-code-3e131v

@@ -1,0 +1,31 @@
+name: Production Health Monitor
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check frontend
+        run: |
+          code=$(curl -sS -o /tmp/frontend.html -w "%{http_code}" https://www.cambobia.com/)
+          echo "frontend_status=$code"
+          test "$code" = "200"
+
+      - name: Check CSRF endpoint
+        run: |
+          code=$(curl -sS -o /tmp/csrf.json -w "%{http_code}" https://www.cambobia.com/api-proxy/api/csrf-token?t=$(date +%s))
+          echo "csrf_status=$code"
+          test "$code" = "200"
+          grep -q "csrfToken" /tmp/csrf.json
+
+      - name: Check backend health
+        run: |
+          code=$(curl -sS -o /tmp/health.json -w "%{http_code}" https://backend-production-9d40.up.railway.app/health)
+          echo "backend_health_status=$code"
+          test "$code" = "200"
+

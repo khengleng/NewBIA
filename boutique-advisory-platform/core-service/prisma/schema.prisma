@@ -13,142 +13,147 @@ datasource db {
 
 // Multi-tenant support
 model Tenant {
-  id          String   @id @default(cuid())
-  name        String
-  domain      String?  @unique
-  settings    Json     @default("{}")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  domain    String?  @unique
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  users       User[]
-  smes        SME[]
-  investors   Investor[]
-  advisors    Advisor[]
-  deals       Deal[]
-  workflows   Workflow[]
-  documents   Document[]
-  notifications Notification[]
-  pushSubscriptions PushSubscription[]
-  conversations Conversation[]
-  matches       Match[]
-  payments      Payment[]
-  subscriptions Subscription[]
-  invoices      Invoice[]
-  supportTickets SupportTicket[]
-  disputes      Dispute[]
-  cases         AdminCase[]
-  onboardingTemplates OnboardingTemplate[]
-  onboardingTasks OnboardingTask[]
-  roleChangeRequests RoleChangeRequest[]
-  temporaryRoleGrants TemporaryRoleGrant[]
-  advisorCapacities AdvisorCapacity[]
-  advisorAssignments AdvisorAssignment[]
-  advisorConflicts AdvisorConflictDeclaration[]
-  retentionRules DataRetentionRule[]
-  legalHolds LegalHold[]
-  reconciliationRuns ReconciliationRun[]
+  users                    User[]
+  smes                     SME[]
+  investors                Investor[]
+  advisors                 Advisor[]
+  deals                    Deal[]
+  workflows                Workflow[]
+  documents                Document[]
+  notifications            Notification[]
+  pushSubscriptions        PushSubscription[]
+  conversations            Conversation[]
+  matches                  Match[]
+  payments                 Payment[]
+  subscriptions            Subscription[]
+  invoices                 Invoice[]
+  supportTickets           SupportTicket[]
+  disputes                 Dispute[]
+  cases                    AdminCase[]
+  onboardingTemplates      OnboardingTemplate[]
+  onboardingTasks          OnboardingTask[]
+  roleChangeRequests       RoleChangeRequest[]
+  temporaryRoleGrants      TemporaryRoleGrant[]
+  advisorCapacities        AdvisorCapacity[]
+  advisorAssignments       AdvisorAssignment[]
+  advisorConflicts         AdvisorConflictDeclaration[]
+  retentionRules           DataRetentionRule[]
+  legalHolds               LegalHold[]
+  reconciliationRuns       ReconciliationRun[]
   reconciliationExceptions ReconciliationException[]
-  activityLogs  ActivityLog[]
+  activityLogs             ActivityLog[]
+  wallets                  Wallet[]
+  walletTransactions       WalletTransaction[]
+  LaunchpadOffering        LaunchpadOffering[]
+  LaunchpadCommitment      LaunchpadCommitment[]
 
   @@map("tenants")
 }
 
 // User management with multi-tenancy
 model User {
-  id          String   @id @default(cuid())
-  tenantId    String
-  email       String
-  password    String
-  firstName   String
-  lastName    String
-  role        UserRole
-  status      UserStatus @default(ACTIVE)
-  language    Language  @default(EN)
-  did         String?   // DID from existing infrastructure
+  id               String     @id @default(cuid())
+  tenantId         String
+  email            String
+  password         String
+  firstName        String
+  lastName         String
+  role             UserRole
+  status           UserStatus @default(ACTIVE)
+  language         Language   @default(EN)
+  did              String? // DID from existing infrastructure
   resetToken       String?
   resetTokenExpiry DateTime?
-  
+
   // Two-Factor Authentication
   twoFactorSecret      String?
-  twoFactorEnabled     Boolean   @default(false)
-  twoFactorBackupCodes String[]  @default([])
+  twoFactorEnabled     Boolean  @default(false)
+  twoFactorBackupCodes String[] @default([])
 
   // Email Verification
-  isEmailVerified      Boolean   @default(false)
-  verificationToken    String?
+  isEmailVerified         Boolean   @default(false)
+  verificationToken       String?
   verificationTokenExpiry DateTime?
-  preferences          Json      @default("{}")
+  preferences             Json      @default("{}")
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  sme         SME?     @relation("SMEUser")
-  investor    Investor? @relation("InvestorUser")
-  advisor     Advisor? @relation("AdvisorUser")
-  notifications Notification[]
-  pushSubscriptions PushSubscription[]
-  messageParticipants ConversationParticipant[]
-  sentMessages      Message[]
-  bookings          Booking[]
-  matchInterests    MatchInterest[]
-  payments          Payment[]
-  initiatedDisputes Dispute[] @relation("DisputeInitiator")
-  resolvedDisputes  Dispute[] @relation("DisputeResolver")
-  activityLogs      ActivityLog[]
-  agreementSignatures AgreementSigner[]
-  requestedSupportTickets SupportTicket[] @relation("TicketRequester")
-  assignedSupportTickets SupportTicket[] @relation("TicketAssignee")
-  requestedCases         AdminCase[]     @relation("CaseRequester")
-  assignedCases          AdminCase[]     @relation("CaseAssignee")
-  createdCases           AdminCase[]     @relation("CaseCreator")
-  caseEvents             AdminCaseEvent[] @relation("CaseEventActor")
-  onboardingTemplates    OnboardingTemplate[] @relation("OnboardingTemplateCreator")
-  onboardingTasks        OnboardingTask[] @relation("OnboardingTaskUser")
-  assignedOnboardingTasks OnboardingTask[] @relation("OnboardingTaskAssignee")
-  requestedRoleChanges   RoleChangeRequest[] @relation("RoleChangeRequester")
-  reviewedRoleChanges    RoleChangeRequest[] @relation("RoleChangeReviewer")
-  roleGrants             TemporaryRoleGrant[] @relation("RoleGrantTarget")
-  grantedRolePrivileges  TemporaryRoleGrant[] @relation("RoleGrantIssuer")
-  advisorAssignmentCreator AdvisorAssignment[] @relation("AdvisorAssignmentCreator")
-  advisorConflictReviewer AdvisorConflictDeclaration[] @relation("AdvisorConflictReviewer")
-  createdLegalHolds LegalHold[] @relation("LegalHoldCreator")
-  releasedLegalHolds LegalHold[] @relation("LegalHoldReleaser")
-  createdReconciliationRuns ReconciliationRun[] @relation("ReconciliationRunCreator")
-  assignedReconciliationExceptions ReconciliationException[] @relation("ReconciliationExceptionAssignee")
-  invoices      Invoice[] @relation("InvoiceCustomer")
+  tenant                           Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sme                              SME?                         @relation("SMEUser")
+  investor                         Investor?                    @relation("InvestorUser")
+  advisor                          Advisor?                     @relation("AdvisorUser")
+  notifications                    Notification[]
+  pushSubscriptions                PushSubscription[]
+  messageParticipants              ConversationParticipant[]
+  sentMessages                     Message[]
+  bookings                         Booking[]
+  matchInterests                   MatchInterest[]
+  payments                         Payment[]
+  initiatedDisputes                Dispute[]                    @relation("DisputeInitiator")
+  resolvedDisputes                 Dispute[]                    @relation("DisputeResolver")
+  activityLogs                     ActivityLog[]
+  agreementSignatures              AgreementSigner[]
+  requestedSupportTickets          SupportTicket[]              @relation("TicketRequester")
+  assignedSupportTickets           SupportTicket[]              @relation("TicketAssignee")
+  requestedCases                   AdminCase[]                  @relation("CaseRequester")
+  assignedCases                    AdminCase[]                  @relation("CaseAssignee")
+  createdCases                     AdminCase[]                  @relation("CaseCreator")
+  caseEvents                       AdminCaseEvent[]             @relation("CaseEventActor")
+  onboardingTemplates              OnboardingTemplate[]         @relation("OnboardingTemplateCreator")
+  onboardingTasks                  OnboardingTask[]             @relation("OnboardingTaskUser")
+  assignedOnboardingTasks          OnboardingTask[]             @relation("OnboardingTaskAssignee")
+  requestedRoleChanges             RoleChangeRequest[]          @relation("RoleChangeRequester")
+  reviewedRoleChanges              RoleChangeRequest[]          @relation("RoleChangeReviewer")
+  roleGrants                       TemporaryRoleGrant[]         @relation("RoleGrantTarget")
+  grantedRolePrivileges            TemporaryRoleGrant[]         @relation("RoleGrantIssuer")
+  advisorAssignmentCreator         AdvisorAssignment[]          @relation("AdvisorAssignmentCreator")
+  advisorConflictReviewer          AdvisorConflictDeclaration[] @relation("AdvisorConflictReviewer")
+  createdLegalHolds                LegalHold[]                  @relation("LegalHoldCreator")
+  releasedLegalHolds               LegalHold[]                  @relation("LegalHoldReleaser")
+  createdReconciliationRuns        ReconciliationRun[]          @relation("ReconciliationRunCreator")
+  assignedReconciliationExceptions ReconciliationException[]    @relation("ReconciliationExceptionAssignee")
+  invoices                         Invoice[]                    @relation("InvoiceCustomer")
 
-  refreshTokens     RefreshToken[]
+  wallet        Wallet?
+  refreshTokens RefreshToken[]
 
   @@unique([tenantId, email])
   @@map("users")
 }
 
 model RefreshToken {
-  id          String   @id @default(cuid())
-  token       String   @unique
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt   DateTime
-  revoked     Boolean  @default(false)
+  id              String   @id @default(cuid())
+  token           String   @unique
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt       DateTime
+  revoked         Boolean  @default(false)
   replacedByToken String?
-  ipAddress   String?
-  userAgent   String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt // Added updateddAt for good measure
+  ipAddress       String?
+  userAgent       String?
 
-  @@map("refresh_tokens")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // Added updateddAt for good measure
+
   @@index([userId])
+  @@map("refresh_tokens")
 }
 
 // SME Module
 model SME {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   tenantId          String
-  userId            String   @unique
+  userId            String    @unique
   name              String
   sector            String
   stage             SMEStage
@@ -156,82 +161,83 @@ model SME {
   description       String?
   website           String?
   location          String?
-  score             Float?   @default(0)
-  certified         Boolean  @default(false)
+  score             Float?    @default(0)
+  certified         Boolean   @default(false)
   certificationDate DateTime?
   status            SMEStatus @default(DRAFT)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   // Relations
-  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user              User     @relation("SMEUser", fields: [userId], references: [id], onDelete: Cascade)
-  documents         Document[]
-  deals             Deal[]
-  certifications    Certification[]
-  workflows         Workflow[]
-  dueDiligences     DueDiligence[]  // New: Due diligence assessments
-  matches           Match[]
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user           User            @relation("SMEUser", fields: [userId], references: [id], onDelete: Cascade)
+  documents      Document[]
+  deals          Deal[]
+  certifications Certification[]
+  workflows      Workflow[]
+  dueDiligences  DueDiligence[] // New: Due diligence assessments
+  matches        Match[]
 
   @@map("smes")
 }
 
 // Investor Module
 model Investor {
-  id              String   @id @default(cuid())
-  tenantId        String
-  userId          String   @unique
-  name            String
-  type            InvestorType
-  kycStatus       KYCStatus @default(PENDING)
-  status          InvestorStatus @default(ACTIVE)
-  preferences     Json     @default("{}")
-  portfolio       Json     @default("[]")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id          String         @id @default(cuid())
+  tenantId    String
+  userId      String         @unique
+  name        String
+  type        InvestorType
+  kycStatus   KYCStatus      @default(PENDING)
+  status      InvestorStatus @default(ACTIVE)
+  preferences Json           @default("{}")
+  portfolio   Json           @default("[]")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   // Relations
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user            User     @relation("InvestorUser", fields: [userId], references: [id], onDelete: Cascade)
-  dealInvestments DealInvestor[]
-  workflows       Workflow[]
-  leadSyndicates  Syndicate[]       @relation("LeadInvestor")  // New: Syndicates led
-  syndicateMemberships SyndicateMember[]  // New: Syndicate memberships
+  tenant               Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                 User               @relation("InvestorUser", fields: [userId], references: [id], onDelete: Cascade)
+  dealInvestments      DealInvestor[]
+  workflows            Workflow[]
+  leadSyndicates       Syndicate[]        @relation("LeadInvestor") // New: Syndicates led
+  syndicateMemberships SyndicateMember[] // New: Syndicate memberships
   secondaryListings    SecondaryListing[] @relation("ListingSeller")
-  tradesAsBuyer        SecondaryTrade[] @relation("TradeBuyer")
-  tradesAsSeller       SecondaryTrade[] @relation("TradeSeller")
+  tradesAsBuyer        SecondaryTrade[]   @relation("TradeBuyer")
+  tradesAsSeller       SecondaryTrade[]   @relation("TradeSeller")
   matches              Match[]
-  
+
   // Token Trading
-  tokenListings        SyndicateTokenListing[]
-  tokenTradesAsBuyer   SyndicateTokenTrade[] @relation("TokenTradeBuyer")
-  tokenTradesAsSeller  SyndicateTokenTrade[] @relation("TokenTradeSeller")
+  tokenListings       SyndicateTokenListing[]
+  tokenTradesAsBuyer  SyndicateTokenTrade[]   @relation("TokenTradeBuyer")
+  tokenTradesAsSeller SyndicateTokenTrade[]   @relation("TokenTradeSeller")
+  LaunchpadCommitment LaunchpadCommitment[]
 
   @@map("investors")
 }
 
 // Advisor Module
 model Advisor {
-  id              String   @id @default(cuid())
-  tenantId        String
-  userId          String   @unique
-  name            String
-  specialization  String[]
+  id                String        @id @default(cuid())
+  tenantId          String
+  userId            String        @unique
+  name              String
+  specialization    String[]
   certificationList String[]
-  status          AdvisorStatus @default(ACTIVE)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  status            AdvisorStatus @default(ACTIVE)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   // Relations
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user            User     @relation("AdvisorUser", fields: [userId], references: [id], onDelete: Cascade)
-  certifications  Certification[]
-  workflows       Workflow[]
-  dueDiligences   DueDiligence[]  // New: Due diligence conducted
-  services        AdvisoryService[]
-  bookings        Booking[]
-  capacities      AdvisorCapacity[]
-  assignments     AdvisorAssignment[]
+  tenant               Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user                 User                         @relation("AdvisorUser", fields: [userId], references: [id], onDelete: Cascade)
+  certifications       Certification[]
+  workflows            Workflow[]
+  dueDiligences        DueDiligence[] // New: Due diligence conducted
+  services             AdvisoryService[]
+  bookings             Booking[]
+  capacities           AdvisorCapacity[]
+  assignments          AdvisorAssignment[]
   conflictDeclarations AdvisorConflictDeclaration[]
 
   @@map("advisors")
@@ -239,52 +245,53 @@ model Advisor {
 
 // Deal Room / Matchmaking
 model Deal {
-  id              String   @id @default(cuid())
-  tenantId        String
-  smeId           String
-  title           String
-  description     String?
-  amount          Float
-  equity          Float?
-  status          DealStatus @default(DRAFT)
-  successFee      Float?
-  terms           String?
+  id               String     @id @default(cuid())
+  tenantId         String
+  smeId            String
+  title            String
+  description      String?
+  amount           Float
+  equity           Float?
+  status           DealStatus @default(DRAFT)
+  successFee       Float?
+  terms            String?
   isDocumentLocked Boolean    @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   // Relations
-  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  sme             SME      @relation(fields: [smeId], references: [id], onDelete: Cascade)
-  investors       DealInvestor[]
-  documents       Document[]
-  workflows       Workflow[]
-  syndicates      Syndicate[]  // New: Syndicates for this deal
-  conversations   Conversation[]
-  disputes        Dispute[]
+  tenant            Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sme               SME                          @relation(fields: [smeId], references: [id], onDelete: Cascade)
+  investors         DealInvestor[]
+  documents         Document[]
+  workflows         Workflow[]
+  syndicates        Syndicate[] // New: Syndicates for this deal
+  conversations     Conversation[]
+  disputes          Dispute[]
   dueDiligenceItems DueDiligenceItem[]
-  escrowAccount   EscrowAccount?
-  agreements      Agreement[]
-  advisorConflicts AdvisorConflictDeclaration[]
+  escrowAccount     EscrowAccount?
+  agreements        Agreement[]
+  advisorConflicts  AdvisorConflictDeclaration[]
+  launchpadOffering LaunchpadOffering?
 
   @@map("deals")
 }
 
 // Many-to-many relationship between Deal and Investor
 model DealInvestor {
-  id          String   @id @default(cuid())
-  dealId      String
-  investorId  String
-  amount      Float
-  status      InvestmentStatus @default(PENDING)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String           @id @default(cuid())
+  dealId     String
+  investorId String
+  amount     Float
+  status     InvestmentStatus @default(PENDING)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   // Relations
-  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  investor    Investor @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  deal              Deal               @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  investor          Investor           @relation(fields: [investorId], references: [id], onDelete: Cascade)
   secondaryListings SecondaryListing[]
-  payments      Payment[]
+  payments          Payment[]
 
   @@unique([dealId, investorId])
   @@map("deal_investors")
@@ -292,70 +299,70 @@ model DealInvestor {
 
 // Document Management
 model Document {
-  id          String   @id @default(cuid())
-  tenantId    String
-  name        String
-  type        DocumentType
-  url         String
-  size        Int
-  mimeType    String
-  smeId       String?
-  dealId      String?
-  uploadedBy  String
-  
+  id         String       @id @default(cuid())
+  tenantId   String
+  name       String
+  type       DocumentType
+  url        String
+  size       Int
+  mimeType   String
+  smeId      String?
+  dealId     String?
+  uploadedBy String
+
   accessLevel AccessLevel @default(QUALIFIED)
   isLocked    Boolean     @default(false)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  sme         SME?     @relation(fields: [smeId], references: [id], onDelete: Cascade)
-  deal        Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sme    SME?   @relation(fields: [smeId], references: [id], onDelete: Cascade)
+  deal   Deal?  @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
   @@map("documents")
 }
 
 // Certification Workflow
 model Certification {
-  id          String   @id @default(cuid())
-  smeId       String
-  advisorId   String
-  status      CertificationStatus @default(PENDING)
-  score       Float?
-  comments    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String              @id @default(cuid())
+  smeId     String
+  advisorId String
+  status    CertificationStatus @default(PENDING)
+  score     Float?
+  comments  String?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
 
   // Relations
-  sme         SME      @relation(fields: [smeId], references: [id], onDelete: Cascade)
-  advisor     Advisor  @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  sme     SME     @relation(fields: [smeId], references: [id], onDelete: Cascade)
+  advisor Advisor @relation(fields: [advisorId], references: [id], onDelete: Cascade)
 
   @@map("certifications")
 }
 
 // Workflow Management (integrated with DID workflow engine)
 model Workflow {
-  id          String   @id @default(cuid())
-  tenantId    String
-  type        WorkflowType
-  status      WorkflowStatus @default(PENDING)
-  data        Json     @default("{}")
-  smeId       String?
-  investorId  String?
-  advisorId   String?
-  dealId      String?
+  id            String         @id @default(cuid())
+  tenantId      String
+  type          WorkflowType
+  status        WorkflowStatus @default(PENDING)
+  data          Json           @default("{}")
+  smeId         String?
+  investorId    String?
+  advisorId     String?
+  dealId        String?
   didWorkflowId String? // Reference to DID workflow engine
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   // Relations
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  sme         SME?     @relation(fields: [smeId], references: [id], onDelete: Cascade)
-  investor    Investor? @relation(fields: [investorId], references: [id], onDelete: Cascade)
-  advisor     Advisor? @relation(fields: [advisorId], references: [id], onDelete: Cascade)
-  deal        Deal?    @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sme      SME?      @relation(fields: [smeId], references: [id], onDelete: Cascade)
+  investor Investor? @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  advisor  Advisor?  @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  deal     Deal?     @relation(fields: [dealId], references: [id], onDelete: Cascade)
 
   @@map("workflows")
 }
@@ -364,262 +371,262 @@ model Workflow {
 
 // Investor Syndicate (like AngelList)
 model Syndicate {
-  id              String   @id @default(cuid())
-  tenantId        String
-  name            String
-  description     String?
-  leadInvestorId  String
-  targetAmount    Float
-  minInvestment   Float    @default(1000)
-  maxInvestment   Float?
-  managementFee   Float    @default(2.0)  // Percentage
-  carryFee        Float    @default(20.0) // Percentage of profits
-  
-  // Tokenization
-  isTokenized     Boolean  @default(false)
-  tokenName       String?
-  tokenSymbol     String?
-  pricePerToken   Float?
-  totalTokens     Float?
-  tokensSold      Float    @default(0)
+  id             String  @id @default(cuid())
+  tenantId       String
+  name           String
+  description    String?
+  leadInvestorId String
+  targetAmount   Float
+  minInvestment  Float   @default(1000)
+  maxInvestment  Float?
+  managementFee  Float   @default(2.0) // Percentage
+  carryFee       Float   @default(20.0) // Percentage of profits
 
-  status          SyndicateStatus @default(FORMING)
-  dealId          String?
-  closingDate     DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  // Tokenization
+  isTokenized   Boolean @default(false)
+  tokenName     String?
+  tokenSymbol   String?
+  pricePerToken Float?
+  totalTokens   Float?
+  tokensSold    Float   @default(0)
+
+  status      SyndicateStatus @default(FORMING)
+  dealId      String?
+  closingDate DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   // Relations
-  leadInvestor    Investor @relation("LeadInvestor", fields: [leadInvestorId], references: [id])
-  deal            Deal?    @relation(fields: [dealId], references: [id])
-  members         SyndicateMember[]
-  tokenListings   SyndicateTokenListing[]
+  leadInvestor  Investor                @relation("LeadInvestor", fields: [leadInvestorId], references: [id])
+  deal          Deal?                   @relation(fields: [dealId], references: [id])
+  members       SyndicateMember[]
+  tokenListings SyndicateTokenListing[]
 
   @@map("syndicates")
 }
 
 model SyndicateMember {
-  id            String   @id @default(cuid())
-  syndicateId   String
-  investorId    String
-  amount        Float
-  tokens        Float?   @default(0) // Number of tokens owned
-  status        SyndicateMemberStatus @default(PENDING)
-  joinedAt      DateTime @default(now())
-  
+  id          String                @id @default(cuid())
+  syndicateId String
+  investorId  String
+  amount      Float
+  tokens      Float?                @default(0) // Number of tokens owned
+  status      SyndicateMemberStatus @default(PENDING)
+  joinedAt    DateTime              @default(now())
+
   // Relations
-  syndicate     Syndicate @relation(fields: [syndicateId], references: [id], onDelete: Cascade)
-  investor      Investor  @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  syndicate Syndicate @relation(fields: [syndicateId], references: [id], onDelete: Cascade)
+  investor  Investor  @relation(fields: [investorId], references: [id], onDelete: Cascade)
 
   @@unique([syndicateId, investorId])
   @@map("syndicate_members")
 }
 
 model SyndicateTokenListing {
-  id              String   @id @default(cuid())
-  syndicateId     String
-  sellerId        String   
-  
+  id          String @id @default(cuid())
+  syndicateId String
+  sellerId    String
+
   tokensAvailable Float
   pricePerToken   Float
-  minTokens       Float    @default(1)
-  
-  status          ListingStatus @default(ACTIVE)
-  listedAt        DateTime @default(now())
-  expiresAt       DateTime?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  minTokens       Float @default(1)
+
+  status    ListingStatus @default(ACTIVE)
+  listedAt  DateTime      @default(now())
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  syndicate       Syndicate @relation(fields: [syndicateId], references: [id])
-  seller          Investor  @relation(fields: [sellerId], references: [id])
-  trades          SyndicateTokenTrade[]
+  syndicate Syndicate             @relation(fields: [syndicateId], references: [id])
+  seller    Investor              @relation(fields: [sellerId], references: [id])
+  trades    SyndicateTokenTrade[]
 
   @@map("syndicate_token_listings")
 }
 
 model SyndicateTokenTrade {
-  id              String   @id @default(cuid())
-  listingId       String
-  buyerId         String
-  sellerId        String
-  
-  tokens          Float
-  pricePerToken   Float
-  totalAmount     Float
-  fee             Float    @default(0)
-  
-  status          TradeStatus @default(PENDING)
-  executedAt      DateTime?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
+  id        String @id @default(cuid())
+  listingId String
+  buyerId   String
+  sellerId  String
+
+  tokens        Float
+  pricePerToken Float
+  totalAmount   Float
+  fee           Float @default(0)
+
+  status     TradeStatus @default(PENDING)
+  executedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   // Relations
-  listing         SyndicateTokenListing @relation(fields: [listingId], references: [id])
-  buyer           Investor              @relation("TokenTradeBuyer", fields: [buyerId], references: [id])
-  seller          Investor              @relation("TokenTradeSeller", fields: [sellerId], references: [id])
+  listing SyndicateTokenListing @relation(fields: [listingId], references: [id])
+  buyer   Investor              @relation("TokenTradeBuyer", fields: [buyerId], references: [id])
+  seller  Investor              @relation("TokenTradeSeller", fields: [sellerId], references: [id])
 
   @@map("syndicate_token_trades")
 }
 
 // Due Diligence Scoring (like OurCrowd)
 model DueDiligence {
-  id              String   @id @default(cuid())
-  smeId           String
-  advisorId       String?
-  
+  id        String  @id @default(cuid())
+  smeId     String
+  advisorId String?
+
   // Scoring Categories (0-100)
-  financialScore      Float    @default(0)
-  teamScore           Float    @default(0)
-  marketScore         Float    @default(0)
-  productScore        Float    @default(0)
-  legalScore          Float    @default(0)
-  operationalScore    Float    @default(0)
-  
+  financialScore   Float @default(0)
+  teamScore        Float @default(0)
+  marketScore      Float @default(0)
+  productScore     Float @default(0)
+  legalScore       Float @default(0)
+  operationalScore Float @default(0)
+
   // Overall calculated score
-  overallScore        Float    @default(0)
-  riskLevel           RiskLevel @default(MEDIUM)
-  
+  overallScore Float     @default(0)
+  riskLevel    RiskLevel @default(MEDIUM)
+
   // Detailed assessments
-  strengths           String[]
-  weaknesses          String[]
-  recommendations     String[]
-  redFlags            String[]
-  
-  status              AssessmentStatus @default(PENDING)
-  completedAt         DateTime?
-  expiresAt           DateTime?
-  
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  strengths       String[]
+  weaknesses      String[]
+  recommendations String[]
+  redFlags        String[]
+
+  status      AssessmentStatus @default(PENDING)
+  completedAt DateTime?
+  expiresAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  sme                 SME      @relation(fields: [smeId], references: [id], onDelete: Cascade)
-  advisor             Advisor? @relation(fields: [advisorId], references: [id])
+  sme     SME      @relation(fields: [smeId], references: [id], onDelete: Cascade)
+  advisor Advisor? @relation(fields: [advisorId], references: [id])
 
   @@map("due_diligences")
 }
 
 // Community Features (like Wefunder)
 model CommunityPost {
-  id              String   @id @default(cuid())
-  tenantId        String
-  authorId        String
-  title           String
-  content         String
-  category        PostCategory @default(GENERAL)
-  
+  id       String       @id @default(cuid())
+  tenantId String
+  authorId String
+  title    String
+  content  String
+  category PostCategory @default(GENERAL)
+
   // Related entities (optional)
-  smeId           String?
-  dealId          String?
-  syndicateId     String?
-  
+  smeId       String?
+  dealId      String?
+  syndicateId String?
+
   // Engagement
-  likes           Int      @default(0)
-  views           Int      @default(0)
-  isPinned        Boolean  @default(false)
-  isAnnouncement  Boolean  @default(false)
-  
-  status          PostStatus @default(PUBLISHED)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  likes          Int     @default(0)
+  views          Int     @default(0)
+  isPinned       Boolean @default(false)
+  isAnnouncement Boolean @default(false)
+
+  status    PostStatus @default(PUBLISHED)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   // Relations
-  comments        Comment[]
+  comments Comment[]
 
   @@map("community_posts")
 }
 
 model Comment {
-  id              String   @id @default(cuid())
-  postId          String
-  authorId        String
-  content         String
-  parentId        String?  // For nested comments
-  likes           Int      @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id        String   @id @default(cuid())
+  postId    String
+  authorId  String
+  content   String
+  parentId  String? // For nested comments
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  post            CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  parent          Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
-  replies         Comment[]     @relation("CommentReplies")
+  post    CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent  Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[]     @relation("CommentReplies")
 
   @@map("comments")
 }
 
 // Secondary Trading (like StartEngine)
 model SecondaryListing {
-  id              String   @id @default(cuid())
-  tenantId        String
-  sellerId        String
-  dealInvestorId  String   // Original investment
-  
+  id             String @id @default(cuid())
+  tenantId       String
+  sellerId       String
+  dealInvestorId String // Original investment
+
   // Listing details
   sharesAvailable Float
   pricePerShare   Float
-  minPurchase     Float    @default(1)
-  
-  status          ListingStatus @default(ACTIVE)
-  listedAt        DateTime @default(now())
-  expiresAt       DateTime?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  minPurchase     Float @default(1)
+
+  status    ListingStatus @default(ACTIVE)
+  listedAt  DateTime      @default(now())
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  seller          Investor      @relation("ListingSeller", fields: [sellerId], references: [id])
-  dealInvestor    DealInvestor  @relation(fields: [dealInvestorId], references: [id])
-  trades          SecondaryTrade[]
+  seller       Investor         @relation("ListingSeller", fields: [sellerId], references: [id])
+  dealInvestor DealInvestor     @relation(fields: [dealInvestorId], references: [id])
+  trades       SecondaryTrade[]
 
   @@map("secondary_listings")
 }
 
 // Escrow System
 model EscrowAccount {
-  id              String   @id @default(cuid())
-  dealId          String   @unique
-  tenantId        String
-  
-  balance         Float    @default(0)
-  currency        String   @default("USD")
-  status          EscrowStatus @default(OPEN)
-  
-  bankName        String?
-  accountNumber   String?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  deal            Deal     @relation(fields: [dealId], references: [id])
-  transactions    EscrowTransaction[]
+  id       String @id @default(cuid())
+  dealId   String @unique
+  tenantId String
+
+  balance  Float        @default(0)
+  currency String       @default("USD")
+  status   EscrowStatus @default(OPEN)
+
+  bankName      String?
+  accountNumber String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deal         Deal                @relation(fields: [dealId], references: [id])
+  transactions EscrowTransaction[]
 
   @@map("escrow_accounts")
 }
 
 model EscrowTransaction {
-  id              String   @id @default(cuid())
+  id              String @id @default(cuid())
   escrowAccountId String
   tenantId        String
-  
-  amount          Float
-  currency        String   @default("USD")
-  type            EscrowTransactionType
-  status          TransactionStatus @default(PENDING)
-  
-  reference       String?  // External reference (e.g. Stripe ID, Bank Tx ID)
-  description     String?
-  
-  requestedBy     String   // User ID
-  approvedBy      String?  // User ID (for release/refund)
-  approvedAt      DateTime?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  escrowAccount   EscrowAccount @relation(fields: [escrowAccountId], references: [id])
+
+  amount   Float
+  currency String                @default("USD")
+  type     EscrowTransactionType
+  status   TransactionStatus     @default(PENDING)
+
+  reference   String? // External reference (e.g. Stripe ID, Bank Tx ID)
+  description String?
+
+  requestedBy String // User ID
+  approvedBy  String? // User ID (for release/refund)
+  approvedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  escrowAccount EscrowAccount @relation(fields: [escrowAccountId], references: [id])
 
   @@map("escrow_transactions")
 }
@@ -648,41 +655,41 @@ enum TransactionStatus {
 
 // Digital Signatures / Contracts
 model Agreement {
-  id          String   @id @default(cuid())
-  dealId      String
-  tenantId    String
-  title       String
-  content     String   @db.Text // HTML/Markdown contract content
-  status      AgreementStatus @default(DRAFT)
-  version     Int      @default(1)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  deal        Deal     @relation(fields: [dealId], references: [id])
-  signers     AgreementSigner[]
+  id       String          @id @default(cuid())
+  dealId   String
+  tenantId String
+  title    String
+  content  String          @db.Text // HTML/Markdown contract content
+  status   AgreementStatus @default(DRAFT)
+  version  Int             @default(1)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deal    Deal              @relation(fields: [dealId], references: [id])
+  signers AgreementSigner[]
 
   @@map("agreements")
 }
 
 model AgreementSigner {
-  id          String   @id @default(cuid())
+  id          String @id @default(cuid())
   agreementId String
   userId      String
-  
-  role        String   // e.g., "SME", "INVESTOR", "WITNESS"
-  status      SigningStatus @default(PENDING)
-  
-  signedAt    DateTime?
-  signature   String?  // Base64 Signature Image or Text
-  ipAddress   String?  // Security Audit
-  userAgent   String?  // Security Audit
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  agreement   Agreement @relation(fields: [agreementId], references: [id])
-  user        User      @relation(fields: [userId], references: [id])
+
+  role   String // e.g., "SME", "INVESTOR", "WITNESS"
+  status SigningStatus @default(PENDING)
+
+  signedAt  DateTime?
+  signature String? // Base64 Signature Image or Text
+  ipAddress String? // Security Audit
+  userAgent String? // Security Audit
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  agreement Agreement @relation(fields: [agreementId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
 
   @@unique([agreementId, userId]) // One signature per user per agreement
   @@map("agreement_signers")
@@ -703,24 +710,24 @@ enum SigningStatus {
 
 // Due Diligence Checklist
 model DueDiligenceItem {
-  id          String   @id @default(cuid())
-  tenantId    String
-  dealId      String
+  id       String @id @default(cuid())
+  tenantId String
+  dealId   String
 
   task        String
   description String?
   status      ChecklistStatus @default(PENDING)
-  assignedTo  String? 
+  assignedTo  String?
 
   completedBy String?
   completedAt DateTime?
 
-  order       Int      @default(0)
+  order Int @default(0)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  deal        Deal     @relation(fields: [dealId], references: [id])
+  deal Deal @relation(fields: [dealId], references: [id])
 
   @@map("deal_checklist_items")
 }
@@ -733,46 +740,46 @@ enum ChecklistStatus {
 }
 
 model SecondaryTrade {
-  id              String   @id @default(cuid())
-  listingId       String
-  buyerId         String
-  sellerId        String
-  
-  shares          Float
-  pricePerShare   Float
-  totalAmount     Float
-  fee             Float    @default(0) // Platform fee
-  
-  status          TradeStatus @default(PENDING)
-  executedAt      DateTime?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id        String @id @default(cuid())
+  listingId String
+  buyerId   String
+  sellerId  String
+
+  shares        Float
+  pricePerShare Float
+  totalAmount   Float
+  fee           Float @default(0) // Platform fee
+
+  status     TradeStatus @default(PENDING)
+  executedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  listing         SecondaryListing @relation(fields: [listingId], references: [id])
-  buyer           Investor         @relation("TradeBuyer", fields: [buyerId], references: [id])
-  seller          Investor         @relation("TradeSeller", fields: [sellerId], references: [id])
+  listing SecondaryListing @relation(fields: [listingId], references: [id])
+  buyer   Investor         @relation("TradeBuyer", fields: [buyerId], references: [id])
+  seller  Investor         @relation("TradeSeller", fields: [sellerId], references: [id])
 
   @@map("secondary_trades")
 }
 
 // Notification System
 model Notification {
-  id          String           @id @default(cuid())
-  tenantId    String
-  userId      String
-  type        NotificationType
-  title       String
-  message     String
-  read        Boolean          @default(false)
-  actionUrl   String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id        String           @id @default(cuid())
+  tenantId  String
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  actionUrl String?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 
   // Relations
-  tenant      Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
@@ -783,13 +790,18 @@ enum UserRole {
   INVESTOR
   ADVISOR
   ADMIN
-  SUPER_ADMIN  // System operator with full system access
-  SUPPORT      // Helpdesk support with read-only access
+  FINOPS
+  CX
+  AUDITOR
+  COMPLIANCE
+  SUPER_ADMIN // System operator with full system access
+  SUPPORT // Helpdesk support with read-only access
 }
 
 enum UserStatus {
   ACTIVE
   INACTIVE
+  PENDING
   SUSPENDED
   DELETED
 }
@@ -850,6 +862,12 @@ enum DealStatus {
   PUBLISHED
   NEGOTIATION
   DUE_DILIGENCE
+  APPROVED_FOR_LISTING
+  LAUNCHPAD_PREP
+  LAUNCHPAD_ACTIVE
+  ALLOCATION
+  DISTRIBUTED
+  SECONDARY_TRADING
   FUNDED
   CLOSED
   CANCELLED
@@ -910,24 +928,24 @@ enum SyndicateMemberStatus {
 }
 
 model Dispute {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   tenantId    String
   dealId      String
   initiatorId String
   resolverId  String?
-  
+
   reason      String
   description String
   status      DisputeStatus @default(OPEN)
   resolution  String?
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
 
-  deal        Deal     @relation(fields: [dealId], references: [id])
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  initiator   User     @relation("DisputeInitiator", fields: [initiatorId], references: [id])
-  resolver    User?    @relation("DisputeResolver", fields: [resolverId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deal      Deal   @relation(fields: [dealId], references: [id])
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  initiator User   @relation("DisputeInitiator", fields: [initiatorId], references: [id])
+  resolver  User?  @relation("DisputeResolver", fields: [resolverId], references: [id])
 
   @@map("disputes")
 }
@@ -1004,13 +1022,13 @@ enum NotificationType {
 // ==================== MESSAGING SYSTEM ====================
 
 model Conversation {
-  id        String   @id @default(cuid())
-  tenantId  String
-  dealId    String?
-  
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  deal      Deal?    @relation(fields: [dealId], references: [id])
-  messages  Message[]
+  id       String  @id @default(cuid())
+  tenantId String
+  dealId   String?
+
+  tenant       Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deal         Deal?                     @relation(fields: [dealId], references: [id])
+  messages     Message[]
   participants ConversationParticipant[]
 
   createdAt DateTime @default(now())
@@ -1020,34 +1038,34 @@ model Conversation {
 }
 
 model ConversationParticipant {
-  id             String       @id @default(cuid())
+  id             String @id @default(cuid())
   conversationId String
   userId         String
-  
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  lastReadAt     DateTime     @default(now())
-  joinedAt       DateTime     @default(now())
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  lastReadAt DateTime @default(now())
+  joinedAt   DateTime @default(now())
 
   @@unique([conversationId, userId])
   @@map("conversation_participants")
 }
 
 model Message {
-  id             String       @id @default(cuid())
+  id             String  @id @default(cuid())
   conversationId String
   senderId       String
   content        String
-  type           String       @default("TEXT") // TEXT, IMAGE, FILE
-  attachments    Json?        // [{ name, url, type, size }]
-  read           Boolean      @default(false)
-  
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  type           String  @default("TEXT") // TEXT, IMAGE, FILE
+  attachments    Json? // [{ name, url, type, size }]
+  read           Boolean @default(false)
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("messages")
 }
@@ -1061,38 +1079,38 @@ model AdvisoryService {
   category    String
   description String?
   price       Float
-  duration    String   // e.g., "1 hour", "4 weeks"
+  duration    String // e.g., "1 hour", "4 weeks"
   features    String[] // What's included
   status      String   @default("ACTIVE")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   // Relations
-  advisor     Advisor  @relation(fields: [advisorId], references: [id], onDelete: Cascade)
-  bookings    Booking[]
+  advisor  Advisor   @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  bookings Booking[]
 
   @@map("advisory_services")
 }
 
 // Booking System
 model Booking {
-  id                String   @id @default(cuid())
-  tenantId          String
-  userId            String   // The client (User)
-  advisorId         String?  // Optional if booking a specific service
-  serviceId         String?  // Optional if booking a general session
-  preferredDate     DateTime
-  notes             String?
-  status            BookingStatus @default(PENDING)
-  amount            Float?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id            String        @id @default(cuid())
+  tenantId      String
+  userId        String // The client (User)
+  advisorId     String? // Optional if booking a specific service
+  serviceId     String? // Optional if booking a general session
+  preferredDate DateTime
+  notes         String?
+  status        BookingStatus @default(PENDING)
+  amount        Float?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   // Relations
-  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  advisor           Advisor?          @relation(fields: [advisorId], references: [id])
-  service           AdvisoryService?  @relation(fields: [serviceId], references: [id])
-  payments          Payment[]
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  advisor  Advisor?         @relation(fields: [advisorId], references: [id])
+  service  AdvisoryService? @relation(fields: [serviceId], references: [id])
+  payments Payment[]
 
   @@map("bookings")
 }
@@ -1105,34 +1123,34 @@ enum BookingStatus {
 }
 
 model Match {
-  id          String   @id @default(cuid())
-  tenantId    String
-  smeId       String
-  investorId  String
-  score       Int      // 0-100
-  factors     Json?    // Details about the score calculation
-  status      MatchStatus @default(PENDING)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String      @id @default(cuid())
+  tenantId   String
+  smeId      String
+  investorId String
+  score      Int // 0-100
+  factors    Json? // Details about the score calculation
+  status     MatchStatus @default(PENDING)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  sme         SME      @relation(fields: [smeId], references: [id], onDelete: Cascade)
-  investor    Investor @relation(fields: [investorId], references: [id], onDelete: Cascade)
-  interests   MatchInterest[]
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sme       SME             @relation(fields: [smeId], references: [id], onDelete: Cascade)
+  investor  Investor        @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  interests MatchInterest[]
 
   @@unique([smeId, investorId])
   @@map("matches")
 }
 
 model MatchInterest {
-  id          String   @id @default(cuid())
-  matchId     String
-  userId      String   // User who expressed interest
-  interest    Boolean  // true = like, false = dislike
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  matchId   String
+  userId    String // User who expressed interest
+  interest  Boolean // true = like, false = dislike
+  createdAt DateTime @default(now())
 
-  match       Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([matchId, userId])
   @@map("match_interests")
@@ -1153,8 +1171,8 @@ model PushSubscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, endpoint])
   @@map("push_subscriptions")
@@ -1163,82 +1181,82 @@ model PushSubscription {
 // ==================== PAYMENT SYSTEM ====================
 
 model Payment {
-  id              String         @id @default(cuid())
-  tenantId        String
-  userId          String
-  amount          Float
-  currency        String         @default("USD")
-  method          PaymentMethod
-  provider        String         // "ABA", "STRIPE", etc.
-  providerTxId    String?        // Transaction ID from the provider
-  status          PaymentStatus  @default(PENDING)
-  description     String?
-  metadata        Json?          // Flexible JSON for provider-specific data (e.g. aba_hash)
-  
-  // Polymorphic-like associations (optional)
-  dealInvestorId  String?
-  bookingId       String?
+  id           String        @id @default(cuid())
+  tenantId     String
+  userId       String
+  amount       Float
+  currency     String        @default("USD")
+  method       PaymentMethod
+  provider     String // "ABA", "STRIPE", etc.
+  providerTxId String? // Transaction ID from the provider
+  status       PaymentStatus @default(PENDING)
+  description  String?
+  metadata     Json? // Flexible JSON for provider-specific data (e.g. aba_hash)
 
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  // Polymorphic-like associations (optional)
+  dealInvestorId String?
+  bookingId      String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  dealInvestment  DealInvestor? @relation(fields: [dealInvestorId], references: [id])
-  booking         Booking?       @relation(fields: [bookingId], references: [id])
+  tenant         Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dealInvestment DealInvestor? @relation(fields: [dealInvestorId], references: [id])
+  booking        Booking?      @relation(fields: [bookingId], references: [id])
 
   @@map("payments")
 }
 
 model Subscription {
-  id               String              @id @default(cuid())
-  tenantId         String              @unique
-  plan             SubscriptionPlan    @default(STARTER)
-  status           SubscriptionStatus  @default(ACTIVE)
-  billingCycle     BillingCycle        @default(MONTHLY)
-  pricePerSeat     Float               @default(0)
-  seatsIncluded    Int                 @default(5)
-  seatsUsed        Int                 @default(0)
-  featureEntitlements Json             @default("{}")
-  nextBillingDate  DateTime?
-  trialEndsAt      DateTime?
-  cancelledAt      DateTime?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  id                  String             @id @default(cuid())
+  tenantId            String             @unique
+  plan                SubscriptionPlan   @default(STARTER)
+  status              SubscriptionStatus @default(ACTIVE)
+  billingCycle        BillingCycle       @default(MONTHLY)
+  pricePerSeat        Float              @default(0)
+  seatsIncluded       Int                @default(5)
+  seatsUsed           Int                @default(0)
+  featureEntitlements Json               @default("{}")
+  nextBillingDate     DateTime?
+  trialEndsAt         DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
-  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoices         Invoice[]
+  tenant   Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoices Invoice[]
 
   @@map("subscriptions")
 }
 
 model Invoice {
-  id               String        @id @default(cuid())
-  tenantId         String
-  customerUserId   String?
-  subscriptionId   String?
-  invoiceNumber    String        @unique
-  monthStart       DateTime
-  monthEnd         DateTime
-  dueDate          DateTime
-  status           InvoiceStatus @default(ISSUED)
-  currency         String        @default("USD")
-  subtotal         Float         @default(0)
-  tax              Float         @default(0)
-  total            Float         @default(0)
-  amountPaid       Float         @default(0)
-  outstandingAmount Float        @default(0)
-  metadata         Json?         @default("{}")
-  issuedAt         DateTime?
-  paidAt           DateTime?
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id                String        @id @default(cuid())
+  tenantId          String
+  customerUserId    String?
+  subscriptionId    String?
+  invoiceNumber     String        @unique
+  monthStart        DateTime
+  monthEnd          DateTime
+  dueDate           DateTime
+  status            InvoiceStatus @default(ISSUED)
+  currency          String        @default("USD")
+  subtotal          Float         @default(0)
+  tax               Float         @default(0)
+  total             Float         @default(0)
+  amountPaid        Float         @default(0)
+  outstandingAmount Float         @default(0)
+  metadata          Json?         @default("{}")
+  issuedAt          DateTime?
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  tenant           Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  customer         User?         @relation("InvoiceCustomer", fields: [customerUserId], references: [id])
-  subscription     Subscription? @relation(fields: [subscriptionId], references: [id])
-  lineItems        InvoiceLineItem[]
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customer     User?             @relation("InvoiceCustomer", fields: [customerUserId], references: [id])
+  subscription Subscription?     @relation(fields: [subscriptionId], references: [id])
+  lineItems    InvoiceLineItem[]
 
   @@index([tenantId, monthStart, monthEnd])
   @@index([customerUserId])
@@ -1246,53 +1264,53 @@ model Invoice {
 }
 
 model InvoiceLineItem {
-  id               String   @id @default(cuid())
-  invoiceId        String
-  description      String
-  quantity         Int      @default(1)
-  unitPrice        Float
-  amount           Float
-  metadata         Json?    @default("{}")
-  createdAt        DateTime @default(now())
+  id          String   @id @default(cuid())
+  invoiceId   String
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Float
+  amount      Float
+  metadata    Json?    @default("{}")
+  createdAt   DateTime @default(now())
 
-  invoice          Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@map("invoice_line_items")
 }
 
 model SupportTicket {
-  id               String                @id @default(cuid())
-  tenantId         String
-  requesterId      String
-  assigneeId       String?
-  subject          String
-  description      String
-  category         String                @default("GENERAL")
-  status           SupportTicketStatus   @default(OPEN)
-  priority         SupportTicketPriority @default(MEDIUM)
-  slaHours         Int                   @default(24)
-  responseDueAt    DateTime?
-  resolvedAt       DateTime?
-  metadata         Json?                 @default("{}")
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
+  id            String                @id @default(cuid())
+  tenantId      String
+  requesterId   String
+  assigneeId    String?
+  subject       String
+  description   String
+  category      String                @default("GENERAL")
+  status        SupportTicketStatus   @default(OPEN)
+  priority      SupportTicketPriority @default(MEDIUM)
+  slaHours      Int                   @default(24)
+  responseDueAt DateTime?
+  resolvedAt    DateTime?
+  metadata      Json?                 @default("{}")
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
 
-  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  requester        User                  @relation("TicketRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  assignee         User?                 @relation("TicketAssignee", fields: [assigneeId], references: [id])
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requester User   @relation("TicketRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  assignee  User?  @relation("TicketAssignee", fields: [assigneeId], references: [id])
 
   @@index([tenantId, status, priority])
   @@map("support_tickets")
 }
 
 model AdminCase {
-  id                String            @id @default(cuid())
+  id                String       @id @default(cuid())
   tenantId          String
   type              CaseType
   title             String
   description       String
-  status            CaseStatus        @default(OPEN)
-  priority          CasePriority      @default(MEDIUM)
+  status            CaseStatus   @default(OPEN)
+  priority          CasePriority @default(MEDIUM)
   requesterUserId   String?
   assigneeId        String?
   createdById       String
@@ -1304,15 +1322,15 @@ model AdminCase {
   escalatedAt       DateTime?
   resolvedAt        DateTime?
   closedAt          DateTime?
-  metadata          Json              @default("{}")
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  metadata          Json         @default("{}")
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
-  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  requester         User?             @relation("CaseRequester", fields: [requesterUserId], references: [id])
-  assignee          User?             @relation("CaseAssignee", fields: [assigneeId], references: [id])
-  createdBy         User              @relation("CaseCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  events            AdminCaseEvent[]
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requester User?            @relation("CaseRequester", fields: [requesterUserId], references: [id])
+  assignee  User?            @relation("CaseAssignee", fields: [assigneeId], references: [id])
+  createdBy User             @relation("CaseCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  events    AdminCaseEvent[]
 
   @@index([tenantId, status, priority])
   @@index([tenantId, assigneeId, status])
@@ -1320,16 +1338,16 @@ model AdminCase {
 }
 
 model AdminCaseEvent {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   caseId      String
   actorUserId String?
   eventType   String
   note        String?
-  metadata    Json      @default("{}")
-  createdAt   DateTime  @default(now())
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
 
-  case        AdminCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  actor       User?     @relation("CaseEventActor", fields: [actorUserId], references: [id])
+  case  AdminCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  actor User?     @relation("CaseEventActor", fields: [actorUserId], references: [id])
 
   @@index([caseId, createdAt])
   @@map("admin_case_events")
@@ -1348,38 +1366,38 @@ model OnboardingTemplate {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdBy   User?    @relation("OnboardingTemplateCreator", fields: [createdById], references: [id])
-  tasks       OnboardingTask[]
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy User?            @relation("OnboardingTemplateCreator", fields: [createdById], references: [id])
+  tasks     OnboardingTask[]
 
   @@index([tenantId, role, isActive])
   @@map("onboarding_templates")
 }
 
 model OnboardingTask {
-  id            String               @id @default(cuid())
-  tenantId      String
-  templateId    String
-  userId        String
-  assigneeId    String?
-  title         String
-  description   String?
-  required      Boolean              @default(true)
-  stepOrder     Int                  @default(0)
-  status        OnboardingTaskStatus @default(PENDING)
-  dueAt         DateTime?
-  completedAt   DateTime?
+  id             String               @id @default(cuid())
+  tenantId       String
+  templateId     String
+  userId         String
+  assigneeId     String?
+  title          String
+  description    String?
+  required       Boolean              @default(true)
+  stepOrder      Int                  @default(0)
+  status         OnboardingTaskStatus @default(PENDING)
+  dueAt          DateTime?
+  completedAt    DateTime?
   lastReminderAt DateTime?
-  reminderCount Int                  @default(0)
-  notes         String?
-  metadata      Json                 @default("{}")
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
+  reminderCount  Int                  @default(0)
+  notes          String?
+  metadata       Json                 @default("{}")
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
 
-  tenant        Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  template      OnboardingTemplate   @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  user          User                 @relation("OnboardingTaskUser", fields: [userId], references: [id], onDelete: Cascade)
-  assignee      User?                @relation("OnboardingTaskAssignee", fields: [assigneeId], references: [id])
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template OnboardingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  user     User               @relation("OnboardingTaskUser", fields: [userId], references: [id], onDelete: Cascade)
+  assignee User?              @relation("OnboardingTaskAssignee", fields: [assigneeId], references: [id])
 
   @@index([tenantId, status, dueAt])
   @@index([tenantId, userId, status])
@@ -1387,22 +1405,22 @@ model OnboardingTask {
 }
 
 model RoleChangeRequest {
-  id               String            @id @default(cuid())
-  tenantId         String
-  requesterId      String
-  currentRole      UserRole
-  requestedRole    UserRole
-  reason           String
-  status           RoleRequestStatus @default(PENDING)
-  reviewedById     String?
-  reviewNote       String?
-  reviewedAt       DateTime?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id            String            @id @default(cuid())
+  tenantId      String
+  requesterId   String
+  currentRole   UserRole
+  requestedRole UserRole
+  reason        String
+  status        RoleRequestStatus @default(PENDING)
+  reviewedById  String?
+  reviewNote    String?
+  reviewedAt    DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
-  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  requester        User              @relation("RoleChangeRequester", fields: [requesterId], references: [id], onDelete: Cascade)
-  reviewedBy       User?             @relation("RoleChangeReviewer", fields: [reviewedById], references: [id])
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requester  User   @relation("RoleChangeRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  reviewedBy User?  @relation("RoleChangeReviewer", fields: [reviewedById], references: [id])
 
   @@index([tenantId, status, createdAt])
   @@index([tenantId, requesterId, status])
@@ -1410,24 +1428,24 @@ model RoleChangeRequest {
 }
 
 model TemporaryRoleGrant {
-  id               String            @id @default(cuid())
-  tenantId         String
-  userId           String
-  role             UserRole
-  reason           String?
-  status           GrantStatus       @default(ACTIVE)
-  grantedById      String
-  grantedAt        DateTime          @default(now())
-  expiresAt        DateTime
-  revokedAt        DateTime?
-  revokedById      String?
-  revokeReason     String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id           String      @id @default(cuid())
+  tenantId     String
+  userId       String
+  role         UserRole
+  reason       String?
+  status       GrantStatus @default(ACTIVE)
+  grantedById  String
+  grantedAt    DateTime    @default(now())
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  revokedById  String?
+  revokeReason String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
-  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user             User              @relation("RoleGrantTarget", fields: [userId], references: [id], onDelete: Cascade)
-  grantedBy        User              @relation("RoleGrantIssuer", fields: [grantedById], references: [id], onDelete: Cascade)
+  tenant    Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user      User   @relation("RoleGrantTarget", fields: [userId], references: [id], onDelete: Cascade)
+  grantedBy User   @relation("RoleGrantIssuer", fields: [grantedById], references: [id], onDelete: Cascade)
 
   @@index([tenantId, userId, status, expiresAt])
   @@index([tenantId, status, expiresAt])
@@ -1435,18 +1453,18 @@ model TemporaryRoleGrant {
 }
 
 model AdvisorCapacity {
-  id                    String   @id @default(cuid())
-  tenantId              String
-  advisorId             String
-  weeklyCapacityHours   Int      @default(40)
-  activeAssignments     Int      @default(0)
-  utilizationPct        Float    @default(0)
-  notes                 String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  tenantId            String
+  advisorId           String
+  weeklyCapacityHours Int      @default(40)
+  activeAssignments   Int      @default(0)
+  utilizationPct      Float    @default(0)
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  tenant                Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  advisor               Advisor  @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  advisor Advisor @relation(fields: [advisorId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, advisorId])
   @@index([tenantId, utilizationPct])
@@ -1454,26 +1472,26 @@ model AdvisorCapacity {
 }
 
 model AdvisorAssignment {
-  id                    String               @id @default(cuid())
-  tenantId              String
-  advisorId             String
-  createdById           String
-  title                 String
-  description           String?
-  sourceType            String?
-  sourceId              String?
-  status                AdvisorAssignmentStatus @default(OPEN)
-  priority              AdvisorAssignmentPriority @default(MEDIUM)
-  dueAt                 DateTime?
-  startedAt             DateTime?
-  completedAt           DateTime?
-  metadata              Json                 @default("{}")
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
+  id          String                    @id @default(cuid())
+  tenantId    String
+  advisorId   String
+  createdById String
+  title       String
+  description String?
+  sourceType  String?
+  sourceId    String?
+  status      AdvisorAssignmentStatus   @default(OPEN)
+  priority    AdvisorAssignmentPriority @default(MEDIUM)
+  dueAt       DateTime?
+  startedAt   DateTime?
+  completedAt DateTime?
+  metadata    Json                      @default("{}")
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
 
-  tenant                Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  advisor               Advisor              @relation(fields: [advisorId], references: [id], onDelete: Cascade)
-  createdBy             User                 @relation("AdvisorAssignmentCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  advisor   Advisor @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("AdvisorAssignmentCreator", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([tenantId, status, dueAt])
   @@index([tenantId, advisorId, status])
@@ -1481,24 +1499,24 @@ model AdvisorAssignment {
 }
 
 model AdvisorConflictDeclaration {
-  id                    String               @id @default(cuid())
-  tenantId              String
-  advisorId             String
-  dealId                String?
-  entityName            String
-  conflictType          String
-  details               String
-  status                AdvisorConflictStatus @default(PENDING)
-  reviewedById          String?
-  reviewNote            String?
-  reviewedAt            DateTime?
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
+  id           String                @id @default(cuid())
+  tenantId     String
+  advisorId    String
+  dealId       String?
+  entityName   String
+  conflictType String
+  details      String
+  status       AdvisorConflictStatus @default(PENDING)
+  reviewedById String?
+  reviewNote   String?
+  reviewedAt   DateTime?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
 
-  tenant                Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  advisor               Advisor              @relation(fields: [advisorId], references: [id], onDelete: Cascade)
-  reviewedBy            User?                @relation("AdvisorConflictReviewer", fields: [reviewedById], references: [id])
-  deal                  Deal?                @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  tenant     Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  advisor    Advisor @relation(fields: [advisorId], references: [id], onDelete: Cascade)
+  reviewedBy User?   @relation("AdvisorConflictReviewer", fields: [reviewedById], references: [id])
+  deal       Deal?   @relation(fields: [dealId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, status, createdAt])
   @@index([tenantId, advisorId, status])
@@ -1506,17 +1524,17 @@ model AdvisorConflictDeclaration {
 }
 
 model DataRetentionRule {
-  id                 String               @id @default(cuid())
-  tenantId           String
-  module             RetentionModule
-  retentionDays      Int
+  id                  String              @id @default(cuid())
+  tenantId            String
+  module              RetentionModule
+  retentionDays       Int
   archiveBeforeDelete Boolean             @default(true)
-  status             RetentionRuleStatus  @default(ACTIVE)
-  lastEvaluatedAt    DateTime?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  status              RetentionRuleStatus @default(ACTIVE)
+  lastEvaluatedAt     DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
-  tenant             Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@unique([tenantId, module])
   @@index([tenantId, status, module])
@@ -1524,47 +1542,47 @@ model DataRetentionRule {
 }
 
 model LegalHold {
-  id                 String          @id @default(cuid())
-  tenantId           String
-  title              String
-  reason             String
-  status             LegalHoldStatus @default(ACTIVE)
-  scopeType          String          @default("TENANT")
-  scope              Json            @default("{}")
-  createdById        String
-  releasedById       String?
-  releasedAt         DateTime?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  id           String          @id @default(cuid())
+  tenantId     String
+  title        String
+  reason       String
+  status       LegalHoldStatus @default(ACTIVE)
+  scopeType    String          @default("TENANT")
+  scope        Json            @default("{}")
+  createdById  String
+  releasedById String?
+  releasedAt   DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
-  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdBy          User            @relation("LegalHoldCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  releasedBy         User?           @relation("LegalHoldReleaser", fields: [releasedById], references: [id])
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy  User   @relation("LegalHoldCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  releasedBy User?  @relation("LegalHoldReleaser", fields: [releasedById], references: [id])
 
   @@index([tenantId, status, createdAt])
   @@map("legal_holds")
 }
 
 model ReconciliationRun {
-  id                  String                @id @default(cuid())
-  tenantId            String
-  periodStart         DateTime
-  periodEnd           DateTime
-  status              ReconciliationStatus  @default(RUNNING)
-  paymentsTotal       Float                 @default(0)
-  invoicesTotal       Float                 @default(0)
-  expectedPayout      Float                 @default(0)
-  actualPayout        Float                 @default(0)
-  discrepancyAmount   Float                 @default(0)
-  notes               String?
-  createdById         String
-  completedAt         DateTime?
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
+  id                String               @id @default(cuid())
+  tenantId          String
+  periodStart       DateTime
+  periodEnd         DateTime
+  status            ReconciliationStatus @default(RUNNING)
+  paymentsTotal     Float                @default(0)
+  invoicesTotal     Float                @default(0)
+  expectedPayout    Float                @default(0)
+  actualPayout      Float                @default(0)
+  discrepancyAmount Float                @default(0)
+  notes             String?
+  createdById       String
+  completedAt       DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 
-  tenant              Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdBy           User                  @relation("ReconciliationRunCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  exceptions          ReconciliationException[]
+  tenant     Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy  User                      @relation("ReconciliationRunCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  exceptions ReconciliationException[]
 
   @@index([tenantId, createdAt])
   @@index([tenantId, status])
@@ -1572,26 +1590,26 @@ model ReconciliationRun {
 }
 
 model ReconciliationException {
-  id                  String                     @id @default(cuid())
-  tenantId            String
-  runId               String
-  type                ReconciliationExceptionType
-  severity            ReconciliationSeverity     @default(MEDIUM)
-  status              ReconciliationExceptionStatus @default(OPEN)
-  referenceType       String?
-  referenceId         String?
-  expectedAmount      Float?
-  actualAmount        Float?
-  delta               Float?
-  reason              String
-  assignedToId        String?
-  resolvedAt          DateTime?
-  createdAt           DateTime                   @default(now())
-  updatedAt           DateTime                   @updatedAt
+  id             String                        @id @default(cuid())
+  tenantId       String
+  runId          String
+  type           ReconciliationExceptionType
+  severity       ReconciliationSeverity        @default(MEDIUM)
+  status         ReconciliationExceptionStatus @default(OPEN)
+  referenceType  String?
+  referenceId    String?
+  expectedAmount Float?
+  actualAmount   Float?
+  delta          Float?
+  reason         String
+  assignedToId   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime                      @default(now())
+  updatedAt      DateTime                      @updatedAt
 
-  tenant              Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  run                 ReconciliationRun          @relation(fields: [runId], references: [id], onDelete: Cascade)
-  assignedTo          User?                      @relation("ReconciliationExceptionAssignee", fields: [assignedToId], references: [id])
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  run        ReconciliationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  assignedTo User?             @relation("ReconciliationExceptionAssignee", fields: [assignedToId], references: [id])
 
   @@index([tenantId, status, severity])
   @@index([runId, status])
@@ -1777,17 +1795,17 @@ enum SupportTicketPriority {
 
 // Activity logging for security and auditing
 model ActivityLog {
-  id        String   @id @default(cuid())
-  tenantId  String
-  userId    String?
-  action    String   // VIEWED, DOWNLOADED, UPLOADED, etc.
-  entityId  String   // Document ID or Deal ID
-  entityType String  // DOCUMENT, DEAL, etc.
-  metadata  Json?    // Additional info (IP, Browser, etc.)
-  timestamp DateTime @default(now())
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String?
+  action     String // VIEWED, DOWNLOADED, UPLOADED, etc.
+  entityId   String // Document ID or Deal ID
+  entityType String // DOCUMENT, DEAL, etc.
+  metadata   Json? // Additional info (IP, Browser, etc.)
+  timestamp  DateTime @default(now())
 
-  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("activity_logs")
 }
@@ -1797,4 +1815,132 @@ enum AccessLevel {
   QUALIFIED
   CONFIDENTIAL
   ADMIN_ONLY
+}
+
+// ==================== WALLET & FINANCE SYSTEM ====================
+
+model Wallet {
+  id       String @id @default(cuid())
+  tenantId String
+  userId   String @unique
+
+  balance       Float  @default(0)
+  frozenBalance Float  @default(0) // For open orders or pending withdrawals
+  currency      String @default("USD")
+
+  status WalletStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  transactions WalletTransaction[]
+
+  @@index([tenantId, userId])
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id       String @id @default(cuid())
+  walletId String
+  tenantId String
+
+  amount Float
+  type   WalletTransactionType
+  status WalletTransactionStatus @default(PENDING)
+
+  referenceType String? // TRADE, DEPOSIT, WITHDRAWAL, FEE
+  referenceId   String?
+
+  description String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wallet Wallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, createdAt])
+  @@index([tenantId, type, status])
+  @@map("wallet_transactions")
+}
+
+enum WalletStatus {
+  ACTIVE
+  FROZEN
+  LOCKED
+}
+
+enum WalletTransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TRADE_BUY
+  TRADE_SELL
+  FEE
+  REFUND
+  ADVISORY_PAYMENT
+  LAUNCHPAD_LOCK
+  LAUNCHPAD_REFUND
+  LAUNCHPAD_ALLOCATION
+}
+
+enum WalletTransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+// ----------------------------------------------------
+// Launchpad & Primary Distribution
+// ----------------------------------------------------
+
+model LaunchpadOffering {
+  id            String   @id @default(cuid())
+  dealId        String   @unique
+  tenantId      String
+  hardCap       Float // Max fiat to raise
+  unitPrice     Float // Price per Digital Unit (share)
+  minCommitment Float
+  maxCommitment Float
+  startTime     DateTime
+  endTime       DateTime
+
+  // Relations
+  deal        Deal                  @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  tenant      Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  commitments LaunchpadCommitment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("launchpad_offerings")
+}
+
+model LaunchpadCommitment {
+  id              String           @id @default(cuid())
+  offeringId      String
+  investorId      String
+  tenantId        String
+  committedAmount Float // Amount locked in Wallet
+  allocatedShares Float? // Calculated after subscription ends
+  status          CommitmentStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  offering LaunchpadOffering @relation(fields: [offeringId], references: [id], onDelete: Cascade)
+  investor Investor          @relation(fields: [investorId], references: [id], onDelete: Cascade)
+  tenant   Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("launchpad_commitments")
+}
+
+enum CommitmentStatus {
+  PENDING
+  ALLOCATED
+  REFUNDED
 }

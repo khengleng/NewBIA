@@ -29,6 +29,16 @@ test('RBAC - inherited role permission is granted', () => {
   assert.strictEqual(hasPermission(ctx, 'advisory_service.create'), true);
 });
 
+test('RBAC - FINOPS does not inherit ADMIN permissions', () => {
+  const ctx: PermissionContext = {
+    userId: 'finops-1',
+    userRole: 'FINOPS',
+    tenantId: 'tenant-a',
+  };
+
+  assert.strictEqual(hasPermission(ctx, 'admin.user_manage'), false);
+});
+
 test('RBAC - owner-only permission requires matching owner', () => {
   const ownerCtx: PermissionContext = {
     userId: 'investor-1',

@@ -1,0 +1,23 @@
+# Backend service upload filter
+.git
+.git/**
+**/.DS_Store
+
+node_modules
+node_modules/**
+
+# Build/cache artifacts generated locally
+.next
+dist
+build
+coverage
+.nyc_output
+
+# Local env files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*

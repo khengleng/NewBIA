@@ -105,9 +105,18 @@ export function validateCsrfToken(sessionId: string, token: string): boolean {
         csrfTokens.delete(sessionId);
         return false;
     }
+    const storedTokenBuffer = Buffer.from(stored.token);
+    const incomingTokenBuffer = Buffer.from(token || '');
+
+    // timingSafeEqual throws when buffers differ in length.
+    // Guard to ensure malformed tokens fail closed without raising runtime errors.
+    if (storedTokenBuffer.length !== incomingTokenBuffer.length) {
+        return false;
+    }
+
     return crypto.timingSafeEqual(
-        Buffer.from(stored.token),
-        Buffer.from(token)
+        storedTokenBuffer,
+        incomingTokenBuffer
     );
 }
 

@@ -1,8 +1,10 @@
 # BIA Backend - Dockerfile
 # Node.js + Express + Prisma API Server
 
-FROM node:20-alpine AS base
-RUN apk add --no-cache openssl wget netcat-openbsd
+FROM node:20-bookworm-slim AS base
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl wget netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
 
 # Dependencies stage
 FROM base AS deps
@@ -33,6 +35,8 @@ RUN adduser --system --uid 1001 expressjs
 
 # Copy built assets and necessary files
 COPY --from=builder --chown=expressjs:nodejs /app/dist ./dist
+COPY --from=builder --chown=expressjs:nodejs /app/src ./src
+COPY --from=builder --chown=expressjs:nodejs /app/tsconfig.json ./tsconfig.json
 COPY --from=builder --chown=expressjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=expressjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=expressjs:nodejs /app/package*.json ./

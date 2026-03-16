@@ -4,10 +4,16 @@ import { AuthenticatedRequest, authorize, getAuditLogs } from '../middleware/aut
 import { prisma } from '../database';
 import { canModifyAcrossTenant, isAllowedStatusTransition } from '../utils/admin-guards';
 import { checkPermissionDetailed, getPermissionsForRole, PERMISSIONS, UserRole } from '../lib/permissions';
+import { clearFailedAttempts, sanitizeEmail } from '../utils/security';
+import { normalizeRole } from '../lib/roles';
 
 const router = Router();
 
-const RBAC_ROLES: UserRole[] = ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'SUPPORT', 'INVESTOR', 'SME'];
+const RBAC_ROLES: UserRole[] = ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'ADVISOR', 'SUPPORT', 'INVESTOR', 'SME'];
+
+function isSuperAdminRole(role: string | null | undefined): boolean {
+    return normalizeRole(role) === 'SUPER_ADMIN';
+}
 
 // ==================== User Management ====================
 
@@ -54,6 +60,7 @@ router.put('/users/:userId/status', authorize('admin.user_manage'), async (req: 
         const { status } = req.body; // ACTIVE, INACTIVE, SUSPENDED
         const tenantId = req.user?.tenantId || 'default';
         const requesterId = req.user?.id;
+        const actorRole = normalizeRole(req.user?.role);
         const allowedStatuses = new Set(['ACTIVE', 'INACTIVE', 'SUSPENDED', 'DELETED']);
 
         if (!status || !allowedStatuses.has(status)) {
@@ -67,6 +74,11 @@ router.put('/users/:userId/status', authorize('admin.user_manage'), async (req: 
 
         if (!canModifyAcrossTenant(req.user?.role, tenantId, targetUser.tenantId)) {
             return res.status(403).json({ error: 'Cannot modify user from another tenant' });
+        }
+
+        // Privilege boundary: only SUPER_ADMIN can modify SUPER_ADMIN accounts.
+        if (isSuperAdminRole(targetUser.role) && actorRole !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Only SUPER_ADMIN can modify SUPER_ADMIN accounts' });
         }
 
         if (!isAllowedStatusTransition(targetUser.status as any, status)) {
@@ -129,6 +141,8 @@ router.put('/users/:userId/role', authorize('admin.user_manage'), async (req: Au
         const { userId } = req.params;
         const { role } = req.body;
         const tenantId = req.user?.tenantId || 'default';
+        const actorRole = normalizeRole(req.user?.role);
+        const targetRole = normalizeRole(role);
 
         const targetUser = await prisma.user.findUnique({ where: { id: userId } });
         if (!targetUser) {
@@ -139,9 +153,19 @@ router.put('/users/:userId/role', authorize('admin.user_manage'), async (req: Au
             return res.status(403).json({ error: 'Cannot modify user from another tenant' });
         }
 
+        // Privilege boundary: only SUPER_ADMIN can modify SUPER_ADMIN accounts.
+        if (isSuperAdminRole(targetUser.role) && actorRole !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Only SUPER_ADMIN can modify SUPER_ADMIN accounts' });
+        }
+
+        // Privilege boundary: only SUPER_ADMIN can assign SUPER_ADMIN role.
+        if (targetRole === 'SUPER_ADMIN' && actorRole !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Only SUPER_ADMIN can assign SUPER_ADMIN role' });
+        }
+
         const user = await prisma.user.update({
             where: { id: userId },
-            data: { role }
+            data: { role: targetRole as any }
         });
 
         return res.json({ message: `User role updated to ${role}`, user });
@@ -155,17 +179,31 @@ router.put('/users/:userId/role', authorize('admin.user_manage'), async (req: Au
 router.post('/users', authorize('admin.user_manage'), async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { email, password, firstName, lastName, role } = req.body;
+        const actorRole = normalizeRole(req.user?.role);
+        const normalizedRole = normalizeRole(role);
 
         if (!email || !password || !firstName || !lastName || !role) {
             return res.status(400).json({ error: 'All fields are required' });
         }
 
+        // Privilege boundary: only SUPER_ADMIN can create SUPER_ADMIN users.
+        if (normalizedRole === 'SUPER_ADMIN' && actorRole !== 'SUPER_ADMIN') {
+            return res.status(403).json({ error: 'Only SUPER_ADMIN can create SUPER_ADMIN users' });
+        }
+
         const tenantId = req.user?.tenantId || 'default';
+        const sanitizedEmail = sanitizeEmail(email);
+        if (!sanitizedEmail) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
 
         // Check if user exists in this tenant
         const existingUser = await prisma.user.findFirst({
             where: {
-                email,
+                email: {
+                    equals: sanitizedEmail,
+                    mode: 'insensitive'
+                },
                 tenantId
             }
         });
@@ -178,16 +216,24 @@ router.post('/users', authorize('admin.user_manage'), async (req: AuthenticatedR
 
         const newUser = await prisma.user.create({
             data: {
-                email,
+                email: sanitizedEmail,
                 password: hashedPassword,
                 firstName,
                 lastName,
-                role: role as any,
+                role: normalizedRole as any,
                 tenantId,
                 status: 'ACTIVE',
-                language: 'EN'
+                language: 'EN',
+                // Admin-created accounts are trusted onboarding actions.
+                // Mark verified so users can sign in immediately without email loop blockers.
+                isEmailVerified: true,
+                verificationToken: null,
+                verificationTokenExpiry: null
             }
         });
+
+        // Ensure newly created users are not blocked by stale email lockout counters.
+        await clearFailedAttempts(sanitizedEmail);
 
         // Remove password from response
         const { password: _, ...userWithoutPassword } = newUser;

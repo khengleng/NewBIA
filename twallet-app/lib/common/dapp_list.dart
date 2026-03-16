@@ -8,6 +8,7 @@ class DAppInfo {
 }
 
 List<DAppInfo> dappList = [
+<<<<<<< HEAD
   // DAppInfo('dapp-1', 'M. CLUB LOCAL', 'http://127.0.0.1:3000',
   //     'assets/icons/dapp/loyalty-club.svg'),
   // DAppInfo(
@@ -66,6 +67,24 @@ List<DAppInfo> dappList = [
     'dapp-11',
     'NFT',
     'https://dev.admin.nft.cn.blockchain.thoughtworks.cn/mobile/denom',
+=======
+  DAppInfo(
+    'cambobia-core',
+    'Cambobia Platform',
+    'https://www.cambobia.com',
+    'assets/icons/dapp/loyalty-club.svg',
+  ),
+  DAppInfo(
+    'cambobia-trade',
+    'Cambobia Trading',
+    'https://trade.cambobia.com',
+    'assets/icons/dapp/loyalty-enterprise.svg',
+  ),
+  DAppInfo(
+    'cambobia-support',
+    'Cambobia Support',
+    'https://www.cambobia.com/settings',
+>>>>>>> origin/codex/review-source-code-3e131v
     'assets/icons/dapp/nft.svg',
   ),
 ];

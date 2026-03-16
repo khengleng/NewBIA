@@ -1,0 +1,241 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "view": "查看",
+    "submit": "提交",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "search": "搜索",
+    "filter": "筛选",
+    "sort": "排序",
+    "actions": "操作",
+    "status": "状态",
+    "createdAt": "创建时间",
+    "updatedAt": "更新时间"
+  },
+  "navigation": {
+    "dashboard": "仪表板",
+    "smes": "中小企业",
+    "investors": "投资者",
+    "deals": "交易",
+    "advisory": "咨询服务",
+    "reports": "报告",
+    "settings": "设置",
+    "profile": "个人资料",
+    "logout": "退出登录"
+  },
+  "auth": {
+    "login": "登录",
+    "register": "注册",
+    "email": "邮箱",
+    "password": "密码",
+    "confirmPassword": "确认密码",
+    "firstName": "名字",
+    "lastName": "姓氏",
+    "forgotPassword": "忘记密码？",
+    "rememberMe": "记住我",
+    "loginSuccess": "登录成功",
+    "loginError": "登录失败",
+    "registerSuccess": "注册成功",
+    "registerError": "注册失败"
+  },
+  "sme": {
+    "title": "中小企业",
+    "addSME": "添加中小企业",
+    "editSME": "编辑中小企业",
+    "name": "公司名称",
+    "sector": "行业",
+    "stage": "阶段",
+    "fundingRequired": "所需资金",
+    "description": "描述",
+    "website": "网站",
+    "location": "位置",
+    "score": "评分",
+    "certified": "已认证",
+    "certificationDate": "认证日期",
+    "status": "状态",
+    "documents": "文档",
+    "uploadDocument": "上传文档",
+    "pitchDeck": "商业计划书",
+    "financialStatement": "财务报表",
+    "businessPlan": "商业计划",
+    "legalDocument": "法律文件",
+    "certification": "认证",
+    "certifySME": "认证中小企业",
+    "certificationScore": "认证评分",
+    "certificationComments": "认证评论"
+  },
+  "investor": {
+    "title": "投资者",
+    "addInvestor": "添加投资者",
+    "editInvestor": "编辑投资者",
+    "name": "投资者名称",
+    "type": "投资者类型",
+    "kycStatus": "KYC状态",
+    "preferences": "投资偏好",
+    "portfolio": "投资组合",
+    "sector": "首选行业",
+    "ticketSize": "投资规模",
+    "geography": "地理区域",
+    "investmentStage": "投资阶段",
+    "kycVerification": "KYC验证",
+    "kycPending": "KYC待处理",
+    "kycVerified": "KYC已验证",
+    "kycRejected": "KYC被拒绝"
+  },
+  "deal": {
+    "title": "交易",
+    "addDeal": "添加交易",
+    "editDeal": "编辑交易",
+    "dealTitle": "交易标题",
+    "description": "描述",
+    "amount": "金额",
+    "equity": "股权 (%)",
+    "status": "状态",
+    "successFee": "成功费用",
+    "investors": "投资者",
+    "matchmaking": "匹配",
+    "dealRoom": "交易室",
+    "termSheet": "条款清单",
+    "valuation": "估值",
+    "dueDiligence": "尽职调查",
+    "funding": "融资",
+    "postFunding": "融资后支持"
+  },
+  "advisor": {
+    "title": "咨询服务",
+    "dashboard": "顾问仪表板",
+    "pipeline": "中小企业管道",
+    "certificationTasks": "认证任务",
+    "workflowChecklists": "工作流程检查清单",
+    "gapAnalysis": "差距分析",
+    "automatedReminders": "自动提醒",
+    "approvals": "审批",
+    "makerChecker": "制作者-检查者逻辑",
+    "specialization": "专业领域",
+    "certifications": "认证",
+    "advisoryTools": "咨询工具"
+  },
+  "workflow": {
+    "title": "工作流程",
+    "smeOnboarding": "中小企业入职",
+    "smeCertification": "中小企业认证",
+    "investorOnboarding": "投资者入职",
+    "dealApproval": "交易审批",
+    "kycVerification": "KYC验证",
+    "status": "状态",
+    "pending": "待处理",
+    "inProgress": "进行中",
+    "completed": "已完成",
+    "failed": "失败",
+    "cancelled": "已取消"
+  },
+  "admin": {
+    "title": "管理",
+    "multiTenantManagement": "多租户管理",
+    "userManagement": "用户管理",
+    "roleManagement": "角色管理",
+    "compliance": "合规",
+    "auditLogs": "审计日志",
+    "systemSettings": "系统设置",
+    "tenantIsolation": "租户隔离",
+    "branding": "品牌",
+    "languageSettings": "语言设置"
+  },
+  "reporting": {
+    "title": "报告和分析",
+    "dashboard": "仪表板",
+    "kpis": "关键绩效指标",
+    "roi": "投资回报率",
+    "quarterlyReports": "季度报告",
+    "investorDashboard": "投资者仪表板",
+    "smePerformance": "中小企业表现",
+    "dealMetrics": "交易指标",
+    "advisoryMetrics": "咨询指标",
+    "complianceReports": "合规报告"
+  },
+  "integrations": {
+    "did": "DID基础设施",
+    "cm": "案例管理",
+    "rwa": "现实世界资产",
+    "kyc": "KYC/AML",
+    "blockchain": "区块链",
+    "escrow": "托管",
+    "payment": "支付处理"
+  },
+  "status": {
+    "draft": "草稿",
+    "submitted": "已提交",
+    "underReview": "审核中",
+    "approved": "已批准",
+    "rejected": "已拒绝",
+    "active": "活跃",
+    "inactive": "非活跃",
+    "suspended": "已暂停",
+    "pending": "待处理",
+    "verified": "已验证",
+    "funded": "已融资",
+    "closed": "已关闭",
+    "cancelled": "已取消"
+  },
+  "stages": {
+    "seed": "种子期",
+    "growth": "成长期",
+    "expansion": "扩张期",
+    "mature": "成熟期"
+  },
+  "investorTypes": {
+    "angel": "天使投资者",
+    "ventureCapital": "风险投资",
+    "privateEquity": "私募股权",
+    "corporate": "企业",
+    "institutional": "机构"
+  },
+  "documentTypes": {
+    "pitchDeck": "商业计划书",
+    "financialStatement": "财务报表",
+    "businessPlan": "商业计划",
+    "legalDocument": "法律文件",
+    "other": "其他"
+  },
+  "home": {
+    "hero": {
+      "title": "连接",
+      "sme": "中小企业",
+      "and": "和",
+      "investors": "投资者",
+      "description": "一个连接中小企业和合格投资者的综合平台，具有先进的DID集成、多租户架构和专业咨询服务。",
+      "getStarted": "开始使用",
+      "viewDemo": "查看演示"
+    },
+    "features": {
+      "sme": {
+        "title": "中小企业平台",
+        "description": "通过我们的综合平台连接中小企业和投资者"
+      },
+      "investor": {
+        "title": "投资者门户",
+        "description": "通过透明流程寻找和投资经过验证的中小企业"
+      },
+      "advisory": {
+        "title": "咨询服务",
+        "description": "投资准备的专业咨询服务"
+      },
+      "security": {
+        "title": "安全和合规",
+        "description": "具有基于DID身份验证的多租户架构"
+      },
+      "analytics": {
+        "title": "分析和报告",
+        "description": "综合仪表板和性能跟踪"
+      }
+    }
+  }
+}

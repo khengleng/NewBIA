@@ -28,9 +28,6 @@ try {
             publicVapidKey!,
             privateVapidKey!
         );
-        console.log('✅ Web Push initialized');
-    } else {
-        console.warn('⚠️ Web Push disabled: VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY are not configured.');
     }
 } catch (error) {
     console.error('❌ Failed to initialize Web Push:', error);
@@ -108,9 +105,12 @@ router.post('/', authorize('notification.broadcast'), async (req: AuthenticatedR
             notifType = type as NotificationType;
         }
 
+        const { getTenantId } = await import('../utils/tenant-utils');
+        const tenantId = getTenantId(req);
+
         const notification = await prisma.notification.create({
             data: {
-                tenantId: req.user?.tenantId || 'default',
+                tenantId: tenantId,
                 userId, // Target user
                 type: notifType,
                 title,
@@ -133,6 +133,7 @@ router.post('/', authorize('notification.broadcast'), async (req: AuthenticatedR
 
 // Get user notifications
 router.get('/', authorize('notification.list'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    console.log(`[Notifications] GET request received for user: ${req.user?.id}`);
     try {
         if (!shouldUseDatabase()) {
             // For now, return sample notifications
@@ -154,11 +155,14 @@ router.get('/', authorize('notification.list'), async (req: AuthenticatedRequest
             return;
         }
 
+        const { getTenantId } = await import('../utils/tenant-utils');
+        const tenantId = getTenantId(req);
+
         // Use Replica for reading notifications (High traffic endpoint)
         const notifications = await prismaReplica.notification.findMany({
             where: {
                 userId: req.user?.id,
-                tenantId: req.user?.tenantId || 'default'
+                tenantId: tenantId
             },
             orderBy: {
                 createdAt: 'desc'
@@ -169,7 +173,7 @@ router.get('/', authorize('notification.list'), async (req: AuthenticatedRequest
         const unreadCount = await prismaReplica.notification.count({
             where: {
                 userId: req.user?.id,
-                tenantId: req.user?.tenantId || 'default',
+                tenantId: tenantId,
                 read: false
             }
         });
@@ -185,7 +189,9 @@ router.get('/', authorize('notification.list'), async (req: AuthenticatedRequest
 });
 
 // Mark notification as read
-router.put('/:id/read', authorize('notification.update'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.put('/:id/read', authorize('notification.update', {
+    getOwnerId: async (req) => req.user?.id
+}), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         if (!shouldUseDatabase()) {
             res.json({ success: true, message: 'Notification marked as read (mock)' });
@@ -213,7 +219,9 @@ router.put('/:id/read', authorize('notification.update'), async (req: Authentica
 });
 
 // Mark all as read
-router.put('/read-all', authorize('notification.update'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.put('/read-all', authorize('notification.update', {
+    getOwnerId: async (req) => req.user?.id
+}), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
         if (!shouldUseDatabase()) {
             res.json({ success: true, message: 'All notifications marked as read (mock)' });
@@ -249,7 +257,7 @@ router.post('/subscribe', authorize('notification.read'), async (req: Authentica
             return;
         }
 
-        console.log('📱 Received push subscription for user:', req.user?.id);
+
 
         if (shouldUseDatabase() && req.user) {
             // Upsert subscription (update keys if endpoint exists for user)
@@ -271,7 +279,7 @@ router.post('/subscribe', authorize('notification.read'), async (req: Authentica
                     keys: subscription.keys
                 }
             });
-            console.log('✅ Push subscription saved to DB');
+
         }
 
         res.status(201).json({ message: 'Push subscription successful' });
@@ -291,7 +299,7 @@ router.post('/unsubscribe', async (req: AuthenticatedRequest, res: Response): Pr
             return;
         }
 
-        console.log('📱 Unsubscribing push endpoint:', endpoint);
+
 
         if (shouldUseDatabase() && req.user) {
             await prisma.pushSubscription.deleteMany({
@@ -300,7 +308,7 @@ router.post('/unsubscribe', async (req: AuthenticatedRequest, res: Response): Pr
                     endpoint: endpoint
                 }
             });
-            console.log('✅ Subscription removed from DB');
+
         }
 
         res.json({ message: 'Push unsubscribe successful' });

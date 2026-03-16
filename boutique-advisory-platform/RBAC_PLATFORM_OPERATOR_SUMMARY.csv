@@ -1,0 +1,8 @@
+role,total_permissions,direct_permissions,inherited_permissions,owner_only_permissions,admin,advisor,advisor_assignment,advisor_capacity,advisor_conflict,advisor_ops,advisory_service,ai,analytics,audit_log,billing,calendar,case,certification,community,dashboard,data_governance,dataroom,deal,dispute,document,due_diligence,escalation,investor,investor_ops,invoice,legal_hold,matchmaking,notification,onboarding_task,onboarding_template,payment,reconciliation,report,retention_rule,role_grant,role_request,secondary_trading,settings,sme,subscription,support_ticket,syndicate,tenant,user,workflow
+SUPER_ADMIN,184,184,0,0,5,5,3,2,2,1,6,1,3,3,2,3,6,5,9,1,1,5,6,4,6,5,1,7,4,2,3,4,5,5,5,4,4,6,2,3,3,4,3,7,2,4,6,5,6,5
+ADMIN,172,171,1,0,3,5,3,2,2,1,6,1,2,2,2,3,6,5,9,1,1,5,6,3,6,5,1,7,4,2,3,4,5,5,5,4,4,6,2,3,3,3,2,7,2,4,6,1,5,5
+FINOPS,18,18,0,0,0,0,0,0,0,0,0,0,2,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,0,0,4,4,0,0,0,3,0,0,1,0,0,0,0,0
+CX,28,28,0,0,0,0,0,0,0,1,0,0,1,0,0,0,6,0,0,0,0,0,0,0,0,0,1,0,2,0,0,0,0,5,2,0,0,3,0,0,0,3,0,0,1,3,0,0,0,0
+AUDITOR,13,13,0,0,0,0,0,0,0,0,0,0,2,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,2,0,1,1,0,3,0,0,0,0,0,0,0,0
+COMPLIANCE,18,18,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,1,0,0,0,0,0,0,0,4,0,3,0,0,0,0,0,0,0,2,1,0,3,0,0,0,0,0,0,0,0
+SUPPORT,49,49,0,0,0,2,0,0,0,0,2,0,0,0,0,0,6,2,2,0,0,2,2,0,2,2,1,2,0,0,0,0,2,5,2,0,0,0,0,0,1,3,0,2,1,4,2,0,0,2

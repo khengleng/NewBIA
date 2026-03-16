@@ -64,17 +64,38 @@ router.get('/', authorize('investor.list'), async (req: AuthenticatedRequest, re
   }
 });
 
-// Get current investor profile
+// Get current investor profile - Auto-create if role matches but record missing
 router.get('/profile', async (req: any, res: Response) => {
   try {
     const userId = req.user?.id;
+    const role = req.user?.role;
+    const tenantId = req.user?.tenantId || 'default';
+
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
     let investor = await prisma.investor.findUnique({
       where: { userId },
       include: { user: true }
     });
 
     if (!investor) {
-      return res.status(404).json({ error: 'Investor not found' });
+      if (role === 'INVESTOR') {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (!user) return res.status(401).json({ error: 'User not found' });
+
+        investor = await prisma.investor.create({
+          data: {
+            userId,
+            tenantId,
+            name: `${user.firstName} ${user.lastName}`.trim(),
+            type: 'ANGEL',
+            kycStatus: 'PENDING'
+          },
+          include: { user: true }
+        });
+      } else {
+        return res.status(404).json({ error: 'Investor record not found for this role.' });
+      }
     }
 
     // Decrypt sensitive data
@@ -94,6 +115,8 @@ router.get('/profile', async (req: any, res: Response) => {
 router.get('/portfolio/stats', authorize('investor.read', { getOwnerId: (req) => req.user?.id }), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.id;
+    const userRole = req.user?.role;
+    const tenantId = req.user?.tenantId || 'default';
 
     // Get investor profile
     let investor = await prisma.investor.findUnique({
@@ -101,11 +124,121 @@ router.get('/portfolio/stats', authorize('investor.read', { getOwnerId: (req) =>
     });
 
     if (!investor) {
-      return res.status(404).json({ error: 'Investor profile not found' });
+      const isAdmin = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN';
+      if (!isAdmin) {
+        return res.status(404).json({ error: 'Investor profile not found' });
+      }
+
+      // Admin/Super Admin fallback: return tenant-wide aggregate portfolio.
+      const [dealInvestments, syndicateInvestments, launchpadCommitments] = await Promise.all([
+        prisma.dealInvestor.findMany({
+          where: {
+            deal: { tenantId },
+            status: { in: ['COMPLETED', 'APPROVED'] }
+          },
+          include: {
+            deal: {
+              include: {
+                sme: true
+              }
+            }
+          }
+        }),
+        prisma.syndicateMember.findMany({
+          where: {
+            syndicate: { deal: { tenantId } },
+            status: 'APPROVED'
+          },
+          include: {
+            syndicate: {
+              include: {
+                deal: {
+                  include: {
+                    sme: true
+                  }
+                }
+              }
+            }
+          }
+        }),
+        prisma.launchpadCommitment.findMany({
+          where: { tenantId },
+          include: {
+            offering: {
+              include: {
+                deal: { include: { sme: true } }
+              }
+            }
+          }
+        })
+      ]);
+
+      const dealAum = dealInvestments.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+      const syndicateAum = syndicateInvestments.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+      const launchpadAum = launchpadCommitments.reduce((sum, inv) => sum + (inv.committedAmount || 0), 0);
+      const totalAum = dealAum + syndicateAum + launchpadAum;
+
+      const allInvestments = [
+        ...dealInvestments.map(i => ({ date: i.createdAt, amount: i.amount, sector: i.deal?.sme?.sector })),
+        ...syndicateInvestments.map(i => ({ date: i.joinedAt, amount: i.amount, sector: i.syndicate?.deal?.sme?.sector || 'Syndicate' })),
+        ...launchpadCommitments.map(i => ({ date: i.createdAt, amount: i.committedAmount, sector: i.offering?.deal?.sme?.sector || 'Launchpad' }))
+      ];
+
+      const startDate = allInvestments.length > 0
+        ? allInvestments.reduce((earliest, inv) => inv.date < earliest ? inv.date : earliest, new Date())
+        : new Date();
+
+      const sectorMap = new Map<string, number>();
+      allInvestments.forEach(inv => {
+        const sector = inv.sector || 'General';
+        const current = sectorMap.get(sector) || 0;
+        sectorMap.set(sector, current + (inv.amount || 0));
+      });
+
+      const sectors = Array.from(sectorMap.entries()).map(([sector, amount]) => {
+        const percentage = totalAum > 0 ? (amount / totalAum) * 100 : 0;
+        return {
+          sector,
+          allocation: parseFloat(percentage.toFixed(1)),
+          value: amount,
+          color: getColorForSector(sector)
+        };
+      }).sort((a, b) => b.value - a.value);
+
+      const topDeals = dealInvestments
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 50)
+        .map(inv => ({
+          id: inv.dealId,
+          parentId: inv.dealId,
+          investmentId: inv.id,
+          type: 'DEAL' as const,
+          name: inv.deal?.sme?.name || inv.deal?.title || 'Unknown Company',
+          sector: inv.deal?.sme?.sector || 'General',
+          allocation: totalAum > 0 ? parseFloat(((inv.amount / totalAum) * 100).toFixed(1)) : 0,
+          value: inv.amount,
+          shares: inv.amount,
+          returns: 0,
+          color: getColorForSector(inv.deal?.sme?.sector || 'General')
+        }));
+
+      return res.json({
+        summary: {
+          totalAum,
+          activePositions: dealInvestments.length + syndicateInvestments.length + launchpadCommitments.length,
+          realizedRoi: 0,
+          totalPerformance: 0,
+          startDate,
+          kycStatus: 'VERIFIED',
+          role: userRole
+        },
+        sectors,
+        items: topDeals
+      });
     }
 
-    // 1. Get all completed/approved investments (Deals & Syndicates)
-    const [dealInvestments, syndicateInvestments] = await Promise.all([
+    // 1. Get all completed/approved investments (Deals & Syndicates & Launchpad)
+    const [dealInvestments, syndicateInvestments, launchpadCommitments] = await Promise.all([
       prisma.dealInvestor.findMany({
         where: {
           investorId: investor.id,
@@ -135,16 +268,30 @@ router.get('/portfolio/stats', authorize('investor.read', { getOwnerId: (req) =>
             }
           }
         }
+      }),
+      prisma.launchpadCommitment.findMany({
+        where: {
+          investorId: investor.id
+        },
+        include: {
+          offering: {
+            include: {
+              deal: { include: { sme: true } }
+            }
+          }
+        }
       })
     ]);
 
-    if (dealInvestments.length === 0 && syndicateInvestments.length === 0) {
+    if (dealInvestments.length === 0 && syndicateInvestments.length === 0 && launchpadCommitments.length === 0) {
       return res.json({
         summary: {
           totalAum: 0,
           activePositions: 0,
           realizedRoi: 0,
-          startDate: new Date()
+          startDate: new Date(),
+          kycStatus: investor.kycStatus,
+          role: userRole
         },
         sectors: [],
         items: []
@@ -154,13 +301,15 @@ router.get('/portfolio/stats', authorize('investor.read', { getOwnerId: (req) =>
     // 2. Calculate Portfolio Metrics
     const dealAum = dealInvestments.reduce((sum, inv) => sum + (inv.amount || 0), 0);
     const syndicateAum = syndicateInvestments.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-    const totalAum = dealAum + syndicateAum;
-    const activePositions = dealInvestments.length + syndicateInvestments.length;
+    const launchpadAum = launchpadCommitments.reduce((sum, inv) => sum + (inv.committedAmount || 0), 0);
+    const totalAum = dealAum + syndicateAum + launchpadAum;
+    const activePositions = dealInvestments.length + syndicateInvestments.length + launchpadCommitments.length;
 
     // Find the earliest investment date
     const allInvestments = [
       ...dealInvestments.map(i => ({ date: i.createdAt, amount: i.amount, sector: i.deal?.sme?.sector })),
-      ...syndicateInvestments.map(i => ({ date: i.joinedAt, amount: i.amount, sector: i.syndicate?.deal?.sme?.sector || 'Syndicate' }))
+      ...syndicateInvestments.map(i => ({ date: i.joinedAt, amount: i.amount, sector: i.syndicate?.deal?.sme?.sector || 'Syndicate' })),
+      ...launchpadCommitments.map(i => ({ date: i.createdAt, amount: i.committedAmount, sector: i.offering?.deal?.sme?.sector || 'Launchpad' }))
     ];
 
     const startDate = allInvestments.reduce((earliest, inv) => {
@@ -219,7 +368,7 @@ router.get('/portfolio/stats', authorize('investor.read', { getOwnerId: (req) =>
         id: inv.syndicateId,
         parentId: inv.syndicateId,
         investmentId: inv.id,
-        type: 'SYNDICATE',
+        type: 'SYNDICATE' as const,
         name: inv.syndicate?.name || 'Syndicate',
         sector: inv.syndicate?.deal?.sme?.sector || 'Syndicate',
         allocation: parseFloat(percentage.toFixed(1)),
@@ -230,7 +379,24 @@ router.get('/portfolio/stats', authorize('investor.read', { getOwnerId: (req) =>
       };
     });
 
-    const portfolioItems = [...dealItems, ...syndicateItems];
+    const launchpadItems = launchpadCommitments.map((inv) => {
+      const percentage = totalAum > 0 ? (inv.committedAmount / totalAum) * 100 : 0;
+      return {
+        id: inv.offeringId,
+        parentId: inv.offeringId,
+        investmentId: inv.id,
+        type: 'LAUNCHPAD' as const,
+        name: inv.offering?.deal?.sme?.name || 'Launchpad Deal',
+        sector: inv.offering?.deal?.sme?.sector || 'Launchpad',
+        allocation: parseFloat(percentage.toFixed(1)),
+        value: inv.committedAmount,
+        shares: inv.committedAmount,
+        returns: 0,
+        color: getColorForSector(inv.offering?.deal?.sme?.sector || 'Launchpad')
+      };
+    });
+
+    const portfolioItems = [...dealItems, ...syndicateItems, ...launchpadItems];
 
     // 5. Calculate Realized ROI & Total Performance
     const completedSales = await prisma.secondaryTrade.findMany({
@@ -261,15 +427,16 @@ router.get('/portfolio/stats', authorize('investor.read', { getOwnerId: (req) =>
         realizedRoi,
         totalPerformance,
         startDate,
-        kycStatus: investor.kycStatus
+        kycStatus: investor.kycStatus,
+        role: userRole
       },
       sectors: sectors,
       items: portfolioItems
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Get portfolio stats error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error', details: error.message, stack: error.stack });
   }
 });
 
@@ -453,6 +620,15 @@ router.post('/kyc-token', authorize('investor.update', { getOwnerId: (req) => re
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+
+    if (!process.env.SUMSUB_APP_TOKEN || !process.env.SUMSUB_SECRET_KEY) {
+      return res.status(503).json({ error: 'Identity verification service is temporarily unavailable' });
+    }
+
+    const investor = await prisma.investor.findUnique({ where: { userId } });
+    if (!investor) {
+      return res.status(404).json({ error: 'Investor profile not found for this account' });
+    }
 
     const levelName = process.env.SUMSUB_LEVEL_NAME || 'basic-kyc-level';
     const tokenData = await sumsub.generateAccessToken(userId, levelName);

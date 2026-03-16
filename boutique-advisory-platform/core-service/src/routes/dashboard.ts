@@ -67,6 +67,10 @@ router.get('/stats', authorize('dashboard.read'), async (req: AuthenticatedReque
                     });
 
                     stats = {
+                        smeName: sme.name,
+                        smeStatus: sme.status,
+                        sector: sme.sector,
+                        stage: sme.stage,
                         totalDeals: dealsCount,
                         activeBookings,
                         documents: documentCount,

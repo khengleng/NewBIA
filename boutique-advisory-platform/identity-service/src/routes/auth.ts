@@ -124,6 +124,7 @@ async function findUserForPlatformEmail(req: Request, email: string) {
   if (user) return user;
 
   console.log(`🔍 [AUTH] findUserForPlatformEmail: User not found in ${tenantId}. Checking core tenant check: isTradingRequest=${isTradingRequest(req)}, coreTenantId=${coreTenantId}`);
+  const tradingTenantId = process.env.TRADING_TENANT_ID || 'trade';
 
   if (normalizedEmail === getCoreSuperadminEmail()) {
     user = await prisma.user.findFirst({
@@ -469,11 +470,7 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
       }
     });
 
-    const verificationEmailResult = await sendVerificationEmail(
-      user.email,
-      verificationToken,
-      getRequestFrontendBaseUrl(req)
-    );
+    const verificationEmailResult = await sendVerificationEmail(user.email, verificationToken);
     if (!verificationEmailResult.success) {
       await logAuditEvent({
         userId: user.id,
@@ -1480,13 +1477,27 @@ router.post('/verify-2fa', async (req: Request, res: Response) => {
     }
 
     let secret = user.twoFactorSecret;
-    try {
-      if (user.twoFactorSecret.includes(':')) {
+    if (user.twoFactorSecret.includes(':')) {
+      try {
         secret = decryptData(user.twoFactorSecret);
+      } catch (e) {
+        console.error('[AUTH] 2FA secret decryption failed', {
+          userId: user.id,
+          error: e instanceof Error ? e.message : String(e)
+        });
+
+        await logAuditEvent({
+          userId: user.id,
+          action: 'LOGIN_MFA_FAIL',
+          resource: 'user',
+          details: { reason: 'invalid_2fa_secret' },
+          ipAddress: clientIp,
+          success: false,
+          errorMessage: 'Stored 2FA secret could not be decrypted'
+        });
+
+        return res.status(500).json({ error: 'Two-factor authentication is temporarily unavailable. Please contact support.' });
       }
-    } catch (e) {
-      // Fallback for legacy plaintext secrets or if decryption fails
-      console.warn('Using fallback plaintext 2FA secret for user', user.id);
     }
 
     let verified = verifyMfaToken(secret, code);

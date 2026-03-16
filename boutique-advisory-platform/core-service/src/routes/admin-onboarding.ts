@@ -3,8 +3,20 @@ import { Prisma, UserRole, OnboardingTaskStatus } from '@prisma/client';
 import { AuthenticatedRequest, authorize } from '../middleware/authorize';
 import { prisma } from '../database';
 import { sendNotification } from '../services/notification.service';
+import { isMissingSchemaError } from '../utils/prisma-errors';
 
 const router = Router();
+
+function isOnboardingModuleUnavailableError(error: unknown): boolean {
+  return (
+    isMissingSchemaError(error) ||
+    error instanceof Prisma.PrismaClientValidationError ||
+    error instanceof Prisma.PrismaClientKnownRequestError ||
+    error instanceof Prisma.PrismaClientUnknownRequestError ||
+    error instanceof Prisma.PrismaClientInitializationError ||
+    error instanceof Prisma.PrismaClientRustPanicError
+  );
+}
 
 interface TemplateStep {
   title: string;
@@ -56,6 +68,13 @@ router.get('/templates', authorize('onboarding_template.list'), async (req: Auth
 
     return res.json({ templates });
   } catch (error) {
+    if (isMissingSchemaError(error)) {
+      return res.json({
+        templates: [],
+        unavailable: true,
+        reason: 'Pending database migration for onboarding templates'
+      });
+    }
     console.error('List onboarding templates error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -251,8 +270,19 @@ router.get('/tasks', authorize('onboarding_task.list'), async (req: Authenticate
 
     return res.json({ tasks });
   } catch (error) {
+    if (isOnboardingModuleUnavailableError(error)) {
+      return res.json({
+        tasks: [],
+        unavailable: true,
+        reason: 'Pending database migration for onboarding tasks'
+      });
+    }
     console.error('List onboarding tasks error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.json({
+      tasks: [],
+      unavailable: true,
+      reason: 'Onboarding tasks service temporarily unavailable'
+    });
   }
 });
 

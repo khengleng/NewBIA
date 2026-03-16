@@ -45,8 +45,12 @@ android {
     }
 
     defaultConfig {
+<<<<<<< HEAD
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId "com.thoughtworks.tw_wallet_ui"
+=======
+        applicationId "com.cambobia.mobile"
+>>>>>>> origin/codex/review-source-code-3e131v
         ndkVersion "21.3.6528147"
         minSdkVersion 23
         targetSdkVersion 29
@@ -66,9 +70,13 @@ android {
 
     buildTypes {
         release {
+<<<<<<< HEAD
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig signingConfigs.debug
+=======
+            signingConfig signingConfigs.release
+>>>>>>> origin/codex/review-source-code-3e131v
         }
     }
 }

@@ -7,26 +7,13 @@ const router = Router();
 // Get financial performance stats
 router.get('/performance', authorize('analytics.read'), async (req: AuthenticatedRequest, res: Response) => {
     try {
-        // High-end mock analytics until we have deep transaction history
+        // TODO: Implement real-time performance analytics from transactions
         const performanceData = {
-            monthlyReturns: [
-                { month: 'Jan', value: 4500, return: 5.2 },
-                { month: 'Feb', value: 5200, return: 4.8 },
-                { month: 'Mar', value: 4800, return: -1.2 },
-                { month: 'Apr', value: 6100, return: 8.5 },
-                { month: 'May', value: 5900, return: 3.1 },
-                { month: 'Jun', value: 7200, return: 6.4 }
-            ],
-            sectorDistribution: [
-                { name: 'Technology', value: 45 },
-                { name: 'Fintech', value: 25 },
-                { name: 'Healthcare', value: 15 },
-                { name: 'E-commerce', value: 10 },
-                { name: 'Other', value: 5 }
-            ],
-            pipelineValue: 12500000,
-            activeDeals: 12,
-            successRate: 84.5
+            monthlyReturns: [],
+            sectorDistribution: [],
+            pipelineValue: 0,
+            activeDeals: 0,
+            successRate: 0
         };
 
         res.json(performanceData);

@@ -7,8 +7,11 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest, authorize } from '../middleware/authorize';
 import { prisma, prismaReplica } from '../database';
-import { payments } from '../utils/mock-payments';
 import { shouldUseDatabase } from '../migration-manager';
+import { createAbaTransaction } from '../utils/aba';
+import { settleSecondaryTrade } from '../services/secondary-trade-settlement';
+import { isTradingOperatorRole } from '../lib/roles';
+import { io } from '../socket';
 
 const router = Router();
 
@@ -21,8 +24,37 @@ function requireTenantId(req: AuthenticatedRequest, res: Response): string | und
     return tenantId;
 }
 
+async function requireInvestor(req: AuthenticatedRequest, tenantId: string, res: Response) {
+    const investor = await prisma.investor.findFirst({
+        where: { userId: req.user?.id, tenantId }
+    });
+
+    if (!investor) {
+        res.status(404).json({ error: 'Investor profile not found' });
+        return undefined;
+    }
+
+    return investor;
+}
+
+async function getInvestor(req: AuthenticatedRequest, tenantId: string) {
+    return prisma.investor.findFirst({
+        where: { userId: req.user?.id, tenantId }
+    });
+}
+
 // Platform fee percentage
 const PLATFORM_FEE = 0.01; // 1%
+
+function resolvePaymentReturnUrl(returnUrl?: string) {
+    if (typeof returnUrl === 'string' && returnUrl.trim()) {
+        return returnUrl.trim();
+    }
+
+    const configuredBase = (process.env.FRONTEND_URL || process.env.APP_URL || 'https://trade.cambobia.com').trim();
+    const normalizedBase = configuredBase.replace(/\/+$/, '');
+    return `${normalizedBase}/secondary-trading`;
+}
 
 // Get all active listings
 router.get('/listings', authorize('secondary_trading.list'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -58,7 +90,16 @@ router.get('/listings', authorize('secondary_trading.list'), async (req: Authent
                     include: {
                         deal: {
                             include: {
-                                sme: { select: { id: true, name: true } }
+                                sme: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        sector: true,
+                                        stage: true,
+                                        score: true,
+                                        certified: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -90,6 +131,367 @@ router.get('/listings', authorize('secondary_trading.list'), async (req: Authent
     } catch (error) {
         console.error('Error fetching listings:', error);
         res.status(500).json({ error: 'Failed to fetch listings' });
+    }
+});
+
+// Trader profile/preferences (investor only)
+router.get('/trader-profile', authorize('secondary_trading.read'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.json({
+                profile: {
+                    riskLevel: 'MEDIUM',
+                    investmentHorizon: 'MID',
+                    strategy: 'VALUE',
+                    maxPositionSize: 10,
+                    preferredSectors: [],
+                    notifications: {
+                        priceAlerts: true,
+                        executionUpdates: true,
+                        marketAnnouncements: true
+                    }
+                }
+            });
+            return;
+        }
+
+        const role = req.user?.role;
+        const isOperator = isTradingOperatorRole(role);
+        if (isOperator) {
+            res.json({
+                mode: 'OPERATOR',
+                operator: {
+                    userId: req.user?.id,
+                    role,
+                    tenantId
+                },
+                profile: {
+                    riskLevel: 'MEDIUM',
+                    investmentHorizon: 'MID',
+                    strategy: 'VALUE',
+                    maxPositionSize: 10,
+                    preferredSectors: [],
+                    notifications: {
+                        priceAlerts: true,
+                        executionUpdates: true,
+                        marketAnnouncements: true
+                    },
+                    watchlistCount: 0
+                }
+            });
+            return;
+        }
+
+        const investor = await getInvestor(req, tenantId);
+        if (!investor) {
+            res.json({
+                mode: 'READ_ONLY',
+                profile: {
+                    riskLevel: 'MEDIUM',
+                    investmentHorizon: 'MID',
+                    strategy: 'VALUE',
+                    maxPositionSize: 10,
+                    preferredSectors: [],
+                    notifications: {
+                        priceAlerts: false,
+                        executionUpdates: false,
+                        marketAnnouncements: true
+                    },
+                    watchlistCount: 0
+                },
+                message: 'Trader profile is available for investor accounts only.'
+            });
+            return;
+        }
+
+        const prefs = (investor.preferences as Record<string, unknown>) || {};
+        const tradingProfile = (prefs.tradingProfile as Record<string, unknown>) || {};
+        const watchlist = Array.isArray(prefs.watchlist) ? (prefs.watchlist as unknown[]) : [];
+
+        res.json({
+            mode: 'TRADER',
+            investor: {
+                id: investor.id,
+                name: investor.name,
+                type: investor.type,
+                kycStatus: investor.kycStatus
+            },
+            profile: {
+                riskLevel: String(tradingProfile.riskLevel || 'MEDIUM'),
+                investmentHorizon: String(tradingProfile.investmentHorizon || 'MID'),
+                strategy: String(tradingProfile.strategy || 'VALUE'),
+                maxPositionSize: Number(tradingProfile.maxPositionSize ?? 10),
+                preferredSectors: Array.isArray(tradingProfile.preferredSectors)
+                    ? tradingProfile.preferredSectors.map(v => String(v)).slice(0, 10)
+                    : [],
+                notifications: {
+                    priceAlerts: Boolean((tradingProfile.notifications as any)?.priceAlerts ?? true),
+                    executionUpdates: Boolean((tradingProfile.notifications as any)?.executionUpdates ?? true),
+                    marketAnnouncements: Boolean((tradingProfile.notifications as any)?.marketAnnouncements ?? true)
+                },
+                watchlistCount: watchlist.length
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching trader profile:', error);
+        res.status(500).json({ error: 'Failed to fetch trader profile' });
+    }
+});
+
+router.put('/trader-profile', authorize('secondary_trading.buy'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.status(503).json({ error: 'Database not available' });
+            return;
+        }
+
+        const role = req.user?.role;
+        if (isTradingOperatorRole(role)) {
+            res.status(403).json({ error: 'Operator accounts do not use trader profile settings' });
+            return;
+        }
+
+        const investor = await getInvestor(req, tenantId);
+        if (!investor) {
+            res.status(403).json({ error: 'Only investor accounts can update trader profile settings' });
+            return;
+        }
+
+        const body = req.body || {};
+        const existingPrefs = (investor.preferences as Record<string, unknown>) || {};
+        const existingTrading = (existingPrefs.tradingProfile as Record<string, unknown>) || {};
+        const existingNotifications = (existingTrading.notifications as Record<string, unknown>) || {};
+
+        const nextTradingProfile = {
+            ...existingTrading,
+            riskLevel: ['LOW', 'MEDIUM', 'HIGH'].includes(String(body.riskLevel)) ? String(body.riskLevel) : String(existingTrading.riskLevel || 'MEDIUM'),
+            investmentHorizon: ['SHORT', 'MID', 'LONG'].includes(String(body.investmentHorizon)) ? String(body.investmentHorizon) : String(existingTrading.investmentHorizon || 'MID'),
+            strategy: ['VALUE', 'GROWTH', 'MOMENTUM', 'INCOME', 'MIXED'].includes(String(body.strategy)) ? String(body.strategy) : String(existingTrading.strategy || 'VALUE'),
+            maxPositionSize: Math.max(1, Math.min(100, Number(body.maxPositionSize ?? existingTrading.maxPositionSize ?? 10))),
+            preferredSectors: Array.isArray(body.preferredSectors)
+                ? body.preferredSectors.map((v: unknown) => String(v)).filter(Boolean).slice(0, 10)
+                : (Array.isArray(existingTrading.preferredSectors) ? existingTrading.preferredSectors : []),
+            notifications: {
+                ...existingNotifications,
+                priceAlerts: body.notifications?.priceAlerts !== undefined ? Boolean(body.notifications.priceAlerts) : Boolean(existingNotifications.priceAlerts ?? true),
+                executionUpdates: body.notifications?.executionUpdates !== undefined ? Boolean(body.notifications.executionUpdates) : Boolean(existingNotifications.executionUpdates ?? true),
+                marketAnnouncements: body.notifications?.marketAnnouncements !== undefined ? Boolean(body.notifications.marketAnnouncements) : Boolean(existingNotifications.marketAnnouncements ?? true)
+            }
+        };
+
+        await prisma.investor.update({
+            where: { id: investor.id },
+            data: {
+                preferences: {
+                    ...existingPrefs,
+                    tradingProfile: nextTradingProfile
+                } as any
+            }
+        });
+
+        res.json({ message: 'Trader profile updated', profile: nextTradingProfile });
+    } catch (error) {
+        console.error('Error updating trader profile:', error);
+        res.status(500).json({ error: 'Failed to update trader profile' });
+    }
+});
+
+// Watchlist (investor-owned)
+router.get('/watchlist', authorize('secondary_trading.read'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.json({ listingIds: [], listings: [] });
+            return;
+        }
+
+        const role = req.user?.role;
+        if (isTradingOperatorRole(role)) {
+            res.json({
+                mode: 'OPERATOR',
+                listingIds: [],
+                listings: []
+            });
+            return;
+        }
+
+        const investor = await getInvestor(req, tenantId);
+        if (!investor) {
+            res.json({
+                mode: 'READ_ONLY',
+                listingIds: [],
+                listings: []
+            });
+            return;
+        }
+
+        const prefs = (investor.preferences as Record<string, unknown>) || {};
+        const rawIds = Array.isArray(prefs.watchlist) ? (prefs.watchlist as unknown[]) : [];
+        const listingIds = rawIds.map(v => String(v)).filter(Boolean).slice(0, 100);
+
+        if (listingIds.length === 0) {
+            res.json({ listingIds: [], listings: [] });
+            return;
+        }
+
+        const listings = await prismaReplica.secondaryListing.findMany({
+            where: {
+                tenantId,
+                id: { in: listingIds },
+                status: 'ACTIVE'
+            },
+            include: {
+                seller: { select: { id: true, name: true, type: true } },
+                dealInvestor: {
+                    include: {
+                        deal: {
+                            include: {
+                                sme: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        sector: true,
+                                        stage: true,
+                                        score: true,
+                                        certified: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { listedAt: 'desc' }
+        });
+
+        const formattedListings = listings.map(l => ({
+            ...l,
+            deal: l.dealInvestor?.deal || { title: 'Unknown Deal', sme: { name: 'N/A' } },
+            returnPercentage: 0,
+            originalPricePerShare: 0,
+            isOwner: l.sellerId === investor.id
+        }));
+
+        res.json({ listingIds, listings: formattedListings });
+    } catch (error) {
+        console.error('Error fetching watchlist:', error);
+        res.status(500).json({ error: 'Failed to fetch watchlist' });
+    }
+});
+
+router.put('/watchlist', authorize('secondary_trading.buy'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.status(503).json({ error: 'Database not available' });
+            return;
+        }
+
+        if (isTradingOperatorRole(req.user?.role)) {
+            res.status(403).json({ error: 'Operator accounts do not have personal watchlists' });
+            return;
+        }
+
+        const investor = await getInvestor(req, tenantId);
+        if (!investor) {
+            res.status(403).json({ error: 'Only investor accounts can update watchlists' });
+            return;
+        }
+
+        const rawIds = Array.isArray(req.body?.listingIds) ? req.body.listingIds : [];
+        const listingIds = rawIds.map((v: unknown) => String(v)).filter(Boolean).slice(0, 100);
+        const uniqueIds = Array.from(new Set(listingIds));
+
+        const prefs = (investor.preferences as Record<string, unknown>) || {};
+        await prisma.investor.update({
+            where: { id: investor.id },
+            data: {
+                preferences: {
+                    ...prefs,
+                    watchlist: uniqueIds
+                } as any
+            }
+        });
+
+        res.json({ message: 'Watchlist updated', listingIds: uniqueIds });
+    } catch (error) {
+        console.error('Error updating watchlist:', error);
+        res.status(500).json({ error: 'Failed to update watchlist' });
+    }
+});
+
+// Public market tape for trading dashboard
+router.get('/trades/recent', authorize('secondary_trading.list'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.json({ trades: [] });
+            return;
+        }
+
+        const limit = Math.max(1, Math.min(100, Number(req.query.limit || 30)));
+        const trades = await prismaReplica.secondaryTrade.findMany({
+            where: {
+                status: 'COMPLETED',
+                listing: { tenantId }
+            },
+            include: {
+                listing: {
+                    include: {
+                        dealInvestor: {
+                            include: {
+                                deal: {
+                                    include: {
+                                        sme: {
+                                            select: {
+                                                id: true,
+                                                name: true,
+                                                sector: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: { executedAt: 'desc' },
+            take: limit
+        });
+
+        const formatted = trades.map(t => ({
+            id: t.id,
+            listingId: t.listingId,
+            pricePerShare: t.pricePerShare,
+            shares: t.shares,
+            totalAmount: t.totalAmount,
+            executedAt: t.executedAt,
+            deal: t.listing?.dealInvestor?.deal
+                ? {
+                    id: t.listing.dealInvestor.deal.id,
+                    title: t.listing.dealInvestor.deal.title,
+                    sme: t.listing.dealInvestor.deal.sme
+                }
+                : null
+        }));
+
+        res.json({ trades: formatted });
+    } catch (error) {
+        console.error('Error fetching recent trades:', error);
+        res.status(500).json({ error: 'Failed to fetch recent trades' });
     }
 });
 
@@ -229,6 +631,18 @@ router.post('/listings', authorize('secondary_trading.create_listing'), async (r
             }
         });
 
+        // Real-time market update: New Listing
+        if (io) {
+            io.emit('market_update', {
+                type: 'NEW_LISTING',
+                symbol: listing.id,
+                listing: {
+                    ...listing,
+                    deal: dealInvestor.deal
+                }
+            });
+        }
+
         res.status(201).json(listing);
     } catch (error) {
         console.error('Error creating listing:', error);
@@ -262,7 +676,7 @@ router.put('/listings/:id', authorize('secondary_trading.update_listing'), async
         });
 
         const isOwner = investor && existing.sellerId === investor.id;
-        const isAdmin = req.user?.role === 'ADMIN' || req.user?.role === 'SUPER_ADMIN';
+        const isAdmin = isTradingOperatorRole(req.user?.role);
 
         if (!isOwner && !isAdmin) {
             res.status(403).json({ error: 'Not authorized to update this listing' });
@@ -397,8 +811,10 @@ router.post('/listings/:id/buy', authorize('secondary_trading.buy'), async (req:
 
         const totalAmount = shares * listing.pricePerShare;
         const fee = totalAmount * PLATFORM_FEE;
+        const grossAmount = Number((totalAmount + fee).toFixed(2));
+        const shortTranId = `${Date.now()}${Math.floor(100000 + Math.random() * 900000)}`;
 
-        // Create trade
+        // Create trade in processing state while awaiting payment settlement.
         const trade = await prisma.secondaryTrade.create({
             data: {
                 listingId: listing.id,
@@ -408,7 +824,7 @@ router.post('/listings/:id/buy', authorize('secondary_trading.buy'), async (req:
                 pricePerShare: listing.pricePerShare,
                 totalAmount,
                 fee,
-                status: 'PENDING'
+                status: 'PROCESSING'
             }
         });
 
@@ -422,55 +838,74 @@ router.post('/listings/:id/buy', authorize('secondary_trading.buy'), async (req:
             }
         });
 
-        // Create Escrow Payment Intent
-        const escrow = await payments.createEscrowIntent(
-            trade.totalAmount + trade.fee,
-            'usd',
-            { tradeId: trade.id, listingId: listing.id, buyerId: buyer.id }
-        );
+        const payment = await prisma.payment.create({
+            data: {
+                tenantId,
+                userId: req.user!.id,
+                amount: grossAmount,
+                currency: 'USD',
+                method: 'ABA_PAYWAY',
+                provider: 'ABA',
+                providerTxId: shortTranId,
+                status: 'PENDING',
+                description: `Secondary trade purchase (${trade.id})`,
+                metadata: {
+                    category: 'SECONDARY_TRADE_BUY',
+                    secondaryTradeId: trade.id,
+                    listingId: listing.id,
+                    sellerInvestorId: listing.sellerId,
+                    buyerInvestorId: buyer.id,
+                    platformFee: fee,
+                    sellerPayout: Number((totalAmount - fee).toFixed(2)),
+                    operatorAccount: 'CAMBOBIA_OPERATOR_CLEARING',
+                    settlementStatus: 'AWAITING_PAYMENT'
+                }
+            }
+        });
+
+        let abaRequest: ReturnType<typeof createAbaTransaction> | null = null;
+        try {
+            const emailName = (req.user?.email || 'Investor').split('@')[0];
+            abaRequest = createAbaTransaction(
+                shortTranId,
+                grossAmount,
+                [
+                    {
+                        name: `Secondary trade ${trade.id}`,
+                        quantity: 1,
+                        price: grossAmount
+                    }
+                ],
+                {
+                    firstName: emailName,
+                    lastName: '',
+                    email: req.user?.email || 'unknown@example.com',
+                    phone: '012000000'
+                },
+                'abapay_khqr',
+                resolvePaymentReturnUrl(req.body.returnUrl)
+            );
+        } catch (paymentError) {
+            console.warn('ABA transaction payload generation failed, trade remains pending payment:', paymentError);
+        }
 
         // DEMO MODE: Auto-execute if requested
         if (req.body.simulate_payment) {
             await prisma.$transaction(async (tx) => {
-                // 1. Mark trade as completed
-                await tx.secondaryTrade.update({
-                    where: { id: trade.id },
-                    data: { status: 'COMPLETED', executedAt: new Date() }
+                await tx.payment.update({
+                    where: { id: payment.id },
+                    data: {
+                        status: 'COMPLETED',
+                        metadata: {
+                            ...((payment.metadata as Record<string, unknown>) || {}),
+                            settlementStatus: 'SETTLED',
+                            settledAt: new Date().toISOString(),
+                            settlementSource: 'SIMULATION'
+                        } as any
+                    }
                 });
 
-                // 2. Deduct from Seller
-                await tx.dealInvestor.update({
-                    where: { id: listing.dealInvestorId },
-                    data: { amount: { decrement: shares } }
-                });
-
-                // 3. Asset Transfer Logic
-                // Fetch seller investment to get Deal ID
-                const sellerInv = await tx.dealInvestor.findUnique({ where: { id: listing.dealInvestorId } });
-
-                if (!sellerInv) {
-                    throw new Error('Seller investment record not found');
-                }
-
-                const existingBuyerInv = await tx.dealInvestor.findUnique({
-                    where: { dealId_investorId: { dealId: sellerInv.dealId, investorId: buyer.id } }
-                });
-
-                if (existingBuyerInv) {
-                    await tx.dealInvestor.update({
-                        where: { id: existingBuyerInv.id },
-                        data: { amount: { increment: shares } }
-                    });
-                } else {
-                    await tx.dealInvestor.create({
-                        data: {
-                            dealId: sellerInv.dealId,
-                            investorId: buyer.id,
-                            amount: shares,
-                            status: 'APPROVED'
-                        }
-                    });
-                }
+                await settleSecondaryTrade(tx, trade.id, tenantId);
             });
 
             // Refetch updated trade
@@ -478,6 +913,7 @@ router.post('/listings/:id/buy', authorize('secondary_trading.buy'), async (req:
 
             res.status(201).json({
                 trade: completedTrade,
+                paymentId: payment.id,
                 message: 'Trade executed immediately (Simulation Mode)'
             });
             return;
@@ -485,8 +921,15 @@ router.post('/listings/:id/buy', authorize('secondary_trading.buy'), async (req:
 
         res.status(201).json({
             trade,
-            clientSecret: escrow.client_secret,
-            paymentIntentId: escrow.id
+            paymentId: payment.id,
+            paymentIntentId: payment.providerTxId,
+            clientSecret: `aba_${payment.providerTxId || payment.id}`,
+            abaUrl: process.env.ABA_PAYWAY_API_URL || null,
+            abaRequest,
+            settlement: {
+                operatorAccount: 'CAMBOBIA_OPERATOR_CLEARING',
+                status: 'AWAITING_PAYMENT'
+            }
         });
     } catch (error) {
         console.error('Error creating trade:', error);
@@ -580,90 +1023,330 @@ router.post('/trades/:id/execute', authorize('secondary_trading.execute'), async
         const tradeId = req.params.id;
 
         await prisma.$transaction(async (tx) => {
-            // 1. Get and verify trade
-            const trade = await tx.secondaryTrade.findUnique({
-                where: { id: tradeId },
-                include: { listing: true }
-            });
-
-            if (!trade) {
-                throw new Error('Trade not found');
-            }
-            if (trade.listing.tenantId !== tenantId) {
-                throw new Error('Trade not found');
-            }
-
-            if (trade.status !== 'PENDING') {
-                throw new Error('Trade is not pending execution');
-            }
-
-            // 2. Mark trade as completed
-            await tx.secondaryTrade.update({
-                where: { id: tradeId },
-                data: {
-                    status: 'COMPLETED',
-                    executedAt: new Date()
-                }
-            });
-
-            // 3. Asset Transfer Logic
-            // We treat 'shares' as units of the original investment amount (e.g., $1 principal = 1 share)
-
-            // A. Deduct from Seller
-            // Verification: Ensure seller still has enough amount (in case of race conditions or multiple listings)
-            const sellerInvestment = await tx.dealInvestor.findUnique({
-                where: { id: trade.listing.dealInvestorId }
-            });
-
-            if (!sellerInvestment || sellerInvestment.amount < trade.shares) {
-                throw new Error('Seller has insufficient investment amount to transfer');
-            }
-
-            await tx.dealInvestor.update({
-                where: { id: trade.listing.dealInvestorId },
-                data: {
-                    amount: { decrement: trade.shares }
-                }
-            });
-
-            // B. Add to Buyer
-            // Check if buyer already has an investment in this deal
-            const dealId = sellerInvestment.dealId;
-            const buyerId = trade.buyerId;
-
-            const buyerInvestment = await tx.dealInvestor.findUnique({
-                where: {
-                    dealId_investorId: {
-                        dealId: dealId,
-                        investorId: buyerId
-                    }
-                }
-            });
-
-            if (buyerInvestment) {
-                await tx.dealInvestor.update({
-                    where: { id: buyerInvestment.id },
-                    data: {
-                        amount: { increment: trade.shares },
-                        status: 'APPROVED' // Ensure it's active
-                    }
-                });
-            } else {
-                await tx.dealInvestor.create({
-                    data: {
-                        dealId: dealId,
-                        investorId: buyerId,
-                        amount: trade.shares,
-                        status: 'APPROVED'
-                    }
-                });
-            }
+            await settleSecondaryTrade(tx, tradeId, tenantId);
         });
 
         res.json({ message: 'Trade executed successfully' });
     } catch (error: any) {
         console.error('Error executing trade:', error);
         res.status(500).json({ error: error.message || 'Failed to execute trade' });
+    }
+});
+
+// Confirm payment and settle trade from operator side.
+router.post('/trades/:id/payment/confirm', authorize('billing.manage'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.status(503).json({ error: 'Database not available' });
+            return;
+        }
+
+        const tradeId = req.params.id;
+        const { paymentId, providerTxId, markFailed, reason } = req.body || {};
+
+        const trade = await prisma.secondaryTrade.findUnique({
+            where: { id: tradeId },
+            include: { listing: true }
+        });
+
+        if (!trade || trade.listing.tenantId !== tenantId) {
+            res.status(404).json({ error: 'Trade not found' });
+            return;
+        }
+
+        const payment = await prisma.payment.findFirst({
+            where: {
+                tenantId,
+                ...(paymentId ? { id: String(paymentId) } : {}),
+                ...(providerTxId ? { providerTxId: String(providerTxId) } : {}),
+                metadata: {
+                    path: ['secondaryTradeId'],
+                    equals: tradeId
+                }
+            }
+        });
+
+        if (!payment) {
+            res.status(404).json({ error: 'Linked payment not found' });
+            return;
+        }
+
+        if (markFailed) {
+            const failedPayment = await prisma.payment.update({
+                where: { id: payment.id },
+                data: {
+                    status: 'FAILED',
+                    metadata: {
+                        ...((payment.metadata as Record<string, unknown>) || {}),
+                        settlementStatus: 'FAILED',
+                        failedAt: new Date().toISOString(),
+                        failureReason: String(reason || 'Marked failed by operator')
+                    } as any
+                }
+            });
+
+            await prisma.secondaryTrade.update({
+                where: { id: tradeId },
+                data: { status: 'FAILED' }
+            });
+
+            res.json({ message: 'Payment marked as failed', payment: failedPayment });
+            return;
+        }
+
+        const result = await prisma.$transaction(async (tx) => {
+            const currentPayment = await tx.payment.findUnique({ where: { id: payment.id } });
+            if (!currentPayment) throw new Error('Payment not found');
+
+            const completedPayment = currentPayment.status === 'COMPLETED'
+                ? currentPayment
+                : await tx.payment.update({
+                    where: { id: currentPayment.id },
+                    data: { status: 'COMPLETED' }
+                });
+
+            const settledTrade = await settleSecondaryTrade(tx, tradeId, tenantId);
+
+            const updatedPayment = await tx.payment.update({
+                where: { id: completedPayment.id },
+                data: {
+                    metadata: {
+                        ...((completedPayment.metadata as Record<string, unknown>) || {}),
+                        settlementStatus: 'SETTLED',
+                        settledAt: new Date().toISOString(),
+                        settledBy: req.user?.id
+                    } as any
+                }
+            });
+
+            return { settledTrade, updatedPayment };
+        });
+
+        res.json({
+            message: 'Payment confirmed and trade settled',
+            trade: result.settledTrade,
+            payment: result.updatedPayment
+        });
+    } catch (error: any) {
+        console.error('Error confirming secondary trade payment:', error);
+        res.status(500).json({ error: error.message || 'Failed to confirm payment' });
+    }
+});
+
+// Customer support intake for wrong transfer and settlement issues.
+router.post('/trades/:id/report-issue', authorize('secondary_trading.read'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.status(503).json({ error: 'Database not available' });
+            return;
+        }
+
+        const tradeId = req.params.id;
+        const category = String(req.body?.category || 'WRONG_TRANSFER').trim();
+        const subject = String(req.body?.subject || `Secondary trade issue ${tradeId}`).trim();
+        const description = String(req.body?.description || '').trim();
+
+        if (description.length < 20) {
+            res.status(400).json({ error: 'Description must be at least 20 characters' });
+            return;
+        }
+
+        const trade = await prisma.secondaryTrade.findUnique({
+            where: { id: tradeId },
+            include: {
+                listing: {
+                    include: { dealInvestor: true }
+                },
+                buyer: true,
+                seller: true
+            }
+        });
+
+        if (!trade || trade.listing.tenantId !== tenantId) {
+            res.status(404).json({ error: 'Trade not found' });
+            return;
+        }
+
+        const actorInvestor = await prisma.investor.findFirst({
+            where: { userId: req.user?.id, tenantId }
+        });
+        const isParty = actorInvestor && (actorInvestor.id === trade.buyerId || actorInvestor.id === trade.sellerId);
+        const isAdmin = isTradingOperatorRole(req.user?.role);
+        if (!isParty && !isAdmin) {
+            res.status(403).json({ error: 'Only trade participants can file trade issues' });
+            return;
+        }
+
+        const ticket = await prisma.supportTicket.create({
+            data: {
+                tenantId,
+                requesterId: req.user!.id,
+                subject: `[TRADE:${tradeId}] ${subject}`,
+                description,
+                category: 'TRADING',
+                priority: category === 'WRONG_TRANSFER' ? 'HIGH' : 'MEDIUM',
+                slaHours: 8,
+                responseDueAt: new Date(Date.now() + 8 * 60 * 60 * 1000),
+                metadata: {
+                    tradeId,
+                    category,
+                    buyerInvestorId: trade.buyerId,
+                    sellerInvestorId: trade.sellerId
+                }
+            }
+        });
+
+        const adminCase = await prisma.adminCase.create({
+            data: {
+                tenantId,
+                type: 'SUPPORT',
+                title: `Trade issue: ${category}`,
+                description,
+                priority: category === 'WRONG_TRANSFER' ? 'HIGH' : 'MEDIUM',
+                requesterUserId: req.user!.id,
+                createdById: req.user!.id,
+                sourceTicketId: ticket.id,
+                relatedEntityType: 'SECONDARY_TRADE',
+                relatedEntityId: tradeId,
+                dueAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+                metadata: {
+                    category,
+                    tradeId
+                }
+            }
+        });
+
+        let dispute: { id: string } | null = null;
+        if (['WRONG_TRANSFER', 'PAYMENT_REVERSAL', 'PAYMENT_NOT_RECEIVED'].includes(category)) {
+            dispute = await prisma.dispute.create({
+                data: {
+                    tenantId,
+                    dealId: trade.listing.dealInvestor.dealId,
+                    initiatorId: req.user!.id,
+                    reason: `Secondary trade transfer issue: ${category}`,
+                    description: `[trade:${tradeId}] ${description}`,
+                    status: 'OPEN'
+                },
+                select: { id: true }
+            });
+        }
+
+        res.status(201).json({
+            message: 'Issue submitted to support and operations',
+            ticket,
+            case: adminCase,
+            dispute
+        });
+    } catch (error) {
+        console.error('Error filing trade issue:', error);
+        res.status(500).json({ error: 'Failed to file trade issue' });
+    }
+});
+
+router.get('/support/my', authorize('secondary_trading.read'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.json({ tickets: [] });
+            return;
+        }
+
+        const tickets = await prisma.supportTicket.findMany({
+            where: {
+                tenantId,
+                requesterId: req.user?.id,
+                category: 'TRADING'
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 100
+        });
+
+        res.json({ tickets });
+    } catch (error) {
+        console.error('Error fetching trade support tickets:', error);
+        res.status(500).json({ error: 'Failed to fetch support tickets' });
+    }
+});
+
+router.get('/operator-account/summary', authorize('billing.read'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        const tenantId = requireTenantId(req, res);
+        if (!tenantId) return;
+
+        if (!shouldUseDatabase()) {
+            res.json({
+                unsettledAmount: 0,
+                settledAmount: 0,
+                failedAmount: 0,
+                unsettledCount: 0,
+                settledCount: 0,
+                failedCount: 0
+            });
+            return;
+        }
+
+        const payments = await prisma.payment.findMany({
+            where: {
+                tenantId,
+                metadata: {
+                    path: ['category'],
+                    equals: 'SECONDARY_TRADE_BUY'
+                }
+            },
+            select: {
+                id: true,
+                amount: true,
+                status: true,
+                metadata: true,
+                createdAt: true
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1000
+        });
+
+        let unsettledAmount = 0;
+        let settledAmount = 0;
+        let failedAmount = 0;
+        let unsettledCount = 0;
+        let settledCount = 0;
+        let failedCount = 0;
+
+        for (const payment of payments) {
+            const metadata = (payment.metadata as Record<string, unknown>) || {};
+            const settlementStatus = String(metadata.settlementStatus || '');
+            if (payment.status === 'FAILED' || settlementStatus === 'FAILED') {
+                failedAmount += payment.amount;
+                failedCount += 1;
+                continue;
+            }
+            if (settlementStatus === 'SETTLED') {
+                settledAmount += payment.amount;
+                settledCount += 1;
+                continue;
+            }
+            unsettledAmount += payment.amount;
+            unsettledCount += 1;
+        }
+
+        res.json({
+            unsettledAmount: Number(unsettledAmount.toFixed(2)),
+            settledAmount: Number(settledAmount.toFixed(2)),
+            failedAmount: Number(failedAmount.toFixed(2)),
+            unsettledCount,
+            settledCount,
+            failedCount
+        });
+    } catch (error) {
+        console.error('Error fetching operator account summary:', error);
+        res.status(500).json({ error: 'Failed to fetch operator account summary' });
     }
 });
 

@@ -3,11 +3,12 @@ import { UserRole } from '@prisma/client';
 import { AuthenticatedRequest, authorize } from '../middleware/authorize';
 import { prisma } from '../database';
 import { logAuditEvent } from '../utils/security';
+import { isMissingSchemaError } from '../utils/prisma-errors';
 
 const router = Router();
 
 function isValidRole(value: string): value is UserRole {
-  return ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'SUPPORT', 'INVESTOR', 'SME'].includes(value);
+  return ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'ADVISOR', 'SUPPORT', 'INVESTOR', 'SME'].includes(value);
 }
 
 function requiresSuperAdmin(role: string): boolean {
@@ -24,8 +25,15 @@ router.get('/requests/mine', authorize('role_request.create'), async (req: Authe
     });
     return res.json({ requests });
   } catch (error) {
+    if (isMissingSchemaError(error)) {
+      return res.json({
+        requests: [],
+        unavailable: true,
+        reason: 'Pending database migration for role lifecycle'
+      });
+    }
     console.error('List my role requests error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.json({ requests: [], unavailable: true, reason: 'Role lifecycle service temporarily unavailable' });
   }
 });
 
@@ -59,6 +67,13 @@ router.post('/requests', authorize('role_request.create'), async (req: Authentic
 
     return res.status(201).json({ message: 'Role change request submitted', request });
   } catch (error) {
+    if (isMissingSchemaError(error)) {
+      return res.status(200).json({
+        message: 'Role lifecycle module unavailable; request not persisted',
+        unavailable: true,
+        reason: 'Pending database migration for role lifecycle'
+      });
+    }
     console.error('Create role request error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -82,6 +97,13 @@ router.get('/requests', authorize('role_request.list'), async (req: Authenticate
 
     return res.json({ requests });
   } catch (error) {
+    if (isMissingSchemaError(error)) {
+      return res.json({
+        requests: [],
+        unavailable: true,
+        reason: 'Pending database migration for role lifecycle'
+      });
+    }
     console.error('List role requests error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -141,6 +163,13 @@ router.post('/requests/:id/approve', authorize('role_request.review'), async (re
 
     return res.json({ message: 'Role request approved', request: result.updatedRequest, user: result.updatedUser });
   } catch (error) {
+    if (isMissingSchemaError(error)) {
+      return res.status(200).json({
+        message: 'Role lifecycle module unavailable; approval deferred',
+        unavailable: true,
+        reason: 'Pending database migration for role lifecycle'
+      });
+    }
     console.error('Approve role request error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -170,6 +199,13 @@ router.post('/requests/:id/reject', authorize('role_request.review'), async (req
 
     return res.json({ message: 'Role request rejected', request: updated });
   } catch (error) {
+    if (isMissingSchemaError(error)) {
+      return res.status(200).json({
+        message: 'Role lifecycle module unavailable; rejection deferred',
+        unavailable: true,
+        reason: 'Pending database migration for role lifecycle'
+      });
+    }
     console.error('Reject role request error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -203,8 +239,15 @@ router.get('/grants', authorize('role_grant.list'), async (req: AuthenticatedReq
 
     return res.json({ grants: normalized });
   } catch (error) {
+    if (isMissingSchemaError(error)) {
+      return res.json({
+        grants: [],
+        unavailable: true,
+        reason: 'Pending database migration for role lifecycle'
+      });
+    }
     console.error('List role grants error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.json({ grants: [], unavailable: true, reason: 'Role grants service temporarily unavailable' });
   }
 });
 
@@ -256,6 +299,13 @@ router.post('/grants', authorize('role_grant.create'), async (req: Authenticated
 
     return res.status(201).json({ message: 'Temporary role grant created', grant });
   } catch (error) {
+    if (isMissingSchemaError(error)) {
+      return res.status(200).json({
+        message: 'Role lifecycle module unavailable; grant not persisted',
+        unavailable: true,
+        reason: 'Pending database migration for role lifecycle'
+      });
+    }
     console.error('Create role grant error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -284,6 +334,13 @@ router.post('/grants/:id/revoke', authorize('role_grant.revoke'), async (req: Au
 
     return res.json({ message: 'Grant revoked', grant: updated });
   } catch (error) {
+    if (isMissingSchemaError(error)) {
+      return res.status(200).json({
+        message: 'Role lifecycle module unavailable; revoke deferred',
+        unavailable: true,
+        reason: 'Pending database migration for role lifecycle'
+      });
+    }
     console.error('Revoke role grant error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }

@@ -54,8 +54,15 @@ export function verifyTotpCode(secret: string, code: string, window: number = 1)
         const time = now + (i * TOTP_PERIOD * 1000);
         const expectedCode = generateTotpCode(secret, time);
 
-        // Constant-time comparison to prevent timing attacks
-        if (crypto.timingSafeEqual(Buffer.from(code), Buffer.from(expectedCode))) {
+        // Constant-time comparison to prevent timing attacks.
+        // timingSafeEqual throws if buffer lengths differ, so fail closed first.
+        const providedCode = Buffer.from(code || '');
+        const expectedCodeBuffer = Buffer.from(expectedCode);
+        if (providedCode.length !== expectedCodeBuffer.length) {
+            continue;
+        }
+
+        if (crypto.timingSafeEqual(providedCode, expectedCodeBuffer)) {
             return true;
         }
     }

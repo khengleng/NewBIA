@@ -270,9 +270,15 @@ export async function sendBookingConfirmation(
 
 // Email Verification
 export async function sendVerificationEmail(to: string, verificationToken: string) {
-  const verificationUrl = `${FRONTEND_URL}/auth/verify-email?token=${verificationToken}`;
+  const verificationUrl = `${FRONTEND_URL}/auth/verify-email?token=${encodeURIComponent(verificationToken)}`;
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error('❌ RESEND_API_KEY is missing. Email will NOT be sent.');
+    return { success: false, error: 'API Key missing' };
+  }
 
   try {
+    console.log(`📧 Attempting to send verification email to: ${to} using ${FROM_EMAIL}`);
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,
       to: [to],
@@ -286,7 +292,7 @@ export async function sendVerificationEmail(to: string, verificationToken: strin
               .container { max-width: 600px; margin: 0 auto; padding: 20px; }
               .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
               .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-              .button { display: inline-block; padding: 12px 30px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+              .button { display: inline-block; padding: 12px 30px; background: #667eea !important; color: white !important; text-decoration: none; border-radius: 5px; margin: 20px 0; font-weight: bold; }
               .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
             </style>
           </head>
@@ -298,7 +304,11 @@ export async function sendVerificationEmail(to: string, verificationToken: strin
               <div class="content">
                 <p>Welcome to Boutique Advisory Platform!</p>
                 <p>Please click the button below to verify your email address and activate your account:</p>
-                <a href="${verificationUrl}" class="button">Verify Email</a>
+                <div style="text-align: center;">
+                  <a href="${verificationUrl}" class="button" style="color: white;">Verify Email</a>
+                </div>
+                <p>Or copy and paste this link in your browser:</p>
+                <p style="font-size: 11px; color: #999;">${verificationUrl}</p>
                 <p>If you didn't create an account, you can safely ignore this email.</p>
               </div>
               <div class="footer">
@@ -311,21 +321,21 @@ export async function sendVerificationEmail(to: string, verificationToken: strin
     });
 
     if (error) {
-      console.error('Error sending verification email:', error);
+      console.error('❌ Resend API Error:', error);
       return { success: false, error };
     }
 
-    console.log('✅ Verification email sent to:', to);
+    console.log('✅ Verification email sent successfully. ID:', data?.id);
     return { success: true, data };
   } catch (error) {
-    console.error('Failed to send verification email:', error);
+    console.error('❌ Failed to send verification email exception:', error);
     return { success: false, error };
   }
 }
 
 // Password reset email
 export async function sendPasswordResetEmail(to: string, resetToken: string) {
-  const resetUrl = `${FRONTEND_URL}/auth/reset-password?token=${resetToken}`;
+  const resetUrl = `${FRONTEND_URL}/auth/reset-password?token=${encodeURIComponent(resetToken)}`;
 
   try {
     const { data, error } = await resend.emails.send({

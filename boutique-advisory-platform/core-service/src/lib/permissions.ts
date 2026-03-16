@@ -8,9 +8,20 @@
  * - Owner-based access control
  * - Audit logging support
  */
+import { normalizeRole } from './roles';
 
 // Role types
-export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'ADVISOR' | 'SUPPORT' | 'INVESTOR' | 'SME';
+export type UserRole =
+    | 'SUPER_ADMIN'
+    | 'ADMIN'
+    | 'FINOPS'
+    | 'CX'
+    | 'AUDITOR'
+    | 'COMPLIANCE'
+    | 'ADVISOR'
+    | 'SUPPORT'
+    | 'INVESTOR'
+    | 'SME';
 
 // Permission action types
 export type PermissionAction = 'create' | 'read' | 'update' | 'delete' | 'list' | 'export' | 'certify' | 'approve';
@@ -51,8 +62,12 @@ const OWNER_SUFFIX = ':owner';
  * Role Hierarchy - Higher roles inherit permissions from lower roles
  */
 export const ROLE_HIERARCHY: Record<UserRole, UserRole[]> = {
-    SUPER_ADMIN: ['ADMIN', 'ADVISOR', 'SUPPORT'],  // Inherits all
-    ADMIN: ['ADVISOR'],                             // Inherits ADVISOR permissions
+    SUPER_ADMIN: ['ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'ADVISOR', 'SUPPORT'], // Inherits all operator roles
+    ADMIN: ['ADVISOR', 'SUPPORT'],                  // Inherits advisory and support baseline
+    FINOPS: [],                                     // Least-privilege: explicit permissions only
+    CX: [],                                         // Least-privilege: explicit permissions only
+    AUDITOR: [],                                    // Least-privilege: explicit permissions only
+    COMPLIANCE: [],                                 // Least-privilege: explicit permissions only
     ADVISOR: [],                                    // Base advisory role
     SUPPORT: [],                                    // Read-only role
     INVESTOR: [],                                   // Resource owner role
@@ -137,10 +152,10 @@ export const PERMISSIONS: Record<string, string[]> = {
     'certification.approve': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR'],
 
     // ==================== Report Permissions ====================
-    'report.list': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
-    'report.read': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
-    'report.create': ['SUPER_ADMIN', 'ADMIN'],
-    'report.export': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
+    'report.list': ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'ADVISOR', 'INVESTOR', 'SME'],
+    'report.read': ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'ADVISOR', 'INVESTOR', 'SME'],
+    'report.create': ['SUPER_ADMIN', 'ADMIN', 'FINOPS'],
+    'report.export': ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'ADVISOR', 'INVESTOR', 'SME'],
     'report.financial': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR'],
     'report.analytics': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR'],
 
@@ -177,10 +192,10 @@ export const PERMISSIONS: Record<string, string[]> = {
     'syndicate.manage': ['SUPER_ADMIN', 'ADMIN', 'INVESTOR'],
 
     // ==================== Secondary Trading Permissions ====================
-    'secondary_trading.list': ['SUPPORT', 'INVESTOR', 'SME', 'SUPER_ADMIN', 'ADMIN'],
-    'secondary_trading.read': ['SUPPORT', 'INVESTOR', 'SME', 'SUPER_ADMIN', 'ADMIN'],
-    'secondary_trading.create_listing': ['INVESTOR'],
-    'secondary_trading.update_listing': ['INVESTOR:owner'],
+    'secondary_trading.list': ['SUPPORT', 'INVESTOR', 'SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE'],
+    'secondary_trading.read': ['SUPPORT', 'INVESTOR', 'SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE'],
+    'secondary_trading.create_listing': ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE'],
+    'secondary_trading.update_listing': ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'SUPPORT'],
     'secondary_trading.buy': ['INVESTOR'],
     'secondary_trading.execute': ['SUPER_ADMIN'],
 
@@ -192,30 +207,34 @@ export const PERMISSIONS: Record<string, string[]> = {
     'notification.broadcast': ['SUPER_ADMIN', 'ADMIN'],
 
     // ==================== Analytics Permissions ====================
-    'analytics.read': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR'],
-    'analytics.financial': ['SUPER_ADMIN', 'ADMIN'],
+    'analytics.read': ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'ADVISOR'],
+    'analytics.financial': ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'AUDITOR'],
     'analytics.system': ['SUPER_ADMIN'],
 
     // ==================== Dashboard/Calendar Permissions ====================
     'dashboard.read': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
     'calendar.read': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
+    'calendar.create': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
+    'calendar.delete': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
 
     // ==================== Payment Permissions ====================
     'payment.list': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR:owner', 'INVESTOR:owner', 'SME:owner'],
     'payment.read': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR:owner', 'INVESTOR:owner', 'SME:owner'],
     'payment.create': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'INVESTOR', 'SME'],
     'payment.refund': ['SUPER_ADMIN', 'ADMIN'],
-    'billing.read': ['SUPER_ADMIN', 'ADMIN'],
-    'billing.manage': ['SUPER_ADMIN', 'ADMIN'],
-    'invoice.read': ['SUPER_ADMIN', 'ADMIN'],
-    'invoice.manage': ['SUPER_ADMIN', 'ADMIN'],
-    'subscription.read': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
+    'billing.read': ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'AUDITOR'],
+    'billing.manage': ['SUPER_ADMIN', 'ADMIN', 'FINOPS'],
+    'invoice.read': ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'AUDITOR'],
+    'invoice.manage': ['SUPER_ADMIN', 'ADMIN', 'FINOPS'],
+    'subscription.read': ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'SUPPORT', 'CX'],
     'subscription.manage': ['SUPER_ADMIN', 'ADMIN'],
-    'support_ticket.list': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
-    'support_ticket.read': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
+    'wallet.read': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR:owner', 'INVESTOR:owner', 'SME:owner'],
+    'wallet.manage': ['SUPER_ADMIN', 'ADMIN', 'FINOPS'],
+    'support_ticket.list': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
+    'support_ticket.read': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
     'support_ticket.create': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'ADVISOR', 'INVESTOR', 'SME'],
-    'support_ticket.update': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
-    'escalation.run': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
+    'support_ticket.update': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
+    'escalation.run': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
 
     // ==================== Dataroom Permissions ====================
     'dataroom.list': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'SUPPORT', 'INVESTOR', 'SME'],
@@ -252,35 +271,35 @@ export const PERMISSIONS: Record<string, string[]> = {
     'dispute.delete': ['SUPER_ADMIN'],
 
     // ==================== Unified Case Management Permissions ====================
-    'case.list': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
-    'case.read': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
-    'case.create': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
-    'case.update': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
-    'case.assign': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
-    'case.escalate': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
+    'case.list': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX', 'COMPLIANCE'],
+    'case.read': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX', 'COMPLIANCE'],
+    'case.create': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
+    'case.update': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX', 'COMPLIANCE'],
+    'case.assign': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
+    'case.escalate': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX', 'COMPLIANCE'],
 
     // ==================== Onboarding Orchestration Permissions ====================
-    'onboarding_template.list': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
-    'onboarding_template.read': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
+    'onboarding_template.list': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
+    'onboarding_template.read': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
     'onboarding_template.create': ['SUPER_ADMIN', 'ADMIN'],
     'onboarding_template.update': ['SUPER_ADMIN', 'ADMIN'],
     'onboarding_template.publish': ['SUPER_ADMIN', 'ADMIN'],
-    'onboarding_task.list': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
-    'onboarding_task.read': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
-    'onboarding_task.create': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
-    'onboarding_task.update': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
-    'onboarding_task.remind': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT'],
+    'onboarding_task.list': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
+    'onboarding_task.read': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
+    'onboarding_task.create': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
+    'onboarding_task.update': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
+    'onboarding_task.remind': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
 
     // ==================== Role Lifecycle Controls ====================
     'role_request.create': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR', 'SUPPORT', 'INVESTOR', 'SME'],
     'role_request.list': ['SUPER_ADMIN', 'ADMIN'],
     'role_request.review': ['SUPER_ADMIN', 'ADMIN'],
-    'role_grant.list': ['SUPER_ADMIN', 'ADMIN'],
+    'role_grant.list': ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE', 'AUDITOR'],
     'role_grant.create': ['SUPER_ADMIN', 'ADMIN'],
     'role_grant.revoke': ['SUPER_ADMIN', 'ADMIN'],
 
     // ==================== Advisor Operations Hub Permissions ====================
-    'advisor_ops.read': ['SUPER_ADMIN', 'ADMIN'],
+    'advisor_ops.read': ['SUPER_ADMIN', 'ADMIN', 'CX'],
     'advisor_capacity.read': ['SUPER_ADMIN', 'ADMIN'],
     'advisor_capacity.update': ['SUPER_ADMIN', 'ADMIN'],
     'advisor_assignment.list': ['SUPER_ADMIN', 'ADMIN'],
@@ -288,20 +307,20 @@ export const PERMISSIONS: Record<string, string[]> = {
     'advisor_assignment.update': ['SUPER_ADMIN', 'ADMIN'],
     'advisor_conflict.list': ['SUPER_ADMIN', 'ADMIN'],
     'advisor_conflict.review': ['SUPER_ADMIN', 'ADMIN'],
-    'investor_ops.read': ['SUPER_ADMIN', 'ADMIN'],
-    'investor_ops.list': ['SUPER_ADMIN', 'ADMIN'],
-    'investor_ops.review': ['SUPER_ADMIN', 'ADMIN'],
-    'investor_ops.update': ['SUPER_ADMIN', 'ADMIN'],
-    'data_governance.read': ['SUPER_ADMIN', 'ADMIN'],
-    'retention_rule.list': ['SUPER_ADMIN', 'ADMIN'],
-    'retention_rule.update': ['SUPER_ADMIN', 'ADMIN'],
-    'legal_hold.list': ['SUPER_ADMIN', 'ADMIN'],
-    'legal_hold.create': ['SUPER_ADMIN', 'ADMIN'],
-    'legal_hold.release': ['SUPER_ADMIN', 'ADMIN'],
-    'reconciliation.read': ['SUPER_ADMIN', 'ADMIN'],
-    'reconciliation.run': ['SUPER_ADMIN', 'ADMIN'],
-    'reconciliation.exception.list': ['SUPER_ADMIN', 'ADMIN'],
-    'reconciliation.exception.update': ['SUPER_ADMIN', 'ADMIN'],
+    'investor_ops.read': ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE', 'CX'],
+    'investor_ops.list': ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE', 'CX'],
+    'investor_ops.review': ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE'],
+    'investor_ops.update': ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE'],
+    'data_governance.read': ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE', 'AUDITOR'],
+    'retention_rule.list': ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE', 'AUDITOR'],
+    'retention_rule.update': ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE'],
+    'legal_hold.list': ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE', 'AUDITOR'],
+    'legal_hold.create': ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE'],
+    'legal_hold.release': ['SUPER_ADMIN', 'ADMIN', 'COMPLIANCE'],
+    'reconciliation.read': ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'AUDITOR'],
+    'reconciliation.run': ['SUPER_ADMIN', 'ADMIN', 'FINOPS'],
+    'reconciliation.exception.list': ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'AUDITOR'],
+    'reconciliation.exception.update': ['SUPER_ADMIN', 'ADMIN', 'FINOPS'],
 
     // ==================== Admin Permissions ====================
     'admin.read': ['SUPER_ADMIN', 'ADMIN'],
@@ -316,7 +335,7 @@ export const PERMISSIONS: Record<string, string[]> = {
  */
 export interface PermissionContext {
     userId: string;
-    userRole: UserRole;
+    userRole: UserRole | string;
     tenantId?: string;
     resourceOwnerId?: string;
     resourceId?: string;
@@ -331,6 +350,10 @@ export interface PermissionContext {
  */
 export function hasPermission(ctx: PermissionContext, permission: string): boolean {
     const { userId, userRole, resourceOwnerId } = ctx;
+    const normalizedUserRole = normalizeRole(userRole) as UserRole;
+    if (!normalizedUserRole) {
+        return false;
+    }
 
     // Get allowed roles for this permission
     const allowedRoles = PERMISSIONS[permission];
@@ -341,12 +364,12 @@ export function hasPermission(ctx: PermissionContext, permission: string): boole
     }
 
     // Check if user's role (or inherited roles) have direct permission
-    if (allowedRoles.includes(userRole)) {
+    if (allowedRoles.includes(normalizedUserRole)) {
         return true;
     }
 
     // Check inherited roles
-    const inheritedRoles = getInheritedRoles(userRole);
+    const inheritedRoles = getInheritedRoles(normalizedUserRole);
     for (const inheritedRole of inheritedRoles) {
         if (allowedRoles.includes(inheritedRole)) {
             return true;
@@ -355,7 +378,7 @@ export function hasPermission(ctx: PermissionContext, permission: string): boole
 
     // Check owner-based permission
     if (resourceOwnerId && resourceOwnerId === userId) {
-        const ownerPermission = `${userRole}${OWNER_SUFFIX}`;
+        const ownerPermission = `${normalizedUserRole}${OWNER_SUFFIX}`;
         if (allowedRoles.includes(ownerPermission)) {
             return true;
         }
@@ -385,7 +408,7 @@ export function getInheritedRoles(role: UserRole): UserRole[] {
  * Convenience function for common checks
  */
 export function canPerformAction(
-    userRole: UserRole,
+    userRole: UserRole | string,
     resource: Resource,
     action: PermissionAction,
     isOwner: boolean = false,
@@ -403,24 +426,27 @@ export function canPerformAction(
  * Get all permissions for a specific role
  */
 export function getPermissionsForRole(role: UserRole): string[] {
+    const normalizedRole = normalizeRole(role) as UserRole;
+    if (!normalizedRole) return [];
+
     const permissions: string[] = [];
 
     for (const [permission, allowedRoles] of Object.entries(PERMISSIONS)) {
         // Direct permission
-        if (allowedRoles.includes(role)) {
+        if (allowedRoles.includes(normalizedRole)) {
             permissions.push(permission);
             continue;
         }
 
         // Inherited permission
-        const inherited = getInheritedRoles(role);
+        const inherited = getInheritedRoles(normalizedRole);
         if (inherited.some(r => allowedRoles.includes(r))) {
             permissions.push(permission);
             continue;
         }
 
         // Owner permission
-        if (allowedRoles.includes(`${role}${OWNER_SUFFIX}`)) {
+        if (allowedRoles.includes(`${normalizedRole}${OWNER_SUFFIX}`)) {
             permissions.push(`${permission} (owner only)`);
         }
     }
@@ -446,10 +472,19 @@ export function checkPermissionDetailed(
     permission: string
 ): PermissionCheckResult {
     const { userId, userRole, resourceOwnerId } = ctx;
+    const normalizedUserRole = normalizeRole(userRole) as UserRole;
+    if (!normalizedUserRole) {
+        return {
+            allowed: false,
+            permission,
+            reason: 'denied',
+            checkedAt: new Date(),
+        };
+    }
     const allowedRoles = PERMISSIONS[permission] || [];
 
     // Direct role check
-    if (allowedRoles.includes(userRole)) {
+    if (allowedRoles.includes(normalizedUserRole)) {
         return {
             allowed: true,
             permission,
@@ -459,7 +494,7 @@ export function checkPermissionDetailed(
     }
 
     // Inherited role check
-    const inheritedRoles = getInheritedRoles(userRole);
+    const inheritedRoles = getInheritedRoles(normalizedUserRole);
     for (const inheritedRole of inheritedRoles) {
         if (allowedRoles.includes(inheritedRole)) {
             return {
@@ -473,7 +508,7 @@ export function checkPermissionDetailed(
 
     // Owner check
     if (resourceOwnerId && resourceOwnerId === userId) {
-        const ownerPermission = `${userRole}${OWNER_SUFFIX}`;
+        const ownerPermission = `${normalizedUserRole}${OWNER_SUFFIX}`;
         if (allowedRoles.includes(ownerPermission)) {
             return {
                 allowed: true,

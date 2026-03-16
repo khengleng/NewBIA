@@ -273,10 +273,7 @@ export const generateAbaQr = async (
 
         const endpoint = `${baseUrl}/api/payment-gateway/v1/payments/generate-qr`;
 
-        console.log('--- ABA QR SUBMISSION ---');
-        console.log('URL:', endpoint);
-        console.log('Merchant:', mid);
-        console.log('Amount:', amountStr);
+
 
         const response = await axios.post(endpoint, payload, {
             headers: { 'Content-Type': 'application/json' },
@@ -354,6 +351,6 @@ export const verifyAbaCallback = (reqBody: any): boolean => {
         if (hash === calculatedHash) return true;
     }
 
-    console.error('❌ ABA Callback Hash Mismatch!');
+
     return false;
 };

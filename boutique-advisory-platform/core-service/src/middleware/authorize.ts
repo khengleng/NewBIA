@@ -44,6 +44,7 @@ interface AuditLogEntry {
 
 // In-memory audit log (replace with database in production)
 const auditLog: AuditLogEntry[] = [];
+let skipTempGrantLookupUntil = 0;
 
 /**
  * Log permission check for audit
@@ -180,15 +181,31 @@ export function authorize(
 
         if (!checkResult.allowed) {
             // Fallback: check active temporary role grants (expiresAt enforced at query time).
-            const grantMatch = await prisma.temporaryRoleGrant.findMany({
-                where: {
-                    tenantId,
-                    userId,
-                    status: 'ACTIVE',
-                    expiresAt: { gt: new Date() }
-                },
-                select: { id: true, role: true, expiresAt: true }
-            });
+            let grantMatch: Array<{ id: string; role: string; expiresAt: Date }> = [];
+            const now = Date.now();
+            const canLookupTempGrants = process.env.NODE_ENV !== 'test' && now >= skipTempGrantLookupUntil;
+            if (canLookupTempGrants) {
+                try {
+                    grantMatch = await prisma.temporaryRoleGrant.findMany({
+                        where: {
+                            tenantId,
+                            userId,
+                            status: 'ACTIVE',
+                            expiresAt: { gt: new Date() }
+                        },
+                        select: { id: true, role: true, expiresAt: true }
+                    });
+                } catch (error) {
+                    // Fail closed and back off repeated DB lookups for denied paths.
+                    skipTempGrantLookupUntil = Date.now() + 30_000;
+                    console.warn('[AUTHZ] Temporary role grant lookup failed; denying by default', {
+                        userId,
+                        permission,
+                        error: error instanceof Error ? error.message : 'Unknown error',
+                        backoffMs: 30_000
+                    });
+                }
+            }
 
             let granted = false;
             let grantedRole: UserRole | undefined;

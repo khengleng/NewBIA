@@ -8,6 +8,8 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest, authorize } from '../middleware/authorize';
 import { prisma, prismaReplica } from '../database';
 import { shouldUseDatabase } from '../migration-manager';
+import { io } from '../socket';
+import { WalletService } from '../services/wallet';
 
 const router = Router();
 
@@ -115,21 +117,10 @@ router.post('/listings', authorize('secondary_trading.create_listing'), async (r
             return;
         }
 
-        // Debug logging
-        console.log('=== Token Listing Debug ===');
-        console.log('Investor ID:', investor.id);
-        console.log('Syndicate ID:', syndicateId);
-        console.log('Membership Amount:', membership.amount);
-        console.log('Membership Tokens (DB):', membership.tokens);
-        console.log('Syndicate isTokenized:', membership.syndicate.isTokenized);
-        console.log('Syndicate pricePerToken:', membership.syndicate.pricePerToken);
-        console.log('Tokens to list:', tokensAvailable);
-
         // Auto-repair/Resilient check for tokens
         let currentTokens = membership.tokens || 0;
         if (currentTokens === 0 && membership.syndicate.isTokenized && membership.syndicate.pricePerToken) {
             currentTokens = membership.amount / membership.syndicate.pricePerToken;
-            console.log('Auto-calculated tokens:', currentTokens);
         }
 
         // Check existing active listings to prevent double-spending
@@ -142,23 +133,11 @@ router.post('/listings', authorize('secondary_trading.create_listing'), async (r
         });
 
         const tokensLockedInListings = activeListings.reduce((sum, l) => sum + l.tokensAvailable, 0);
-
-        console.log('Tokens locked in active listings:', tokensLockedInListings);
-        console.log('Final currentTokens:', currentTokens);
-
         const availableToSell = currentTokens - tokensLockedInListings;
 
         if (availableToSell < tokensAvailable) {
-            console.warn(`❌ Insufficient tokens for ${investor.id}: Has ${currentTokens}, Locked ${tokensLockedInListings}, Available ${availableToSell}, tried to list ${tokensAvailable}`);
             res.status(400).json({
-                error: `Insufficient tokens. You have ${currentTokens.toFixed(2)} tokens, but ${tokensLockedInListings.toFixed(2)} are already listed. Available: ${availableToSell.toFixed(2)}`,
-                debug: {
-                    totalTokens: currentTokens,
-                    lockedInListings: tokensLockedInListings,
-                    available: availableToSell,
-                    requested: tokensAvailable,
-                    activeListingsCount: activeListings.length
-                }
+                error: `Insufficient tokens. You have ${currentTokens.toFixed(2)} tokens, but ${tokensLockedInListings.toFixed(2)} are already listed. Available: ${availableToSell.toFixed(2)}`
             });
             return;
         }
@@ -188,6 +167,15 @@ router.post('/listings', authorize('secondary_trading.create_listing'), async (r
                 }
             }
         });
+
+        // Real-time market update
+        if (io) {
+            io.emit('market_update', {
+                type: 'NEW_SYNDICATE_LISTING',
+                symbol: listing.syndicateId,
+                listing
+            });
+        }
 
         res.status(201).json(listing);
     } catch (error) {
@@ -386,6 +374,33 @@ router.post('/buy', authorize('secondary_trading.buy'), async (req: Authenticate
                 tokens: { decrement: tokens }
             }
         });
+
+        // Transfer funds via Wallet System (Binance Standard)
+        const buyerUser = await prisma.user.findUnique({ where: { id: req.user!.id } });
+        const sellerUser = await prisma.user.findUnique({
+            where: { id: listing.seller.userId }
+        });
+
+        if (buyerUser && sellerUser) {
+            await WalletService.settleTrade(
+                buyerUser.id,
+                sellerUser.id,
+                totalAmount,
+                fee,
+                trade.id,
+                buyerUser.tenantId,
+                prisma as any
+            );
+        }
+
+        // Real-time market update
+        if (io) {
+            io.emit('market_update', {
+                type: 'SYNDICATE_TRADE_EXECUTED',
+                syndicateId: listing.syndicateId,
+                trade
+            });
+        }
 
         res.status(201).json({
             message: 'Tokens purchased successfully',
