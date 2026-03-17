@@ -14,8 +14,10 @@ interface SecurityCheckResult {
  * Run all security checks before server startup
  * Returns false if any CRITICAL checks fail
  */
-export function validateSecurityConfiguration(): { success: boolean; results: SecurityCheckResult[] } {
+export function validateSecurityConfiguration(options: { silent?: boolean } = {}): { success: boolean; results: SecurityCheckResult[] } {
     const results: SecurityCheckResult[] = [];
+
+    const silent = options.silent === true;
 
     // ============================================
     // CRITICAL CHECKS - Server won't start without these
@@ -69,19 +71,25 @@ export function validateSecurityConfiguration(): { success: boolean; results: Se
     results.push(checkMonitoring());
 
     // Print results
-    printSecurityReport(results);
+    if (!silent) {
+        printSecurityReport(results);
+    }
 
     // Check for critical failures
     const criticalFailures = results.filter(r => !r.passed && r.severity === 'CRITICAL');
     const highFailures = results.filter(r => !r.passed && r.severity === 'HIGH');
 
     if (criticalFailures.length > 0) {
-        console.error('\n❌ CRITICAL SECURITY CHECKS FAILED - SERVER CANNOT START');
+        if (!silent) {
+            console.error('\n❌ CRITICAL SECURITY CHECKS FAILED - SERVER CANNOT START');
+        }
         return { success: false, results };
     }
 
     if (highFailures.length > 0) {
-        console.warn('\n⚠️  HIGH PRIORITY SECURITY ISSUES DETECTED - Review before production');
+        if (!silent) {
+            console.warn('\n⚠️  HIGH PRIORITY SECURITY ISSUES DETECTED - Review before production');
+        }
     }
 
     return { success: true, results };

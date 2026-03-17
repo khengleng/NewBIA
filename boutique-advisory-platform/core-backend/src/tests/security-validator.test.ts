@@ -53,7 +53,7 @@ test('Security validator - blocks production startup when trading frontend URL u
       SSO_INTERNAL_API_KEY: 'sso_internal_key_9VxA2Qn7Lp4Rs8Ty1Uz6Wm3',
     },
     () => {
-      const result = validateSecurityConfiguration();
+      const result = validateSecurityConfiguration({ silent: true });
       assert.strictEqual(result.success, false);
       assert.ok(result.results.some((item) =>
         item.name === 'Platform Boundary' && !item.passed && item.severity === 'CRITICAL'
@@ -75,7 +75,7 @@ test('Security validator - passes production startup with valid trading boundary
       SSO_INTERNAL_API_KEY: 'sso_internal_key_9VxA2Qn7Lp4Rs8Ty1Uz6Wm3',
     },
     () => {
-      const result = validateSecurityConfiguration();
+      const result = validateSecurityConfiguration({ silent: true });
       assert.strictEqual(result.success, true);
     }
   );

@@ -36,7 +36,7 @@ const BASE_ENV = {
 
 test('Security Validator - checks JWT_SECRET', () => {
     withEnv({ ...BASE_ENV, NODE_ENV: 'production' }, () => {
-        const weakResult = withEnv({ JWT_SECRET: 'weak' }, () => validateSecurityConfiguration());
+        const weakResult = withEnv({ JWT_SECRET: 'weak' }, () => validateSecurityConfiguration({ silent: true }));
 
         const jwtCheck = weakResult.results.find(r => r.name === 'JWT_SECRET');
         assert.ok(jwtCheck, 'JWT_SECRET check should exist');
@@ -45,7 +45,7 @@ test('Security Validator - checks JWT_SECRET', () => {
 
         const strongResult = withEnv(
             { JWT_SECRET: 'strong-key-without-protected-words-more-than-32-chars' },
-            () => validateSecurityConfiguration()
+            () => validateSecurityConfiguration({ silent: true })
         );
         const jwtCheck2 = strongResult.results.find(r => r.name === 'JWT_SECRET');
         assert.strictEqual(jwtCheck2!.passed, true, 'Strong secret in production should pass');
@@ -54,7 +54,7 @@ test('Security Validator - checks JWT_SECRET', () => {
 
 test('Security Validator - checks NODE_ENV warnings', () => {
     withEnv({ ...BASE_ENV, NODE_ENV: 'development', RENDER: 'true' }, () => {
-        const result = validateSecurityConfiguration();
+        const result = validateSecurityConfiguration({ silent: true });
         const envCheck = result.results.find(r => r.name === 'NODE_ENV');
 
         assert.strictEqual(envCheck!.passed, false, 'Non-production ENV on cloud platform should fail/warn');
