@@ -43,11 +43,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/speakeasy": "^2.0.10",
     "@types/web-push": "^3.6.4",
-<<<<<<< HEAD:boutique-advisory-platform/core-service/package.json
     "axios": "^1.7.9",
-=======
-    "axios": "^1.13.6",
->>>>>>> origin/codex/review-source-code-3e131v:boutique-advisory-platform/backend/package.json
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
