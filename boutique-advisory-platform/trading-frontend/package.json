@@ -6,7 +6,7 @@
     "dev": "next dev -p 3005 -H 127.0.0.1",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint --max-warnings=9999",
     "test": "rm -rf .test-dist && tsc -p tsconfig.test.json && node --test $(find .test-dist/src/tests -name '*.test.js' -type f)"
   },
   "dependencies": {
