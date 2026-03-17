@@ -7,7 +7,7 @@ The system is now separated into independent codebases for better scalability an
 | Platform | Repository | Domain | Role |
 | :--- | :--- | :--- | :--- |
 | **Core Platform** | `boutique-advisory-frontend` | `www.cambobia.com` | SME Advisory & Investments |
-| **Trading Platform** | `boutique-advisory-platform/trade-frontend` | `trade.cambobia.com` | Secondary Market Trading |
+| **Trading Platform** | `boutique-advisory-platform/trading-frontend` | `trade.cambobia.com` | Secondary Market Trading |
 | **API Backend** | `boutique-advisory-platform/backend` | `api.cambobia.com` | Shared Business Logic |
 | **T-Wallet** | `twallet-app` | `wallet.cambobia.com` | Digital Asset Management |
 
@@ -24,7 +24,7 @@ This is now a standalone repository.
 ### 2. Trading Platform (`trade.cambobia.com`)
 This remains in the monorepo but has its own root directory.
 1. Link your Railway service to the `boutique-advisory-platform` repo.
-2. Set **Root Directory** to `/trade-frontend`.
+2. Set **Root Directory** to `/trading-frontend`.
 3. Set `NEXT_PUBLIC_PLATFORM_MODE=trading`.
 
 ### 3. API Backend

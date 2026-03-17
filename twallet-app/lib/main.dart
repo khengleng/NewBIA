@@ -5,10 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-<<<<<<< HEAD
-=======
 import 'package:flutter/foundation.dart';
->>>>>>> origin/codex/review-source-code-3e131v
 import 'package:sentry/sentry.dart';
 import 'package:tw_wallet_ui/common/application.dart';
 import 'package:tw_wallet_ui/common/theme/color.dart';
@@ -17,13 +14,6 @@ import 'package:tw_wallet_ui/generated/l10n.dart';
 import 'package:tw_wallet_ui/router/routers.dart';
 import 'package:tw_wallet_ui/views/splash_screen/splash_screen.dart';
 
-<<<<<<< HEAD
-final SentryClient sentry = SentryClient(
-  SentryOptions()
-    ..dsn =
-        "https://cbc45c2b4f0f400797ca489f4f117699@o402661.ingest.sentry.io/5264109",
-);
-=======
 const String sentryDsn = String.fromEnvironment('SENTRY_DSN', defaultValue: '');
 
 final SentryClient? sentry = sentryDsn.isEmpty
@@ -31,7 +21,6 @@ final SentryClient? sentry = sentryDsn.isEmpty
     : SentryClient(
         SentryOptions()..dsn = sentryDsn,
       );
->>>>>>> origin/codex/review-source-code-3e131v
 
 bool get isInDebugMode {
   bool inDebugMode = false;
@@ -39,11 +28,6 @@ bool get isInDebugMode {
   return inDebugMode;
 }
 
-<<<<<<< HEAD
-Future<Future<SentryId>> _reportError(dynamic error, dynamic stackTrace) async {
-  return sentry.captureException(
-    false,
-=======
 Future<SentryId> _reportError(dynamic error, dynamic stackTrace) async {
   if (sentry == null) {
     if (kDebugMode) {
@@ -54,7 +38,6 @@ Future<SentryId> _reportError(dynamic error, dynamic stackTrace) async {
 
   return sentry!.captureException(
     error,
->>>>>>> origin/codex/review-source-code-3e131v
     stackTrace: stackTrace,
   );
 }

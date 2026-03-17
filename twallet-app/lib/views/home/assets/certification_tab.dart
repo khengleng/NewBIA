@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-import 'package:cached_network_image/cached_network_image.dart';
-=======
->>>>>>> origin/codex/review-source-code-3e131v
 import 'package:flutter/material.dart';
 import 'package:flutter_custom_dialog/flutter_custom_dialog.dart';
 import 'package:tw_wallet_ui/common/theme/color.dart';
@@ -17,13 +13,6 @@ class CertificationTab extends StatelessWidget {
       ..margin = const EdgeInsets.symmetric(horizontal: 24, vertical: 144)
       ..width = 1000
       ..widget(
-<<<<<<< HEAD
-        CachedNetworkImage(
-          placeholder: (context, url) => CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(WalletColor.primary),
-          ),
-          imageUrl: 'https://cac-file.thoughtworks.cn/6ef1435323db384e04c2.png',
-=======
         Container(
           padding: const EdgeInsets.all(24),
           color: Colors.white,
@@ -51,7 +40,6 @@ class CertificationTab extends StatelessWidget {
               ),
             ],
           ),
->>>>>>> origin/codex/review-source-code-3e131v
         ),
       )
       ..show();

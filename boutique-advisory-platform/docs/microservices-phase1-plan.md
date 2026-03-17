@@ -3,7 +3,7 @@
 This repository currently runs as a multi-app monorepo with:
 - `backend` API service
 - `core-frontend` web portal (`cambobia.com`)
-- `trade-frontend` web portal (`trade.cambobia.com`)
+- `trading-frontend` web portal (`trade.cambobia.com`)
 - mobile apps (`mobile_app`, `twallet-app`)
 - `mobile-bot-service`
 

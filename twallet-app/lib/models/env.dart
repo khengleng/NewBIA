@@ -30,23 +30,6 @@ abstract class Env extends Object implements Built<Env, EnvBuilder> {
   factory Env([void Function(EnvBuilder) updates]) = _$Env;
 
   factory Env.fromDefault() {
-<<<<<<< HEAD
-    return Env(
-      (builder) => builder
-        ..apiGatewayBaseUrl = 'https://api.trade.cambobia.com/'
-        ..apiGatewayConnectTimeout = 30 * 1000
-        ..web3RpcGatewayUrl =
-            'https://rpc.blockchain.cambobia.com'
-        ..didPrefix = 'did:bia:'
-        ..tokenName = 'BIA Asset'
-        ..tokenSymbol = '$'
-        ..tokenPrecision = 2
-        ..tokenHumanReadablePrecision = 2
-        ..chainId = 101
-        ..centralBankPublicKey = RSAPublicKey.fromString(
-          'MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAI5SXpw1SSsM3FN43JVKn4gb+oGXfjL7rCDluqydAyHZ8vV7ySqi8oM1CoHRC9U2ST7IldydsQ+4cjC9xfzexxcCAwEAAQ==',
-        ),
-=======
     const defaultApiBaseUrl = String.fromEnvironment(
       'CAMBOBIA_API_BASE_URL',
       defaultValue: 'https://www.cambobia.com/api-proxy/api/',
@@ -88,7 +71,6 @@ abstract class Env extends Object implements Built<Env, EnvBuilder> {
         ..tokenHumanReadablePrecision = defaultReadablePrecision
         ..chainId = defaultChainId
         ..centralBankPublicKey = RSAPublicKey.fromString(defaultPublicKey),
->>>>>>> origin/codex/review-source-code-3e131v
     );
   }
 

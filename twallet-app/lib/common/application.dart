@@ -12,11 +12,7 @@ class Application {
 
   static Env globalEnv = Env.fromDefault();
 
-<<<<<<< HEAD
-  static String appName = '';
-=======
   static String appName = 'Cambobia Mobile';
->>>>>>> origin/codex/review-source-code-3e131v
 
   static FluroRouter router = FluroRouter.appRouter;
 
