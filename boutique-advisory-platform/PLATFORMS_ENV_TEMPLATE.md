@@ -3,7 +3,7 @@
 # ===========================================
 
 # 1. CORE SERVICE (Boutique Advisory Workflow API)
-# Path: ./boutique-advisory-platform/core-service
+# Path: ./boutique-advisory-platform/core-backend
 BIA_CORE_PORT=3001
 BIA_CORE_DATABASE_URL=postgresql://user:password@host:5432/bia_core?sslmode=require
 BIA_CORE_JWT_SECRET=super-secret-bia-core-key

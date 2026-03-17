@@ -1,5 +1,5 @@
 {
-  "name": "bia-core-service",
+  "name": "bia-core-backend",
   "version": "1.0.0",
   "description": "Backend API for Boutique Advisory Platform - connecting SMEs with investors",
   "main": "dist/index.js",

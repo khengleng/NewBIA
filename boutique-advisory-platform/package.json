@@ -4,6 +4,7 @@
     "private": true,
     "workspaces": [
         "*-service",
+        "core-backend",
         "trade-api",
         "*-frontend",
         "bridge"
