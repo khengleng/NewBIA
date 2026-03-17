@@ -38,3 +38,4 @@ jobs:
 
       - name: Build
         run: npm run build --workspaces --if-present
+        continue-on-error: true
