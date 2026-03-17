@@ -30,16 +30,11 @@ export function verifySocketAuthToken(token: string): any {
 export function initSocket(server: HttpServer) {
     const isProduction = process.env.NODE_ENV === 'production';
     const frontendUrl = process.env.FRONTEND_URL || 'https://www.cambobia.com';
-    const tradingFrontendUrl = process.env.TRADING_FRONTEND_URL || 'https://trade.cambobia.com';
     const allowedOrigins = [
         frontendUrl,
         frontendUrl.replace(/\/$/, ''),
         'https://cambobia.com',
         'https://www.cambobia.com',
-        'https://trade.cambobia.com',
-        'https://trade-backend.railway.internal',
-        tradingFrontendUrl,
-        tradingFrontendUrl.replace(/\/$/, ''),
     ];
 
     if (!isProduction) {

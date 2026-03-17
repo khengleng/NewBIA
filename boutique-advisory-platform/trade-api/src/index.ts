@@ -436,15 +436,17 @@ app.use((req, res, next) => {
       const frontendUrl = process.env.FRONTEND_URL || '';
       const tradingFrontendUrl = process.env.TRADING_FRONTEND_URL || '';
       const corsOriginsEnv = process.env.CORS_ORIGIN || '';
-      const allowCrossPlatformCors = (process.env.ALLOW_CROSS_PLATFORM_CORS === 'true') || true; // Force allow for unified backend
+      const allowCrossPlatformCors = process.env.ALLOW_CROSS_PLATFORM_CORS === 'true';
       const allowedOrigins = new Set<string>();
       const allowedHostnames = new Set<string>([
         'cambobia.com',
         'www.cambobia.com',
-        'trade.cambobia.com',
-        'localhost',
-        '127.0.0.1'
+        'trade.cambobia.com'
       ]);
+      if (!isProduction) {
+        allowedHostnames.add('localhost');
+        allowedHostnames.add('127.0.0.1');
+      }
 
       if (!isTradingService && frontendUrl) {
         try {
@@ -1033,12 +1035,23 @@ async function startServer() {
         const errorMsg = migrateError.stdout || migrateError.message || '';
         console.warn(`   Info: ${errorMsg.substring(0, 200)}...`);
 
+        const allowDestructiveMigration = process.env.ALLOW_DESTRUCTIVE_MIGRATION === 'true' && !isProduction;
+        if (!allowDestructiveMigration) {
+          startupError = 'Database schema migration failed; destructive fallback disabled';
+          console.error(`❌ [Database] ${startupError}`);
+          isStartingUp = false;
+          return;
+        }
+
         try {
           const { stdout } = await execAsync('npx prisma db push --accept-data-loss');
           if (stdout) console.log(stdout.split('\n').filter(Boolean).map(l => `   ${l}`).join('\n'));
           console.log('✅ Database schema pushed successfully');
         } catch (pushError: any) {
           console.error('❌ Database schema update failed:', pushError.stdout || pushError.message);
+          startupError = 'Database schema update failed during destructive fallback';
+          isStartingUp = false;
+          return;
         }
       }
 

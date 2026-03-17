@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import dataroomRoutes from './routes/dataroom';
 import documentRoutes from './routes/document';
 import type { DocumentServiceConfig } from './config';
+import { authenticateToken } from './middleware/jwt-auth';
 
 export function createApp(config: DocumentServiceConfig) {
   const app = express();
@@ -44,6 +45,7 @@ export function createApp(config: DocumentServiceConfig) {
     });
   });
 
+  app.use('/api', authenticateToken);
   app.use('/api/dataroom', dataroomRoutes);
   app.use('/api/document', documentRoutes);
 

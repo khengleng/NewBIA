@@ -795,6 +795,7 @@ router.get('/email-health', authenticateToken, async (req: AuthenticatedRequest,
 
 router.get('/sso/trading-link', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
+    return res.status(404).json({ error: 'Route not found' });
     if (isTradingService) {
       return res.status(404).json({ error: 'Route not found in trading mode' });
     }
@@ -851,6 +852,7 @@ router.get('/sso/trading-link', authenticateToken, async (req: AuthenticatedRequ
 
 router.post('/sso/trading/consume', async (req: Request, res: Response) => {
   try {
+    return res.status(404).json({ error: 'Route not found' });
     if (isTradingService) {
       return res.status(404).json({ error: 'Route not found in trading mode' });
     }
@@ -882,6 +884,7 @@ router.post('/sso/trading/consume', async (req: Request, res: Response) => {
 
 router.post('/sso/trading/exchange', async (req: Request, res: Response) => {
   try {
+    return res.status(404).json({ error: 'Route not found' });
     if (!isTradingService) {
       return res.status(404).json({ error: 'Route not found in core mode' });
     }

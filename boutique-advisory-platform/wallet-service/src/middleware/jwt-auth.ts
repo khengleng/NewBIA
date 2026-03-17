@@ -57,10 +57,14 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
         }
 
         if (!decoded.tenantId || decoded.tenantId !== user.tenantId) {
-            res.status(401).json({ 
-                error: 'DIAGNOSTIC: Invalid token tenant context',
-                details: `Token tenant: ${decoded.tenantId}, User tenant: ${user.tenantId}`
-            });
+            if (process.env.AUTH_DEBUG === 'true') {
+                res.status(401).json({ 
+                    error: 'Invalid token tenant context',
+                    details: `Token tenant: ${decoded.tenantId}, User tenant: ${user.tenantId}`
+                });
+            } else {
+                res.status(401).json({ error: 'Invalid token tenant context' });
+            }
             return;
         }
 
@@ -91,7 +95,11 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
                 hostname: req.hostname,
                 serviceMode,
             });
-            res.status(403).json({ error: 'DIAGNOSTIC: Tenant access denied. Path: ' + (req.originalUrl || req.url) });
+            if (process.env.AUTH_DEBUG === 'true') {
+                res.status(403).json({ error: 'Tenant access denied. Path: ' + (req.originalUrl || req.url) });
+            } else {
+                res.status(403).json({ error: 'Tenant access denied' });
+            }
             return;
         }
 
@@ -104,10 +112,14 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
         }
 
         console.error('[AUTH] Token verification failed:', error.message);
-        res.status(401).json({ 
-            error: 'DIAGNOSTIC: Invalid token',
-            details: error.message 
-        });
+        if (process.env.AUTH_DEBUG === 'true') {
+            res.status(401).json({ 
+                error: 'Invalid token',
+                details: error.message 
+            });
+        } else {
+            res.status(401).json({ error: 'Invalid token' });
+        }
     }
 };
 
@@ -123,7 +135,11 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
     }
 
     if (!refreshToken) {
-        res.status(401).json({ error: 'DIAGNOSTIC: Session expired. No refresh token found.' });
+        if (process.env.AUTH_DEBUG === 'true') {
+            res.status(401).json({ error: 'Session expired. No refresh token found.' });
+        } else {
+            res.status(401).json({ error: 'Session expired. Please log in again.' });
+        }
         return;
     }
 
@@ -135,18 +151,30 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
         });
 
         if (!storedToken) {
-            res.status(401).json({ error: 'DIAGNOSTIC: Invalid session. Refresh token not found in database.' });
+            if (process.env.AUTH_DEBUG === 'true') {
+                res.status(401).json({ error: 'Invalid session. Refresh token not found in database.' });
+            } else {
+                res.status(401).json({ error: 'Invalid session. Please log in again.' });
+            }
             return;
         }
 
         if (storedToken.expiresAt < new Date()) {
             await prisma.refreshToken.delete({ where: { id: storedToken.id } });
-            res.status(401).json({ error: 'DIAGNOSTIC: Session expired. Refresh token expired at ' + storedToken.expiresAt.toISOString() });
+            if (process.env.AUTH_DEBUG === 'true') {
+                res.status(401).json({ error: 'Session expired. Refresh token expired at ' + storedToken.expiresAt.toISOString() });
+            } else {
+                res.status(401).json({ error: 'Session expired. Please log in again.' });
+            }
             return;
         }
 
         if (storedToken.revoked) {
-            res.status(401).json({ error: 'DIAGNOSTIC: Session revoked. Please login again.' });
+            if (process.env.AUTH_DEBUG === 'true') {
+                res.status(401).json({ error: 'Session revoked. Please login again.' });
+            } else {
+                res.status(401).json({ error: 'Session revoked. Please log in again.' });
+            }
             return;
         }
 
@@ -185,10 +213,14 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
         next();
     } catch (err: any) {
         console.error('Auto-refresh error:', err);
-        res.status(401).json({ 
-            error: 'DIAGNOSTIC: Authentication failed during refresh',
-            details: err.message 
-        });
+        if (process.env.AUTH_DEBUG === 'true') {
+            res.status(401).json({ 
+                error: 'Authentication failed during refresh',
+                details: err.message 
+            });
+        } else {
+            res.status(401).json({ error: 'Authentication failed during refresh' });
+        }
     }
 }
 

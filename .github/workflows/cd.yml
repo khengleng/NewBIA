@@ -1,0 +1,267 @@
+name: CD (Railway)
+
+on:
+  push:
+    branches: [main, canary]
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_SERVICE_ID: ${{ secrets[matrix.service_id_secret] }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: core-backend
+            path: boutique-advisory-platform/core-backend
+            service_id_secret: RAILWAY_SERVICE_ID_CORE_BACKEND
+          - name: trade-api
+            path: boutique-advisory-platform/trade-api
+            service_id_secret: RAILWAY_SERVICE_ID_TRADE_API
+          - name: identity-service
+            path: boutique-advisory-platform/identity-service
+            service_id_secret: RAILWAY_SERVICE_ID_IDENTITY_SERVICE
+          - name: wallet-service
+            path: boutique-advisory-platform/wallet-service
+            service_id_secret: RAILWAY_SERVICE_ID_WALLET_SERVICE
+          - name: document-service
+            path: boutique-advisory-platform/document-service
+            service_id_secret: RAILWAY_SERVICE_ID_DOCUMENT_SERVICE
+          - name: funding-service
+            path: boutique-advisory-platform/funding-service
+            service_id_secret: RAILWAY_SERVICE_ID_FUNDING_SERVICE
+          - name: market-service
+            path: boutique-advisory-platform/market-service
+            service_id_secret: RAILWAY_SERVICE_ID_MARKET_SERVICE
+          - name: advisory-service
+            path: boutique-advisory-platform/advisory-service
+            service_id_secret: RAILWAY_SERVICE_ID_ADVISORY_SERVICE
+          - name: twallet-bff-service
+            path: boutique-advisory-platform/twallet-bff-service
+            service_id_secret: RAILWAY_SERVICE_ID_TWALLET_BFF
+          - name: mobile-bot-service
+            path: boutique-advisory-platform/mobile-bot-service
+            service_id_secret: RAILWAY_SERVICE_ID_MOBILE_BOT
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy
+        if: env.RAILWAY_SERVICE_ID != ''
+        working-directory: ${{ matrix.path }}
+        run: |
+          echo "Deploying ${{ matrix.name }}..."
+          railway up --service "$RAILWAY_SERVICE_ID" --detach
+
+      - name: Skip (missing service id)
+        if: env.RAILWAY_SERVICE_ID == ''
+        run: echo "Skipping ${{ matrix.name }} — missing secret ${{ matrix.service_id_secret }}"
+
+  migrations:
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: github.ref == 'refs/heads/main'
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_SERVICE_ID: ${{ secrets[matrix.service_id_secret] }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: core-backend
+            path: boutique-advisory-platform/core-backend
+            service_id_secret: RAILWAY_SERVICE_ID_CORE_BACKEND
+          - name: trade-api
+            path: boutique-advisory-platform/trade-api
+            service_id_secret: RAILWAY_SERVICE_ID_TRADE_API
+          - name: identity-service
+            path: boutique-advisory-platform/identity-service
+            service_id_secret: RAILWAY_SERVICE_ID_IDENTITY_SERVICE
+          - name: wallet-service
+            path: boutique-advisory-platform/wallet-service
+            service_id_secret: RAILWAY_SERVICE_ID_WALLET_SERVICE
+          - name: document-service
+            path: boutique-advisory-platform/document-service
+            service_id_secret: RAILWAY_SERVICE_ID_DOCUMENT_SERVICE
+          - name: funding-service
+            path: boutique-advisory-platform/funding-service
+            service_id_secret: RAILWAY_SERVICE_ID_FUNDING_SERVICE
+          - name: market-service
+            path: boutique-advisory-platform/market-service
+            service_id_secret: RAILWAY_SERVICE_ID_MARKET_SERVICE
+          - name: advisory-service
+            path: boutique-advisory-platform/advisory-service
+            service_id_secret: RAILWAY_SERVICE_ID_ADVISORY_SERVICE
+          - name: twallet-bff-service
+            path: boutique-advisory-platform/twallet-bff-service
+            service_id_secret: RAILWAY_SERVICE_ID_TWALLET_BFF
+          - name: mobile-bot-service
+            path: boutique-advisory-platform/mobile-bot-service
+            service_id_secret: RAILWAY_SERVICE_ID_MOBILE_BOT
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Run Prisma Migrations
+        if: env.RAILWAY_SERVICE_ID != ''
+        working-directory: ${{ matrix.path }}
+        run: |
+          echo "Running migrations for ${{ matrix.name }}..."
+          railway run --service "$RAILWAY_SERVICE_ID" -- npx prisma migrate deploy
+
+      - name: Skip (missing service id)
+        if: env.RAILWAY_SERVICE_ID == ''
+        run: echo "Skipping migrations for ${{ matrix.name }} — missing secret ${{ matrix.service_id_secret }}"
+
+  deploy_canary:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/canary'
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_SERVICE_ID: ${{ secrets[matrix.service_id_secret] }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: core-backend
+            path: boutique-advisory-platform/core-backend
+            service_id_secret: RAILWAY_SERVICE_ID_CORE_BACKEND_CANARY
+          - name: trade-api
+            path: boutique-advisory-platform/trade-api
+            service_id_secret: RAILWAY_SERVICE_ID_TRADE_API_CANARY
+          - name: identity-service
+            path: boutique-advisory-platform/identity-service
+            service_id_secret: RAILWAY_SERVICE_ID_IDENTITY_SERVICE_CANARY
+          - name: wallet-service
+            path: boutique-advisory-platform/wallet-service
+            service_id_secret: RAILWAY_SERVICE_ID_WALLET_SERVICE_CANARY
+          - name: document-service
+            path: boutique-advisory-platform/document-service
+            service_id_secret: RAILWAY_SERVICE_ID_DOCUMENT_SERVICE_CANARY
+          - name: funding-service
+            path: boutique-advisory-platform/funding-service
+            service_id_secret: RAILWAY_SERVICE_ID_FUNDING_SERVICE_CANARY
+          - name: market-service
+            path: boutique-advisory-platform/market-service
+            service_id_secret: RAILWAY_SERVICE_ID_MARKET_SERVICE_CANARY
+          - name: advisory-service
+            path: boutique-advisory-platform/advisory-service
+            service_id_secret: RAILWAY_SERVICE_ID_ADVISORY_SERVICE_CANARY
+          - name: twallet-bff-service
+            path: boutique-advisory-platform/twallet-bff-service
+            service_id_secret: RAILWAY_SERVICE_ID_TWALLET_BFF_CANARY
+          - name: mobile-bot-service
+            path: boutique-advisory-platform/mobile-bot-service
+            service_id_secret: RAILWAY_SERVICE_ID_MOBILE_BOT_CANARY
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy (Canary)
+        if: env.RAILWAY_SERVICE_ID != ''
+        working-directory: ${{ matrix.path }}
+        run: |
+          echo "Deploying CANARY ${{ matrix.name }}..."
+          railway up --service "$RAILWAY_SERVICE_ID" --detach
+
+      - name: Skip (missing service id)
+        if: env.RAILWAY_SERVICE_ID == ''
+        run: echo "Skipping CANARY ${{ matrix.name }} — missing secret ${{ matrix.service_id_secret }}"
+
+  migrations_canary:
+    runs-on: ubuntu-latest
+    needs: deploy_canary
+    if: github.ref == 'refs/heads/canary'
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_SERVICE_ID: ${{ secrets[matrix.service_id_secret] }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: core-backend
+            path: boutique-advisory-platform/core-backend
+            service_id_secret: RAILWAY_SERVICE_ID_CORE_BACKEND_CANARY
+          - name: trade-api
+            path: boutique-advisory-platform/trade-api
+            service_id_secret: RAILWAY_SERVICE_ID_TRADE_API_CANARY
+          - name: identity-service
+            path: boutique-advisory-platform/identity-service
+            service_id_secret: RAILWAY_SERVICE_ID_IDENTITY_SERVICE_CANARY
+          - name: wallet-service
+            path: boutique-advisory-platform/wallet-service
+            service_id_secret: RAILWAY_SERVICE_ID_WALLET_SERVICE_CANARY
+          - name: document-service
+            path: boutique-advisory-platform/document-service
+            service_id_secret: RAILWAY_SERVICE_ID_DOCUMENT_SERVICE_CANARY
+          - name: funding-service
+            path: boutique-advisory-platform/funding-service
+            service_id_secret: RAILWAY_SERVICE_ID_FUNDING_SERVICE_CANARY
+          - name: market-service
+            path: boutique-advisory-platform/market-service
+            service_id_secret: RAILWAY_SERVICE_ID_MARKET_SERVICE_CANARY
+          - name: advisory-service
+            path: boutique-advisory-platform/advisory-service
+            service_id_secret: RAILWAY_SERVICE_ID_ADVISORY_SERVICE_CANARY
+          - name: twallet-bff-service
+            path: boutique-advisory-platform/twallet-bff-service
+            service_id_secret: RAILWAY_SERVICE_ID_TWALLET_BFF_CANARY
+          - name: mobile-bot-service
+            path: boutique-advisory-platform/mobile-bot-service
+            service_id_secret: RAILWAY_SERVICE_ID_MOBILE_BOT_CANARY
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Run Prisma Migrations (Canary)
+        if: env.RAILWAY_SERVICE_ID != ''
+        working-directory: ${{ matrix.path }}
+        run: |
+          echo "Running CANARY migrations for ${{ matrix.name }}..."
+          railway run --service "$RAILWAY_SERVICE_ID" -- npx prisma migrate deploy
+
+      - name: Skip (missing service id)
+        if: env.RAILWAY_SERVICE_ID == ''
+        run: echo "Skipping CANARY migrations for ${{ matrix.name }} — missing secret ${{ matrix.service_id_secret }}"

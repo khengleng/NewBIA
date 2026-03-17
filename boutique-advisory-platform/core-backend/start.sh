@@ -21,17 +21,6 @@ echo "📡 Handing over database connection management to Node.js..."
 
 
 
-# Note: Database migrations are now handled inside the Node.js application 
-# to allow the server to start listening immediately on $PORT.
-
-# Ensure schema is up-to-date before boot so admin/security modules don't fail on missing tables.
-if [ -n "$DATABASE_URL" ]; then
-  echo "🗄️ Running Prisma migrations (migrate deploy)..."
-  npx prisma migrate deploy
-  echo "✅ Prisma migrations applied"
-fi
-
-
 # Start the application
 echo "🚀 Starting Node.js server..."
 exec node dist/index.js

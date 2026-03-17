@@ -28,12 +28,6 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
     const cookieNames = getAuthCookieNames(req);
     let token = req.cookies?.[cookieNames.accessToken] || req.headers.authorization?.split(' ')[1];
 
-    // Fallback for trading: If we are on the trading platform but don't have a tr_ cookie,
-    // try the core cookie name. This allows seamless transitions if cookies share a domain/proxy.
-    if (!token && cookieNames.accessToken === 'tr_accessToken') {
-        token = req.cookies?.['accessToken'];
-    }
-
     if (!token) {
         // No access token, try refresh token logic immediately.
         // Keep cookie presence diagnostics behind an explicit debug flag
@@ -83,27 +77,14 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
         }
 
         const requestTenantId = getTenantId(req);
-        const coreTenantId = process.env.CORE_TENANT_ID || 'default';
-        const tradingTenantId = process.env.TRADING_TENANT_ID || 'trade';
-        
-        // Detect if we are in the trading context based on the cookie naming convention, 
-        // which is derived from the current request hostname.
-        const isTradingContext = getAuthCookieNames(req).accessToken.startsWith('tr_');
-
-        const isAuthorizedCrossTenant = isTradingContext && 
-            user.tenantId === coreTenantId && 
-            (requestTenantId === tradingTenantId || requestTenantId === coreTenantId);
-
         const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
 
-        if (requestTenantId !== user.tenantId && !isAuthorizedCrossTenant) {
+        if (requestTenantId !== user.tenantId) {
             console.warn('[AUTH] Tenant access denied', {
                 path: req.originalUrl || req.url,
                 requestTenantId,
                 userTenantId: user.tenantId,
                 userRole: user.role,
-                isTradingContext,
-                isAuthorizedCrossTenant,
                 forwardedHost: req.headers['x-forwarded-host'],
                 host: req.headers['host'],
                 hostname: req.hostname,
@@ -135,10 +116,6 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
     const cookieNames = getAuthCookieNames(req);
     let refreshToken = req.cookies?.[cookieNames.refreshToken];
 
-    if (!refreshToken && cookieNames.refreshToken === 'tr_refreshToken') {
-        refreshToken = req.cookies?.['refreshToken'];
-    }
-
     if (!refreshToken) {
         res.status(401).json({ error: 'Session expired. Please log in again.' });
         return;
@@ -168,18 +145,9 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
         }
 
         const requestTenantId = getTenantId(req);
-        const coreTenantId = process.env.CORE_TENANT_ID || 'default';
-        const tradingTenantId = process.env.TRADING_TENANT_ID || 'trade';
-        
-        const isTradingContext = getAuthCookieNames(req).accessToken.startsWith('tr_');
-
-        const isAuthorizedCrossTenant = isTradingContext && 
-            storedToken.user.tenantId === coreTenantId && 
-            (requestTenantId === tradingTenantId || requestTenantId === coreTenantId);
-
         const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
 
-        if (requestTenantId !== storedToken.user.tenantId && !isAuthorizedCrossTenant) {
+        if (requestTenantId !== storedToken.user.tenantId) {
             console.warn('[AUTH] Tenant access denied during refresh', {
                 path: req.originalUrl || req.url,
                 requestTenantId,
