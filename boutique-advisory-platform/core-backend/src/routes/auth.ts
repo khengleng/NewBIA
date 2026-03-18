@@ -933,7 +933,7 @@ router.post('/sso/trading/exchange', async (req: Request, res: Response) => {
     }
 
     const tenantId = getTenantId(req);
-    let user = await prisma.user.findFirst({
+    const existingUser = await prisma.user.findFirst({
       where: {
         tenantId,
         email: { equals: normalizedEmail, mode: 'insensitive' },
@@ -941,33 +941,29 @@ router.post('/sso/trading/exchange', async (req: Request, res: Response) => {
       }
     });
 
-    if (!user) {
-      const randomPassword = await bcrypt.hash(generateSecureToken(32), 12);
-      user = await prisma.user.create({
-        data: {
-          email: normalizedEmail,
-          password: randomPassword,
-          firstName: claims?.firstName || 'User',
-          lastName: claims?.lastName || 'SSO',
-          role: role as any,
-          tenantId,
-          status: 'ACTIVE',
-          isEmailVerified: true,
-          language: 'EN'
-        }
-      });
-    } else {
-      const existingUser = user;
-      user = await prisma.user.update({
-        where: { id: existingUser.id },
-        data: {
-          role: role as any,
-          firstName: claims?.firstName || existingUser.firstName,
-          lastName: claims?.lastName || existingUser.lastName,
-          isEmailVerified: true
-        }
-      });
-    }
+    const user = existingUser
+      ? await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            role: role as any,
+            firstName: claims?.firstName || existingUser.firstName,
+            lastName: claims?.lastName || existingUser.lastName,
+            isEmailVerified: true
+          }
+        })
+      : await prisma.user.create({
+          data: {
+            email: normalizedEmail,
+            password: await bcrypt.hash(generateSecureToken(32), 12),
+            firstName: claims?.firstName || 'User',
+            lastName: claims?.lastName || 'SSO',
+            role: role as any,
+            tenantId,
+            status: 'ACTIVE',
+            isEmailVerified: true,
+            language: 'EN'
+          }
+        });
 
     if (!user) {
       return res.status(500).json({ error: 'Failed to resolve user for SSO login' });
