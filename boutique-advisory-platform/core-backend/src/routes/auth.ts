@@ -6,7 +6,7 @@ import { clearAuthCookies, getAuthCookieNames, issueTokensAndSetCookies } from '
 import { getTenantId } from '../utils/tenant-utils';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../database';
-import { Prisma } from '@prisma/client';
+import { Prisma, type User } from '@prisma/client';
 import {
   validatePasswordStrength,
   generateSecureToken,
@@ -941,9 +941,9 @@ router.post('/sso/trading/exchange', async (req: Request, res: Response) => {
       }
     });
 
-    let user: Prisma.User;
+    let user: User;
     if (existingUser) {
-      user = await prisma.user.update({
+      const updatedUser = await prisma.user.update({
         where: { id: existingUser.id },
         data: {
           role: role as any,
@@ -952,8 +952,9 @@ router.post('/sso/trading/exchange', async (req: Request, res: Response) => {
           isEmailVerified: true
         }
       });
+      user = updatedUser;
     } else {
-      user = await prisma.user.create({
+      const createdUser = await prisma.user.create({
         data: {
           email: normalizedEmail,
           password: await bcrypt.hash(generateSecureToken(32), 12),
@@ -966,6 +967,7 @@ router.post('/sso/trading/exchange', async (req: Request, res: Response) => {
           language: 'EN'
         }
       });
+      user = createdUser;
     }
 
     if (!user) {
