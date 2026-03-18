@@ -90,7 +90,7 @@ function getBackendTargets(req: NextRequest): string[] {
   };
 
   const coreInternalBackend = inferServiceUrl(
-    process.env.RAILWAY_SERVICE_BACKEND_URL,
+    process.env.RAILWAY_SERVICE_BACKEND_URL || process.env.RAILWAY_SERVICE_CORE_BACKEND_URL,
     'http://backend.railway.internal:8080'
   );
   const tradingInternalBackend = inferServiceUrl(
@@ -109,12 +109,16 @@ function getBackendTargets(req: NextRequest): string[] {
     addTarget(process.env.CORE_API_URL);
     addTarget(process.env.CORE_BACKEND_INTERNAL_URL);
     addTarget(process.env.CORE_BACKEND_URL);
+    addTarget(process.env.RAILWAY_SERVICE_CORE_BACKEND_URL);
+    addTarget(process.env.RAILWAY_SERVICE_CORE_BACKEND_INTERNAL_URL);
     addTarget(coreInternalBackend);
   } else {
     // Priority: Core -> Trading -> Others
     addTarget(process.env.CORE_API_URL);
     addTarget(process.env.CORE_BACKEND_INTERNAL_URL);
     addTarget(process.env.CORE_BACKEND_URL);
+    addTarget(process.env.RAILWAY_SERVICE_CORE_BACKEND_URL);
+    addTarget(process.env.RAILWAY_SERVICE_CORE_BACKEND_INTERNAL_URL);
     addTarget(coreInternalBackend);
 
     addTarget(process.env.TRADING_API_URL);

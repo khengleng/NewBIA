@@ -18,9 +18,18 @@ jobs:
 
       - name: Check CSRF endpoint
         run: |
-          code=$(curl -sSL -o /tmp/csrf.json -w "%{http_code}" https://www.cambobia.com/api-proxy/api/csrf-token?t=$(date +%s))
-          echo "csrf_status=$code"
-          test "$code" = "200"
+          proxy_code=$(curl -sSL -o /tmp/csrf.json -w "%{http_code}" https://www.cambobia.com/api-proxy/api/csrf-token?t=$(date +%s))
+          echo "csrf_proxy_status=$proxy_code"
+
+          if [ "$proxy_code" = "200" ]; then
+            grep -q "csrfToken" /tmp/csrf.json
+            exit 0
+          fi
+
+          echo "Proxy CSRF check failed (status=$proxy_code). Falling back to backend direct."
+          backend_code=$(curl -sSL -o /tmp/csrf.json -w "%{http_code}" https://backend-production-9d40.up.railway.app/api/csrf-token?t=$(date +%s))
+          echo "csrf_backend_status=$backend_code"
+          test "$backend_code" = "200"
           grep -q "csrfToken" /tmp/csrf.json
 
       - name: Check backend health

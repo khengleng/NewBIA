@@ -124,6 +124,10 @@ const nextConfig: NextConfig = {
       : (
         process.env.RAILWAY_SERVICE_BACKEND_URL
           ? `http://${process.env.RAILWAY_SERVICE_BACKEND_URL}`
+          : process.env.RAILWAY_SERVICE_CORE_BACKEND_URL
+            ? `http://${process.env.RAILWAY_SERVICE_CORE_BACKEND_URL}`
+            : process.env.RAILWAY_SERVICE_CORE_BACKEND_INTERNAL_URL
+              ? `http://${process.env.RAILWAY_SERVICE_CORE_BACKEND_INTERNAL_URL}`
           : 'http://backend.railway.internal:8080'
       );
 
@@ -142,6 +146,8 @@ const nextConfig: NextConfig = {
         process.env.CORE_API_URL ||
         process.env.CORE_BACKEND_INTERNAL_URL ||
         process.env.CORE_BACKEND_URL ||
+        process.env.RAILWAY_SERVICE_CORE_BACKEND_URL ||
+        process.env.RAILWAY_SERVICE_CORE_BACKEND_INTERNAL_URL ||
         process.env.API_URL ||
         process.env.BACKEND_INTERNAL_URL ||
         process.env.BACKEND_URL ||
