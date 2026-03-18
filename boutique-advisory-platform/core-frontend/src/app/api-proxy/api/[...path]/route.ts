@@ -91,7 +91,7 @@ function getBackendTargets(req: NextRequest): string[] {
 
   const coreInternalBackend = inferServiceUrl(
     process.env.RAILWAY_SERVICE_BACKEND_URL || process.env.RAILWAY_SERVICE_CORE_BACKEND_URL,
-    'http://backend.railway.internal:8080'
+    'http://core-backend.railway.internal:8080'
   );
   const tradingInternalBackend = inferServiceUrl(
     process.env.RAILWAY_SERVICE_TRADING_URL || process.env.RAILWAY_SERVICE_TRADING_BACKEND_URL,

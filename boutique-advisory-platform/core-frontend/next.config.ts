@@ -128,7 +128,7 @@ const nextConfig: NextConfig = {
             ? `http://${process.env.RAILWAY_SERVICE_CORE_BACKEND_URL}`
             : process.env.RAILWAY_SERVICE_CORE_BACKEND_INTERNAL_URL
               ? `http://${process.env.RAILWAY_SERVICE_CORE_BACKEND_INTERNAL_URL}`
-          : 'http://backend.railway.internal:8080'
+          : 'http://core-backend.railway.internal:8080'
       );
 
     const apiUrl = tradingBuild
