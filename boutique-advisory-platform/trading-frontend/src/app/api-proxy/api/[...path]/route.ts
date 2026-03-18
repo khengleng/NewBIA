@@ -177,7 +177,17 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
   if (targets.length === 0) {
     console.error(`❌ [Proxy] No backend targets found for request to /api/${pathParts.join('/')}`);
     return NextResponse.json(
-      { error: 'Backend proxy is not configured.' },
+      {
+        error: 'Backend proxy is not configured.',
+        hint: 'Set TRADING_API_URL (or TRADING_BACKEND_URL) on the trading frontend service.',
+        missing: [
+          'TRADING_API_URL',
+          'TRADING_BACKEND_URL',
+          'TRADING_BACKEND_INTERNAL_URL',
+          'NEXT_PUBLIC_API_URL'
+        ],
+        host: req.nextUrl.host
+      },
       { status: 503 }
     );
   }
@@ -240,7 +250,8 @@ async function proxy(req: NextRequest, pathParts: string[]): Promise<NextRespons
       error: 'Service temporarily unavailable. Please try again in a few seconds.',
       proxyStatus: lastStatus,
       proxyError: lastError,
-      targetsAttempted: targets.length
+      targetsAttempted: targets.length,
+      tried: targets
     },
     { status: 503 }
   );
