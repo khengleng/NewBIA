@@ -26,6 +26,16 @@ services:
     networks:
       - bia-network
 
+  # Redis (shared cache/session store)
+  redis:
+    image: redis:7-alpine
+    container_name: bia-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - bia-network
+
   # Core Backend API Service
   core-backend:
     image: bia-core-backend:latest
@@ -60,6 +70,225 @@ services:
       retries: 3
       start_period: 30s
 
+  # Identity Service
+  identity-service:
+    image: bia-identity-service:latest
+    build:
+      context: ./identity-service
+      dockerfile: Dockerfile
+    container_name: bia-identity-service
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      NODE_ENV: production
+      PORT: 3007
+      SERVICE_NAME: identity-service
+      DATABASE_URL: postgresql://bia_user:bia_secret_password@postgres:5432/bia_development?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3002}
+      TRADING_FRONTEND_URL: ${TRADING_FRONTEND_URL:-http://localhost:3002}
+    ports:
+      - "3007:3007"
+    networks:
+      - bia-network
+
+  # Wallet Service
+  wallet-service:
+    image: bia-wallet-service:latest
+    build:
+      context: ./wallet-service
+      dockerfile: Dockerfile
+    container_name: bia-wallet-service
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      NODE_ENV: production
+      PORT: 3008
+      SERVICE_NAME: wallet-service
+      DATABASE_URL: postgresql://bia_user:bia_secret_password@postgres:5432/bia_development?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3002}
+      TRADING_FRONTEND_URL: ${TRADING_FRONTEND_URL:-http://localhost:3002}
+      SERVICE_VERSION: ${SERVICE_VERSION:-local}
+    ports:
+      - "3008:3008"
+    networks:
+      - bia-network
+
+  # Funding Service
+  funding-service:
+    image: bia-funding-service:latest
+    build:
+      context: ./funding-service
+      dockerfile: Dockerfile
+    container_name: bia-funding-service
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      NODE_ENV: production
+      PORT: 3009
+      SERVICE_NAME: funding-service
+      DATABASE_URL: postgresql://bia_user:bia_secret_password@postgres:5432/bia_development?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3002}
+      TRADING_FRONTEND_URL: ${TRADING_FRONTEND_URL:-http://localhost:3002}
+    ports:
+      - "3009:3009"
+    networks:
+      - bia-network
+
+  # Market Service (Secondary Market)
+  market-service:
+    image: bia-market-service:latest
+    build:
+      context: ./market-service
+      dockerfile: Dockerfile
+    container_name: bia-market-service
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      NODE_ENV: production
+      PORT: 3012
+      SERVICE_NAME: market-service
+      DATABASE_URL: postgresql://bia_user:bia_secret_password@postgres:5432/bia_development?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3002}
+      TRADING_FRONTEND_URL: ${TRADING_FRONTEND_URL:-http://localhost:3002}
+    ports:
+      - "3012:3012"
+    networks:
+      - bia-network
+
+  # Advisory Service
+  advisory-service:
+    image: bia-advisory-service:latest
+    build:
+      context: ./advisory-service
+      dockerfile: Dockerfile
+    container_name: bia-advisory-service
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      NODE_ENV: production
+      PORT: 3006
+      DATABASE_URL: postgresql://bia_user:bia_secret_password@postgres:5432/bia_development?schema=public
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3002}
+    ports:
+      - "3006:3006"
+    networks:
+      - bia-network
+
+  # Document Service
+  document-service:
+    image: bia-document-service:latest
+    build:
+      context: ./document-service
+      dockerfile: Dockerfile
+    container_name: bia-document-service
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      NODE_ENV: production
+      PORT: 3005
+      DATABASE_URL: postgresql://bia_user:bia_secret_password@postgres:5432/bia_development?schema=public
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3002}
+    ports:
+      - "3005:3005"
+    networks:
+      - bia-network
+
+  # Trade API
+  trade-api:
+    image: bia-trade-api:latest
+    build:
+      context: ./trade-api
+      dockerfile: Dockerfile
+    container_name: bia-trade-api
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+      - advisory-service
+      - document-service
+    environment:
+      NODE_ENV: production
+      PORT: 3011
+      DATABASE_URL: postgresql://bia_user:bia_secret_password@postgres:5432/bia_development?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3002}
+      REDIS_URL: redis://redis:6379
+      DOCUMENT_SERVICE_URL: http://document-service:3005
+      ADVISORY_SERVICE_URL: http://advisory-service:3006
+    ports:
+      - "3011:3011"
+    networks:
+      - bia-network
+
+  # TWallet BFF
+  twallet-bff-service:
+    image: bia-twallet-bff-service:latest
+    build:
+      context: ./twallet-bff-service
+      dockerfile: Dockerfile
+    container_name: bia-twallet-bff-service
+    restart: unless-stopped
+    depends_on:
+      - identity-service
+      - wallet-service
+      - funding-service
+      - market-service
+      - trade-api
+    environment:
+      NODE_ENV: production
+      PORT: 3010
+      SERVICE_NAME: twallet-bff-service
+      IDENTITY_SERVICE_URL: http://identity-service:3007
+      WALLET_SERVICE_URL: http://wallet-service:3008
+      FUNDING_SERVICE_URL: http://funding-service:3009
+      MARKET_SERVICE_URL: http://market-service:3012
+      TRADE_API_URL: http://trade-api:3011
+      MOBILE_APP_URL: ${MOBILE_APP_URL:-http://localhost:4173}
+      TRADING_FRONTEND_HOST: ${TRADING_FRONTEND_HOST:-localhost:3002}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3002}
+    ports:
+      - "3010:3010"
+    networks:
+      - bia-network
+
+  # Mobile Bot Service
+  mobile-bot-service:
+    image: bia-mobile-bot-service:latest
+    build:
+      context: ./mobile-bot-service
+      dockerfile: Dockerfile
+    container_name: bia-mobile-bot-service
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      NODE_ENV: production
+      PORT: 3005
+      DATABASE_URL: postgresql://bia_user:bia_secret_password@postgres:5432/bia_development?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY:-dev-internal-key}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+    ports:
+      - "3015:3005"
+    networks:
+      - bia-network
+
   # Core Frontend Web Application
   core-frontend:
     image: bia-core-frontend:latest
@@ -80,6 +309,28 @@ services:
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
     ports:
       - "3002:3000"
+    networks:
+      - bia-network
+
+  # Trading Frontend
+  trading-frontend:
+    image: bia-trading-frontend:latest
+    build:
+      context: ./trading-frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:3011
+        - NEXT_PUBLIC_PLATFORM_MODE=trading
+    container_name: bia-trading-frontend
+    restart: unless-stopped
+    depends_on:
+      - trade-api
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost:3011
+      NEXT_PUBLIC_PLATFORM_MODE: trading
+    ports:
+      - "3016:3000"
     networks:
       - bia-network
 
