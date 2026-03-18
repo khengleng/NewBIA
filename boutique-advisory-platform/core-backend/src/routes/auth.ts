@@ -943,12 +943,13 @@ router.post('/sso/trading/exchange', async (req: Request, res: Response) => {
 
     let user: User;
     if (existingUser) {
+      const existingUserRecord = existingUser!;
       const updatedUser = await prisma.user.update({
-        where: { id: existingUser.id },
+        where: { id: existingUserRecord.id },
         data: {
           role: role as any,
-          firstName: claims?.firstName || existingUser.firstName,
-          lastName: claims?.lastName || existingUser.lastName,
+          firstName: claims?.firstName || existingUserRecord.firstName,
+          lastName: claims?.lastName || existingUserRecord.lastName,
           isEmailVerified: true
         }
       });
