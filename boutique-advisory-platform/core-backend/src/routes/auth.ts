@@ -915,7 +915,8 @@ router.post('/sso/trading/exchange', async (req: Request, res: Response) => {
     const role = normalizeRole(typeof claims?.role === 'string' ? claims.role : '');
     const sourceTenantId = String(claims?.sourceTenantId || '');
 
-    if (!email) {
+    const normalizedEmail = email ?? '';
+    if (!normalizedEmail) {
       return res.status(400).json({ error: 'Invalid SSO claims payload' });
     }
     if (sourceTenantId !== coreTenantId) {
@@ -935,7 +936,7 @@ router.post('/sso/trading/exchange', async (req: Request, res: Response) => {
     let user = await prisma.user.findFirst({
       where: {
         tenantId,
-        email: { equals: email, mode: 'insensitive' },
+        email: { equals: normalizedEmail, mode: 'insensitive' },
         status: { not: 'DELETED' }
       }
     });
@@ -944,7 +945,7 @@ router.post('/sso/trading/exchange', async (req: Request, res: Response) => {
       const randomPassword = await bcrypt.hash(generateSecureToken(32), 12);
       user = await prisma.user.create({
         data: {
-          email,
+          email: normalizedEmail,
           password: randomPassword,
           firstName: claims?.firstName || 'User',
           lastName: claims?.lastName || 'SSO',
@@ -956,15 +957,20 @@ router.post('/sso/trading/exchange', async (req: Request, res: Response) => {
         }
       });
     } else {
+      const existingUser = user;
       user = await prisma.user.update({
-        where: { id: user.id },
+        where: { id: existingUser.id },
         data: {
           role: role as any,
-          firstName: claims?.firstName || user.firstName,
-          lastName: claims?.lastName || user.lastName,
+          firstName: claims?.firstName || existingUser.firstName,
+          lastName: claims?.lastName || existingUser.lastName,
           isEmailVerified: true
         }
       });
+    }
+
+    if (!user) {
+      return res.status(500).json({ error: 'Failed to resolve user for SSO login' });
     }
 
     if (role === 'INVESTOR') {
