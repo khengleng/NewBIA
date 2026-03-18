@@ -5,12 +5,12 @@ A comprehensive multi-tenant platform that connects SMEs with investors through 
 ## 🚀 Quick Start (Local Docker)
 
 ```bash
-# Start all services locally
+# Start core services locally (Postgres + Core Backend + Core Frontend)
 docker-compose up --build
 
 # Access the platform
-# Frontend: http://localhost:3002
-# Backend:  http://localhost:3003
+# Core Frontend: http://localhost:3002
+# Core Backend:  http://localhost:3003
 ```
 
 ## 🛠️ Local Development & GCP Readiness
@@ -70,13 +70,19 @@ After deployment, the database is automatically seeded. All initial accounts use
 
 ```
 boutique-advisory-platform/
-├── backend/              # Node.js + Express API
-│   ├── src/              # Source code
-│   ├── prisma/           # Database schema & migrations
-│   └── Dockerfile        # Production Docker config
-├── frontend/             # Next.js web app
-│   ├── src/              # Source code
-│   └── Dockerfile        # Production Docker config
+├── core-backend/         # Core Node.js + Express API
+├── core-frontend/        # Core Next.js web app (cambobia.com)
+├── trade-api/            # Trading API (orderbook & market)
+├── identity-service/     # Auth & identity
+├── wallet-service/       # Wallet & balances
+├── funding-service/      # Funding & payments
+├── market-service/       # Market & secondary trading
+├── advisory-service/     # Advisory workflows
+├── document-service/     # Document management
+├── twallet-bff-service/  # Mobile BFF for TWallet
+├── mobile-bot-service/   # Telegram/mobile bot service
+├── bia-frontend/         # Legacy/admin frontend (if used)
+├── trading-frontend/     # Trading UI (trade.cambobia.com)
 └── docker-compose.yml    # Local multi-container setup
 ```
 
@@ -111,6 +117,10 @@ boutique-advisory-platform/
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `NEXT_PUBLIC_API_URL` | Yes | Backend API URL (passed as build arg) |
+
+### Service Note
+
+Most services include their own `DATABASE_URL` and Prisma client. In the current setup, many services share the same schema, so keep migrations and database access coordinated.
 
 ## 🔐 Security Notes
 

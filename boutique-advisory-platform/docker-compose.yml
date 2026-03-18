@@ -26,13 +26,13 @@ services:
     networks:
       - bia-network
 
-  # Backend API Service
-  backend:
-    image: bia-backend:latest
+  # Core Backend API Service
+  core-backend:
+    image: bia-core-backend:latest
     build:
-      context: ./backend
+      context: ./core-backend
       dockerfile: Dockerfile
-    container_name: bia-backend
+    container_name: bia-core-backend
     restart: unless-stopped
     depends_on:
       - postgres
@@ -60,18 +60,19 @@ services:
       retries: 3
       start_period: 30s
 
-  # Frontend Web Application
-  frontend:
-    image: bia-frontend:latest
+  # Core Frontend Web Application
+  core-frontend:
+    image: bia-core-frontend:latest
     build:
-      context: ./frontend
+      context: ./core-frontend
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_API_URL=http://localhost:3003
-    container_name: bia-frontend
+        - NEXT_PUBLIC_PLATFORM_MODE=core
+    container_name: bia-core-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      - core-backend
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_URL: http://localhost:3003
