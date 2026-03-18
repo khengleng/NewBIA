@@ -372,12 +372,6 @@ export default function LoginPage() {
               <p className="text-green-400 text-sm">{resendStatus}</p>
             </div>
           )}
-          <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-            <p className="text-blue-300 text-sm">
-              If you normally sign in on cambobia.com, use SSO below. Direct password login on this trading site is for trading-local credentials only.
-            </p>
-          </div>
-
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300">
@@ -466,17 +460,6 @@ export default function LoginPage() {
                 {t('auth.forgotPassword')}
               </Link>
             </div>
-          </div>
-
-          <div>
-            <button
-              type="button"
-              onClick={handleTradingSso}
-              disabled={isSsoLoading || isLoading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            >
-              {isSsoLoading ? 'Redirecting to SSO...' : 'Continue with CamboBia Account (SSO)'}
-            </button>
           </div>
 
           <div>

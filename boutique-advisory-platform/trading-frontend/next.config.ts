@@ -119,12 +119,20 @@ const nextConfig: NextConfig = {
           ? `http://${process.env.RAILWAY_SERVICE_TRADING_URL}`
           : process.env.RAILWAY_SERVICE_TRADING_BACKEND_URL
             ? `http://${process.env.RAILWAY_SERVICE_TRADING_BACKEND_URL}`
-            : 'http://trading.railway.internal:8080'
+            : process.env.RAILWAY_SERVICE_TRADE_API_URL
+              ? `http://${process.env.RAILWAY_SERVICE_TRADE_API_URL}`
+              : process.env.RAILWAY_SERVICE_TRADE_API_INTERNAL_URL
+                ? `http://${process.env.RAILWAY_SERVICE_TRADE_API_INTERNAL_URL}`
+                : 'http://trade-api.railway.internal:8080'
       )
       : (
         process.env.RAILWAY_SERVICE_BACKEND_URL
           ? `http://${process.env.RAILWAY_SERVICE_BACKEND_URL}`
-          : 'http://backend.railway.internal:8080'
+          : process.env.RAILWAY_SERVICE_CORE_BACKEND_URL
+            ? `http://${process.env.RAILWAY_SERVICE_CORE_BACKEND_URL}`
+            : process.env.RAILWAY_SERVICE_CORE_BACKEND_INTERNAL_URL
+              ? `http://${process.env.RAILWAY_SERVICE_CORE_BACKEND_INTERNAL_URL}`
+              : 'http://core-backend.railway.internal:8080'
       );
 
     const apiUrl = tradingBuild
