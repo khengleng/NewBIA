@@ -119,6 +119,7 @@ import axios from 'axios';
 const DOCUMENT_SERVICE_URL = process.env.DOCUMENT_SERVICE_URL || 'http://document-service:3005';
 const ADVISORY_SERVICE_URL = process.env.ADVISORY_SERVICE_URL || 'http://advisory-service:3006';
 const IDENTITY_SERVICE_URL = process.env.IDENTITY_SERVICE_URL || 'http://identity-service:3007';
+console.log(`[config] IDENTITY_SERVICE_URL=${IDENTITY_SERVICE_URL}`);
 const MARKET_SERVICE_URL = process.env.MARKET_SERVICE_URL || 'http://market-service:3008';
 const FUNDING_SERVICE_URL = process.env.FUNDING_SERVICE_URL || 'http://funding-service:3009';
 const WALLET_SERVICE_URL = process.env.WALLET_SERVICE_URL || 'http://wallet-service:3004';
