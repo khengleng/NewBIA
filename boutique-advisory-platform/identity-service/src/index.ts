@@ -11,7 +11,27 @@ const app = createApp(config);
 let server: Server | null = null;
 let shuttingDown = false;
 
+function validateRuntimeConfig(): void {
+  const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
+  if (!['core', 'trading'].includes(serviceMode)) {
+    console.error(`[FATAL] Invalid SERVICE_MODE "${serviceMode}". Expected "core" or "trading".`);
+    process.exit(1);
+  }
+
+  if (serviceMode === 'trading') {
+    if (!process.env.TRADING_TENANT_ID) {
+      console.error('[FATAL] SERVICE_MODE=trading requires TRADING_TENANT_ID to be set.');
+      process.exit(1);
+    }
+    if (!process.env.TRADING_FRONTEND_URL) {
+      console.error('[FATAL] SERVICE_MODE=trading requires TRADING_FRONTEND_URL to be set.');
+      process.exit(1);
+    }
+  }
+}
+
 async function start(): Promise<void> {
+  validateRuntimeConfig();
   server = createServer(app);
   server.listen(config.port, '0.0.0.0', () => {
     console.log(`${config.serviceName} listening on ${config.port}`);

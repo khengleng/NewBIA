@@ -124,6 +124,22 @@ const MARKET_SERVICE_URL = process.env.MARKET_SERVICE_URL || 'http://market-serv
 const FUNDING_SERVICE_URL = process.env.FUNDING_SERVICE_URL || 'http://funding-service:3009';
 const WALLET_SERVICE_URL = process.env.WALLET_SERVICE_URL || 'http://wallet-service:3004';
 
+const tradeServiceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
+if (tradeServiceMode === 'trading') {
+  const enforceTradeIdentity = String(process.env.ENFORCE_TRADE_IDENTITY || 'true').toLowerCase() !== 'false';
+  const identityUrl = IDENTITY_SERVICE_URL.toLowerCase();
+  const looksLikeTradeIdentity =
+    identityUrl.includes('identity-trade') ||
+    identityUrl.includes('identitytrade') ||
+    identityUrl.includes('identity_trade');
+
+  if (enforceTradeIdentity && !looksLikeTradeIdentity) {
+    console.error('[FATAL] Trade API is running in trading mode but IDENTITY_SERVICE_URL does not point to the trade identity service.');
+    console.error(`        IDENTITY_SERVICE_URL=${IDENTITY_SERVICE_URL}`);
+    process.exit(1);
+  }
+}
+
 const proxyService = (targetUrl: string) => async (req: express.Request, res: express.Response) => {
   try {
     const url = `${targetUrl}${req.originalUrl}`;
