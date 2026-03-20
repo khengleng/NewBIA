@@ -154,8 +154,19 @@ const proxyService = (targetUrl: string) => async (req: express.Request, res: ex
       params: req.query,
       validateStatus: () => true,
     });
-    
-    res.status(response.status).json(response.data);
+
+    // Forward upstream Set-Cookie headers so auth sessions survive the proxy.
+    const setCookie = response.headers?.['set-cookie'];
+    if (setCookie) {
+      res.setHeader('set-cookie', setCookie);
+    }
+
+    // Preserve upstream status and content type.
+    if (response.headers?.['content-type']) {
+      res.setHeader('content-type', response.headers['content-type']);
+    }
+
+    res.status(response.status).send(response.data);
   } catch (error: any) {
     console.error(`Proxy error to ${targetUrl}:`, error.message);
     res.status(502).json({ error: 'Service Unavailable', service: targetUrl });
