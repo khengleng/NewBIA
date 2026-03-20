@@ -80,10 +80,13 @@ export function initSocket(server: HttpServer) {
 
         // If no token in auth, check cookies
         if (!token && socket.handshake.headers.cookie) {
-            const cookieMatch = socket.handshake.headers.cookie.match(/token=([^;]+)/);
-            if (cookieMatch) {
-                token = cookieMatch[1];
-            }
+            const cookieHeader = socket.handshake.headers.cookie;
+            const match =
+                cookieHeader.match(/(?:^|;\s*)tr_token=([^;]+)/) ||
+                cookieHeader.match(/(?:^|;\s*)tr_accessToken=([^;]+)/) ||
+                cookieHeader.match(/(?:^|;\s*)token=([^;]+)/) ||
+                cookieHeader.match(/(?:^|;\s*)accessToken=([^;]+)/);
+            if (match) token = match[1];
         }
 
         if (!token) {
