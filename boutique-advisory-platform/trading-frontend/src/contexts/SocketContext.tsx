@@ -94,7 +94,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             const socket = io(socketOrigin, {
                 path: '/api-proxy/socket.io',
                 withCredentials: true,
-                transports: ['polling', 'websocket'],
+                transports: ['websocket'],
+                upgrade: false,
                 autoConnect: false,
                 reconnection: true,
                 reconnectionAttempts: 5,
