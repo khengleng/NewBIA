@@ -33,6 +33,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         const syncUserFromSession = async () => {
+            if (typeof window !== 'undefined' && window.location.pathname.startsWith('/auth/')) {
+                setUser(null)
+                return
+            }
             try {
                 const response = await authorizedRequest('/api/auth/me')
                 if (!response.ok) {
