@@ -160,8 +160,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 roles: operatorRoles,
                 items: [
                     {
-                        href: `${CORE_FRONTEND_URL}/admin/dashboard`,
-                        label: 'Back to CamboBia Admin',
+                        href: '/trading/operator/dashboard',
+                        label: 'Trading Admin Home',
                         icon: LayoutDashboard,
                         roles: operatorRoles
                     }
