@@ -150,15 +150,16 @@ const nextConfig: NextConfig = {
       );
     console.log(`📡 [Proxy Configuration] Target: ${apiUrl}`);
 
+    const socketTarget = apiUrl.replace(/\/api\/?$/, '');
 
     return [
       {
         source: '/api-proxy/socket.io',
-        destination: `${apiUrl}/socket.io`,
+        destination: `${socketTarget}/socket.io`,
       },
       {
         source: '/api-proxy/socket.io/:path*',
-        destination: `${apiUrl}/socket.io/:path*`,
+        destination: `${socketTarget}/socket.io/:path*`,
       }
     ];
   },
