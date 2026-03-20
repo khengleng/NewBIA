@@ -22,9 +22,10 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
     const cookieNames = getAuthCookieNames(req);
     let token = req.cookies?.[cookieNames.accessToken] || req.headers.authorization?.split(' ')[1];
 
-    // Fallback for trading: If we are on the trading platform but don't have a tr_ cookie,
-    // try the core cookie name. This allows seamless transitions if cookies share a domain/proxy.
-    if (!token && cookieNames.accessToken === 'tr_accessToken') {
+    // Optional legacy fallback for shared-cookie setups (disabled by default for hard separation).
+    const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
+    const allowCoreCookieFallback = process.env.ALLOW_CORE_COOKIE_FALLBACK === 'true' && serviceMode !== 'trading';
+    if (!token && allowCoreCookieFallback && cookieNames.accessToken === 'tr_accessToken') {
         token = req.cookies?.['accessToken'];
     }
 
@@ -80,8 +81,6 @@ export const authenticateToken = async (req: AuthenticatedRequest, res: Response
             user.tenantId === coreTenantId && 
             (requestTenantId === tradingTenantId || requestTenantId === coreTenantId);
 
-        const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
-
         if (requestTenantId !== user.tenantId && !isAuthorizedCrossTenant) {
             console.warn('[AUTH] Tenant access denied', {
                 path: req.originalUrl || req.url,
@@ -130,7 +129,9 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
     const cookieNames = getAuthCookieNames(req);
     let refreshToken = req.cookies?.[cookieNames.refreshToken];
 
-    if (!refreshToken && cookieNames.refreshToken === 'tr_refreshToken') {
+    const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
+    const allowCoreCookieFallback = process.env.ALLOW_CORE_COOKIE_FALLBACK === 'true' && serviceMode !== 'trading';
+    if (!refreshToken && allowCoreCookieFallback && cookieNames.refreshToken === 'tr_refreshToken') {
         refreshToken = req.cookies?.['refreshToken'];
     }
 
@@ -187,8 +188,6 @@ async function handleRefresh(req: AuthenticatedRequest, res: Response, next: Nex
         const isAuthorizedCrossTenant = isTradingContext && 
             storedToken.user.tenantId === coreTenantId && 
             (requestTenantId === tradingTenantId || requestTenantId === coreTenantId);
-
-        const serviceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
 
         if (requestTenantId !== storedToken.user.tenantId && !isAuthorizedCrossTenant) {
             console.warn('[AUTH] Tenant access denied during refresh', {
