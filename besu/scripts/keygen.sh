@@ -37,3 +37,6 @@ done < <(find "$OUT_DIR" -type f -name key | sort)
 
 printf "NOTE: Use the validator public keys above to fill static-nodes.json and permissions_config.toml.\n"
 printf "Replace <host> with the Railway internal hostnames.\n\n"
+
+printf "FILES_IN_GENERATED=\n"
+find "$OUT_DIR" -type f -maxdepth 3 | sort
