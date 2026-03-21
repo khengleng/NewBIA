@@ -12,9 +12,16 @@ besu operator generate-blockchain-config \
   --to=$OUT_DIR \
   --private-key-file-name=key
 
+gen_extra_key() {
+  local role=$1
+  mkdir -p "$OUT_DIR/$role"
+  head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$OUT_DIR/$role/key"
+  besu public-key export --node-private-key-file="$OUT_DIR/$role/key" > "$OUT_DIR/$role/key.pub"
+}
+
 # Generate extra keys for bootnode and rpc node
-besu operator generate-key-pair --directory="$OUT_DIR/bootnode"
-besu operator generate-key-pair --directory="$OUT_DIR/rpc"
+gen_extra_key bootnode
+gen_extra_key rpc
 
 GENESIS_PATH="$OUT_DIR/genesis.json"
 if [[ ! -f "$GENESIS_PATH" ]]; then
