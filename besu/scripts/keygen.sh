@@ -20,16 +20,19 @@ fi
 
 printf "\n===== BESU KEYGEN OUTPUT =====\n"
 printf "GENESIS_JSON_BASE64=\n"
-base64 < "$GENESIS_PATH"
+base64 < "$GENESIS_PATH" | tr -d '\n'
+printf "\n"
 printf "\n\nVALIDATOR_KEYS (private hex)\n"
 INDEX=1
 while IFS= read -r KEY_PATH; do
   PUB_PATH="${KEY_PATH}.pub"
   if [[ -f "$KEY_PATH" ]]; then
-    printf "validator%d_private_key=0x%s\n" "$INDEX" "$(cat "$KEY_PATH")"
+    KEY_VALUE="$(sed 's/^0x//' "$KEY_PATH")"
+    printf "validator%d_private_key=0x%s\n" "$INDEX" "$KEY_VALUE"
   fi
   if [[ -f "$PUB_PATH" ]]; then
-    printf "validator%d_public_key=%s\n" "$INDEX" "$(cat "$PUB_PATH")"
+    PUB_VALUE="$(sed 's/^0x//' "$PUB_PATH")"
+    printf "validator%d_public_key=0x%s\n" "$INDEX" "$PUB_VALUE"
   fi
   printf "\n"
   INDEX=$((INDEX+1))
@@ -37,6 +40,3 @@ done < <(find "$OUT_DIR" -type f -name key | sort)
 
 printf "NOTE: Use the validator public keys above to fill static-nodes.json and permissions_config.toml.\n"
 printf "Replace <host> with the Railway internal hostnames.\n\n"
-
-printf "FILES_IN_GENERATED=\n"
-find "$OUT_DIR" -type f -maxdepth 3 | sort
