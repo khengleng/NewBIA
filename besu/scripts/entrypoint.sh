@@ -38,6 +38,10 @@ if [[ -f "$STATIC_NODES" ]]; then
       dig +short "$host" | head -n1
       return
     fi
+    if command -v ping >/dev/null 2>&1; then
+      ping -c1 -W1 "$host" 2>/dev/null | head -n1 | sed -n 's/.*(\\([0-9.]*\\)).*/\\1/p'
+      return
+    fi
   }
   for HOST in $HOSTS; do
     IP=$(resolve_host "$HOST")
