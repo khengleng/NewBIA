@@ -6,7 +6,7 @@ import { allocateEscrowOnBesu, commitEscrowOnBesu, refundEscrowOnBesu } from '..
 
 const router = Router();
 
-router.post('/commit', (req, res) => {
+router.post('/commit', async (req, res) => {
   if (config.mode === 'disabled') {
     return res.status(503).json({ status: 'DISABLED', error: 'Blockchain gateway disabled' });
   }
@@ -28,7 +28,7 @@ router.post('/commit', (req, res) => {
   }
 });
 
-router.post('/allocate', (req, res) => {
+router.post('/allocate', async (req, res) => {
   if (config.mode === 'disabled') {
     return res.status(503).json({ status: 'DISABLED', error: 'Blockchain gateway disabled' });
   }
@@ -54,7 +54,7 @@ router.post('/allocate', (req, res) => {
   }
 });
 
-router.post('/refund', (req, res) => {
+router.post('/refund', async (req, res) => {
   if (config.mode === 'disabled') {
     return res.status(503).json({ status: 'DISABLED', error: 'Blockchain gateway disabled' });
   }

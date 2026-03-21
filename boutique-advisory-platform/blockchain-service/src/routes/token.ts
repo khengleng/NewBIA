@@ -6,7 +6,7 @@ import { getTokenBalanceOnBesu, mintTokenOnBesu } from '../services/besu-chain';
 
 const router = Router();
 
-router.post('/mint', (req, res) => {
+router.post('/mint', async (req, res) => {
   if (config.mode === 'disabled') {
     return res.status(503).json({ status: 'DISABLED', error: 'Blockchain gateway disabled' });
   }
