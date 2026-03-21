@@ -1,12 +1,8 @@
-import 'package:decimal/decimal.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:tw_wallet_ui/common/application.dart';
-import 'package:tw_wallet_ui/models/amount.dart';
-import 'package:tw_wallet_ui/models/tx_status.dart';
 import 'package:tw_wallet_ui/router/routers.dart';
-import 'package:tw_wallet_ui/store/identity_store.dart';
+import 'package:tw_wallet_ui/service/mobile_api_provider.dart';
 import 'package:tw_wallet_ui/views/transfer_confirm/widgets/confirm_row.dart';
 import 'package:tw_wallet_ui/views/transfer_confirm/widgets/input_pin.dart';
 import 'package:tw_wallet_ui/views/tx_list/tx_list_details_page.dart';
@@ -31,7 +27,7 @@ class TransferConfirmPage extends StatefulWidget {
 class TransferConfirmState extends State<TransferConfirmPage> {
   final GlobalKey<InputPinWidgetState> inputPinWidgetKey =
       GlobalKey<InputPinWidgetState>();
-  final IdentityStore identityStore = Get.find();
+  final MobileApiProvider apiProvider = Get.find();
 
   TransferConfirmState();
 
@@ -39,23 +35,28 @@ class TransferConfirmState extends State<TransferConfirmPage> {
     final bool pinValidation =
         await inputPinWidgetKey.currentState!.validatePin();
     if (pinValidation) {
-      final bool transferSuccess =
-          await identityStore.selectedIdentity!.transferPoint(
-        toAddress: widget.toAddress,
-        amount: Amount(Decimal.parse(widget.amount)),
-      );
+      bool transferSuccess = false;
+      try {
+        await apiProvider.transfer({
+          'recipient': widget.toAddress,
+          'amount': double.parse(widget.amount),
+          'memo': 'P2P transfer'
+        });
+        transferSuccess = true;
+      } catch (_) {
+        transferSuccess = false;
+      }
       if (transferSuccess && mounted) {
         // Application.router.navigateTo(context, '${Routes.transferResult}?amount=$amount&toAddress=$toAddress');
         return Navigator.pushNamed(
           context,
           Routes.txListDetails,
           arguments: TxListDetailsPageArgs(
-            amount: '${Application.globalEnv.tokenSymbol}${widget.amount}',
+            amount: widget.amount,
             time: parseDate(DateTime.now()),
-            status: TxStatus.transferring,
-            fromAddress: identityStore.selectedIdentityAddress,
-            toAddress: widget.toAddress,
-            fromAddressName: identityStore.selectedIdentityName,
+            status: 'SUCCESS',
+            type: 'WITHDRAWAL',
+            description: 'P2P transfer',
             isExpense: true,
           ),
         );
@@ -76,8 +77,7 @@ class TransferConfirmState extends State<TransferConfirmPage> {
           children: [
             ConfirmRowWidget(
               title: '金额',
-              contentLeft:
-                  '${Application.globalEnv.tokenSymbol}${widget.amount}',
+              contentLeft: widget.amount,
               contentRight: widget.currency,
             ),
             ConfirmRowWidget(

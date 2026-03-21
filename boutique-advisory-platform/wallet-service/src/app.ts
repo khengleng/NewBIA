@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 
 import walletRoutes from './routes/wallet';
 import type { WalletServiceConfig } from './config';
+import { authenticateToken } from './middleware/jwt-auth';
 
 export function createApp(config: WalletServiceConfig) {
   const app = express();
@@ -61,7 +62,7 @@ export function createApp(config: WalletServiceConfig) {
     });
   });
 
-  app.use('/api/wallet', walletRoutes);
+  app.use('/api/wallet', authenticateToken, walletRoutes);
 
   app.use((req, res) => {
     res.status(404).json({

@@ -14,15 +14,11 @@ import 'package:tw_wallet_ui/common/device_info.dart';
 import 'package:tw_wallet_ui/common/secure_storage.dart';
 import 'package:tw_wallet_ui/common/theme/color.dart';
 import 'package:tw_wallet_ui/common/theme/index.dart';
-import 'package:tw_wallet_ui/models/api_response.dart';
 import 'package:tw_wallet_ui/models/identity/decentralized_identity.dart';
-import 'package:tw_wallet_ui/models/send_transaction_response.dart';
 import 'package:tw_wallet_ui/models/webview/create_account_param.dart';
-import 'package:tw_wallet_ui/models/webview/send_transaction_request.dart';
 import 'package:tw_wallet_ui/models/webview/sign_transaction/sign_transaction.dart';
 import 'package:tw_wallet_ui/models/webview/webview_request_method.dart';
 import 'package:tw_wallet_ui/router/routers.dart';
-import 'package:tw_wallet_ui/service/api_provider.dart';
 import 'package:tw_wallet_ui/service/pincode.dart';
 import 'package:tw_wallet_ui/store/identity_store.dart';
 import 'package:tw_wallet_ui/store/mnemonics.dart';
@@ -129,26 +125,9 @@ class DAppService {
   }
 
   static void sendTransaction(String id, String? param) {
-    final SendTransactionRequest sendTransactionRequest =
-        SendTransactionRequest.fromJson(json.decode(param!));
-    Get.find<ApiProvider>()
-        .transferPoint(
-      sendTransactionRequest.fromAddress,
-      sendTransactionRequest.fromPublicKey,
-      sendTransactionRequest.signedTransactionRawData,
-    )
-        .then((response) {
-      resolve(
-        id,
-        (ApiResponse.fromJson(
-          response.data,
-          [const FullType(SendTransactionResponse)],
-        ).result as SendTransactionResponse)
-            .hash,
-      );
-    }).catchError((err) {
-      reject(id, false);
-    });
+    // Legacy blockchain transfer is no longer supported in the unified mobile app.
+    // Use /api/mobile/wallet/transfer instead for P2P/C2B/C2C payments.
+    reject(id, 'Unsupported: use mobile wallet transfer');
   }
 
   static Future<void> qrCode(String id, _) async {

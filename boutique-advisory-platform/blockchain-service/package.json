@@ -1,0 +1,31 @@
+{
+  "name": "bia-blockchain-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Blockchain gateway for Besu integration (mint, transfer, escrow).",
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.ts",
+    "start:prod": "node dist/index.js",
+    "start:dev": "tsx watch src/index.ts",
+    "test": "echo \"no tests\"",
+    "lint": "echo \"lint skipped (no eslint config)\""
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.21.2",
+    "ethers": "^6.12.1",
+    "helmet": "^7.1.0",
+    "morgan": "^1.10.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^20.10.5",
+    "tsx": "^4.20.6",
+    "typescript": "^5.3.3"
+  }
+}

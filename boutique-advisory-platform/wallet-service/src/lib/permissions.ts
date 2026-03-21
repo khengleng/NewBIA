@@ -229,6 +229,7 @@ export const PERMISSIONS: Record<string, string[]> = {
     'subscription.read': ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'SUPPORT', 'CX'],
     'subscription.manage': ['SUPER_ADMIN', 'ADMIN'],
     'wallet.read': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR:owner', 'INVESTOR:owner', 'SME:owner'],
+    'wallet.update': ['SUPER_ADMIN', 'ADMIN', 'ADVISOR:owner', 'INVESTOR:owner', 'SME:owner'],
     'wallet.manage': ['SUPER_ADMIN', 'ADMIN', 'FINOPS'],
     'support_ticket.list': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],
     'support_ticket.read': ['SUPER_ADMIN', 'ADMIN', 'SUPPORT', 'CX'],

@@ -1,4 +1,3 @@
-import 'package:decimal/decimal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:get/get.dart';
@@ -7,10 +6,10 @@ import 'package:tw_wallet_ui/common/device_info.dart';
 import 'package:tw_wallet_ui/common/theme/color.dart';
 import 'package:tw_wallet_ui/common/theme/font.dart';
 import 'package:tw_wallet_ui/common/theme/index.dart';
-import 'package:tw_wallet_ui/models/amount.dart';
-import 'package:tw_wallet_ui/models/transaction.dart';
+import 'package:tw_wallet_ui/models/mobile/mobile_wallet_transaction.dart';
 import 'package:tw_wallet_ui/router/routers.dart';
-import 'package:tw_wallet_ui/store/identity_store.dart';
+import 'package:tw_wallet_ui/service/mobile_api_provider.dart';
+import 'package:tw_wallet_ui/store/mobile/mobile_session_controller.dart';
 import 'package:tw_wallet_ui/views/tx_list/store/tx_list_store.dart';
 import 'package:tw_wallet_ui/views/tx_list/tx_list_details_page.dart';
 import 'package:tw_wallet_ui/views/tx_list/utils/date.dart';
@@ -26,29 +25,42 @@ class TxListPage extends StatefulWidget {
 
 class _TxListPageState extends State<TxListPage> {
   final TxListStore store = TxListStore();
-  final IdentityStore iStore = Get.find();
+  final MobileSessionController session = Get.find();
+  final MobileApiProvider apiProvider = Get.find();
+  Map<String, dynamic> wallet = {};
 
-  void _onTap(Transaction item) {
-    final ie = _txType(item.fromAddress) == TxType.expense;
+  void _onTap(MobileWalletTransaction item) {
+    final isExpense = _isExpense(item.type);
     Navigator.pushNamed(
       context,
       Routes.txListDetails,
       arguments: TxListDetailsPageArgs(
-        amount: item.amount.value.toString(),
+        amount: item.amount.toString(),
         time: parseDateTime(item.createTime),
-        status: item.txType,
-        fromAddress: item.fromAddress,
-        toAddress: item.toAddress,
-        fromAddressName: iStore.selectedIdentityName,
-        isExpense: ie,
+        status: item.status,
+        type: item.type,
+        description: item.description,
+        isExpense: isExpense,
       ),
     );
   }
 
   @override
   void initState() {
-    store.fetchList(iStore.selectedIdentityAddress);
+    store.fetchList();
+    _loadWallet();
     super.initState();
+  }
+
+  Future<void> _loadWallet() async {
+    try {
+      final response = await apiProvider.fetchWallet();
+      setState(() {
+        wallet = (response.data as Map<String, dynamic>?)?['wallet']
+                as Map<String, dynamic>? ??
+            {};
+      });
+    } catch (_) {}
   }
 
   @override
@@ -64,11 +76,13 @@ class _TxListPageState extends State<TxListPage> {
   }
 
   Widget buildHeader() {
+    final balance = wallet['balance']?.toString() ?? '--';
+    final currency = wallet['currency']?.toString() ?? '';
     return Container(
       margin: const EdgeInsets.only(top: 34),
       alignment: Alignment.center,
       child: Text(
-        iStore.selectedIdentityBalance.humanReadableWithSymbol,
+        '$balance $currency',
         style:
             WalletFont.font_24(textStyle: TextStyle(color: WalletColor.white)),
       ),
@@ -121,7 +135,12 @@ class _TxListPageState extends State<TxListPage> {
               onPressed: () => Navigator.pushNamed(
                 context,
                 Routes.qrPage,
-                arguments: iStore.selectedIdentity,
+                arguments: {
+                  'name': session.me.value?.user.email ?? 'User',
+                  'account': session.me.value?.user.email ??
+                      session.me.value?.user.id ??
+                      '',
+                },
               ),
               buttonType: ButtonType.outlineType,
               outlineColor: WalletColor.white,
@@ -132,12 +151,14 @@ class _TxListPageState extends State<TxListPage> {
     );
   }
 
-  TxType _txType(String fromAddress) {
-    if (fromAddress.toLowerCase() ==
-        iStore.selectedIdentityAddress.toLowerCase()) {
-      return TxType.expense;
-    } else {
-      return TxType.credit;
+  bool _isExpense(String type) {
+    switch (type) {
+      case 'WITHDRAWAL':
+      case 'TRADE_BUY':
+      case 'FEE':
+        return true;
+      default:
+        return false;
     }
   }
 
@@ -154,17 +175,11 @@ class _TxListPageState extends State<TxListPage> {
       itemBuilder: (BuildContext context, int index) {
         final item = txList[index];
         return TxListItem(
-          _txType(item.fromAddress) == TxType.expense
-              ? item.toAddress
-              : item.fromAddress,
-          item.txType,
-          _amountWithSignal(
-            _txType(item.fromAddress) == TxType.expense,
-            item.amount.value,
-          ),
+          item.type,
+          _amountWithSignal(_isExpense(item.type), item.amount),
+          item.status,
           item.createTime,
           () => _onTap(item),
-          _txType(item.fromAddress),
         );
       },
       separatorBuilder: (BuildContext context, int index) => Divider(
@@ -174,7 +189,8 @@ class _TxListPageState extends State<TxListPage> {
     );
   }
 
-  Amount _amountWithSignal(bool isExpense, Decimal decimal) {
-    return isExpense ? Amount(-decimal) : Amount(decimal);
+  String _amountWithSignal(bool isExpense, double amount) {
+    final sign = isExpense ? '-' : '+';
+    return '$sign${amount.toString()}';
   }
 }

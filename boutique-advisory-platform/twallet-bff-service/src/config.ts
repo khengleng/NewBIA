@@ -24,6 +24,7 @@ export const config = {
   fundingServiceUrl: requireEnv('FUNDING_SERVICE_URL'),
   marketServiceUrl: requireEnv('MARKET_SERVICE_URL'),
   tradeApiUrl: requireEnv('TRADE_API_URL'),
+  blockchainGatewayUrl: process.env.BLOCKCHAIN_GATEWAY_URL || '',
   tradingFrontendHost: process.env.TRADING_FRONTEND_HOST || 'trade.cambobia.com',
 }
 

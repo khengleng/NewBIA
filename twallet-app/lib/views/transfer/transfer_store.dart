@@ -1,6 +1,5 @@
 import 'package:mobx/mobx.dart';
 import 'package:tw_wallet_ui/common/application.dart';
-import 'package:tw_wallet_ui/models/did.dart';
 
 part 'transfer_store.g.dart';
 
@@ -10,7 +9,7 @@ abstract class _TransferStore with Store {
   final FormErrorState error = FormErrorState();
 
   @observable
-  String? payerDID;
+  String? payerAccount;
 
   @observable
   String? balance;
@@ -19,14 +18,14 @@ abstract class _TransferStore with Store {
   String? amount;
 
   @observable
-  String? payeeDID;
+  String? payeeAccount;
 
   List<ReactionDisposer>? _disposers;
 
   void setupErrorDisposers() {
     _disposers = [
       reaction((_) => amount, resetAmountError),
-      reaction((_) => payeeDID, resetAddressError),
+      reaction((_) => payeeAccount, resetAddressError),
     ];
   }
 
@@ -38,7 +37,7 @@ abstract class _TransferStore with Store {
 
   void validateAll() {
     validateAmount(amount!);
-    validatePayeeDID(payeeDID!);
+    validatePayeeAccount(payeeAccount!);
   }
 
   @action
@@ -76,19 +75,21 @@ abstract class _TransferStore with Store {
   }
 
   @action
-  void validatePayeeDID(String value) {
-    try {
-      if (value == payerDID) {
-        error.payeeDID =
-            "The payee's account cannot be the same as the payer's account";
-        return;
-      }
-      DID.parse(value);
-      error.payeeDID = null;
-    } catch (_) {
+  void validatePayeeAccount(String value) {
+    if (value.trim().isEmpty) {
       error.payeeDID = 'Please enter a valid recipient account';
       return;
     }
+    if (value.trim() == payerAccount) {
+      error.payeeDID =
+          "The payee's account cannot be the same as the payer's account";
+      return;
+    }
+    if (value.contains(' ')) {
+      error.payeeDID = 'Please remove spaces from the account';
+      return;
+    }
+    error.payeeDID = null;
   }
 }
 

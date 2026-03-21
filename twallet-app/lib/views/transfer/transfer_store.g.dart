@@ -9,19 +9,19 @@ part of 'transfer_store.dart';
 // ignore_for_file: non_constant_identifier_names, unnecessary_brace_in_string_interps, unnecessary_lambdas, prefer_expression_function_bodies, lines_longer_than_80_chars, avoid_as, avoid_annotating_with_dynamic, no_leading_underscores_for_local_identifiers
 
 mixin _$TransferStore on _TransferStore, Store {
-  late final _$payerDIDAtom =
-      Atom(name: '_TransferStore.payerDID', context: context);
+  late final _$payerAccountAtom =
+      Atom(name: '_TransferStore.payerAccount', context: context);
 
   @override
-  String? get payerDID {
-    _$payerDIDAtom.reportRead();
-    return super.payerDID;
+  String? get payerAccount {
+    _$payerAccountAtom.reportRead();
+    return super.payerAccount;
   }
 
   @override
-  set payerDID(String? value) {
-    _$payerDIDAtom.reportWrite(value, super.payerDID, () {
-      super.payerDID = value;
+  set payerAccount(String? value) {
+    _$payerAccountAtom.reportWrite(value, super.payerAccount, () {
+      super.payerAccount = value;
     });
   }
 
@@ -57,19 +57,19 @@ mixin _$TransferStore on _TransferStore, Store {
     });
   }
 
-  late final _$payeeDIDAtom =
-      Atom(name: '_TransferStore.payeeDID', context: context);
+  late final _$payeeAccountAtom =
+      Atom(name: '_TransferStore.payeeAccount', context: context);
 
   @override
-  String? get payeeDID {
-    _$payeeDIDAtom.reportRead();
-    return super.payeeDID;
+  String? get payeeAccount {
+    _$payeeAccountAtom.reportRead();
+    return super.payeeAccount;
   }
 
   @override
-  set payeeDID(String? value) {
-    _$payeeDIDAtom.reportWrite(value, super.payeeDID, () {
-      super.payeeDID = value;
+  set payeeAccount(String? value) {
+    _$payeeAccountAtom.reportWrite(value, super.payeeAccount, () {
+      super.payeeAccount = value;
     });
   }
 
@@ -110,11 +110,11 @@ mixin _$TransferStore on _TransferStore, Store {
   }
 
   @override
-  void validatePayeeDID(String value) {
+  void validatePayeeAccount(String value) {
     final _$actionInfo = _$_TransferStoreActionController.startAction(
-        name: '_TransferStore.validatePayeeDID');
+        name: '_TransferStore.validatePayeeAccount');
     try {
-      return super.validatePayeeDID(value);
+      return super.validatePayeeAccount(value);
     } finally {
       _$_TransferStoreActionController.endAction(_$actionInfo);
     }
@@ -123,10 +123,10 @@ mixin _$TransferStore on _TransferStore, Store {
   @override
   String toString() {
     return '''
-payerDID: ${payerDID},
+payerAccount: ${payerAccount},
 balance: ${balance},
 amount: ${amount},
-payeeDID: ${payeeDID}
+payeeAccount: ${payeeAccount}
     ''';
   }
 }

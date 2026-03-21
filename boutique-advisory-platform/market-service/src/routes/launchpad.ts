@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { prisma } from '../database';
 import { authenticateToken, authorizeRoles } from '../middleware/jwt-auth';
+import { allocateEscrow, commitEscrow } from '../services/blockchain-gateway';
 
 
 const router = Router();
@@ -218,7 +219,13 @@ router.post('/:id/commit', authenticateToken, authorizeRoles('INVESTOR'), async 
             return commitment;
         });
 
-        return res.json({ message: 'Commitment successful', commitment: result });
+        const onchain = await commitEscrow({
+            offeringId: id,
+            investorId: investor.id,
+            amount: Number(amount)
+        });
+
+        return res.json({ message: 'Commitment successful', commitment: result, onchain });
 
     } catch (error: any) {
         if (error.message.includes('Insufficient wallet balance')) {
@@ -338,7 +345,17 @@ router.post('/:id/close', authenticateToken, authorizeRoles('SUPER_ADMIN', 'ADMI
             )
         );
 
-        return res.json({ message: 'Offering closed and finalized successfully', results });
+        const allocations = offering.commitments.map((c) => ({
+            investorId: c.investorId,
+            tokens: offering.unitPrice ? Number(c.committedAmount) / Number(offering.unitPrice) : 0
+        })).filter((a) => Number.isFinite(a.tokens) && a.tokens > 0);
+
+        const onchain = await allocateEscrow({
+            offeringId: offering.id,
+            allocations
+        });
+
+        return res.json({ message: 'Offering closed and finalized successfully', results, onchain });
 
     } catch (error: any) {
         return res.status(500).json({ error: 'Failed to close offering', details: error.message });

@@ -43,44 +43,7 @@ class DiscoveryPage extends StatelessWidget {
   }
 
   Widget _dappList({required BuildContext context}) {
-    final List<Widget> dappItemList = <Widget>[
-      GestureDetector(
-        onTap: () => Navigator.pushNamed(
-          context,
-          Routes.healthCertPage,
-          arguments: homeStore,
-        ),
-        child: DiscoveryItem(text: S.of(context).pageDiscoveryHealthCert),
-      )
-    ];
-
-    dappItemList.add(
-      GestureDetector(
-        onTap: () => Navigator.pushNamed(
-          context,
-          Routes.ownVcPage,
-          arguments: homeStore,
-        ),
-        child: DiscoveryItem(
-          text: S.of(context).pageDiscoveryMoreVc,
-          svgAsset: 'assets/icons/vc.svg',
-        ),
-      ),
-    );
-
-    dappItemList.add(
-      GestureDetector(
-        onTap: () => Navigator.pushNamed(
-          context,
-          Routes.verificationScenarioPage,
-          arguments: homeStore,
-        ),
-        child: DiscoveryItem(
-          text: S.of(context).pageDiscoveryVerificationSenario,
-          svgAsset: 'assets/icons/verification-scenario.svg',
-        ),
-      ),
-    );
+    final List<Widget> dappItemList = <Widget>[];
 
     dappItemList.addAll(
       dappList.map(

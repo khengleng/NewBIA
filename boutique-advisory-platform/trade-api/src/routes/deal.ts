@@ -3,6 +3,7 @@ import { prisma } from '../database';
 import { validateBody, createDealSchema, tokenizeDealSchema, updateDealSchema } from '../middleware/validation';
 import { authorize, AuthenticatedRequest } from '../middleware/authorize';
 import { sendNotification } from '../services/notification.service';
+import { mintTokenOnChain } from '../services/blockchain-gateway';
 import { logAuditEvent } from '../utils/security';
 
 const router = Router();
@@ -479,6 +480,36 @@ router.post('/:id/tokenize', authorize('deal.update', {
       return synced;
     });
 
+    const onchain = await mintTokenOnChain({
+      tenantId,
+      dealId: deal.id,
+      syndicateId: tokenized.id,
+      tokenName: tokenized.tokenName || String(tokenName),
+      tokenSymbol: tokenized.tokenSymbol || safeTokenSymbol,
+      totalTokens: Number(tokenized.totalTokens || tokenSupply),
+      pricePerToken: Number(tokenized.pricePerToken || price),
+      ownerUserId: userId || undefined,
+    });
+
+    if (onchain.status && onchain.status !== 'SKIPPED') {
+      await prisma.syndicate.update({
+        where: { id: tokenized.id },
+        data: {
+          tokenContractAddress: onchain.tokenContractAddress || undefined,
+          tokenChainId: onchain.chainId || undefined,
+          mintTxHash: onchain.txHash || undefined,
+          onchainStatus: onchain.status as any,
+        },
+      })
+    } else if (onchain.status === 'SKIPPED') {
+      await prisma.syndicate.update({
+        where: { id: tokenized.id },
+        data: {
+          onchainStatus: 'SKIPPED' as any,
+        },
+      })
+    }
+
     await logAuditEvent({
       userId: userId || 'unknown',
       tenantId,
@@ -488,7 +519,8 @@ router.post('/:id/tokenize', authorize('deal.update', {
       details: {
         syndicateId: tokenized.id,
         tokenSymbol: tokenized.tokenSymbol,
-        totalTokens: tokenized.totalTokens
+        totalTokens: tokenized.totalTokens,
+        onchain
       },
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'] as string | undefined,
@@ -497,7 +529,8 @@ router.post('/:id/tokenize', authorize('deal.update', {
 
     return res.status(201).json({
       message: 'Deal tokenized successfully',
-      syndicate: tokenized
+      syndicate: tokenized,
+      onchain
     });
   } catch (error) {
     console.error('Deal tokenization error:', error);

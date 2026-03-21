@@ -1,23 +1,23 @@
 import 'package:mobx/mobx.dart';
-import 'package:tw_wallet_ui/models/transaction.dart';
-import 'package:tw_wallet_ui/service/api_provider.dart';
+import 'package:tw_wallet_ui/models/mobile/mobile_wallet_transaction.dart';
+import 'package:tw_wallet_ui/service/mobile_api_provider.dart';
 
 part 'tx_list_store.g.dart';
 
 class TxListStore = _TxListStore with _$TxListStore;
 
 abstract class _TxListStore with Store {
-  final ApiProvider _client = ApiProvider();
+  final MobileApiProvider _client = MobileApiProvider();
 
   @observable
-  ObservableFuture<List<Transaction>> listFuture =
-      ObservableFuture.value(<Transaction>[]);
+  ObservableFuture<List<MobileWalletTransaction>> listFuture =
+      ObservableFuture.value(<MobileWalletTransaction>[]);
 
   @observable
-  late ObservableFuture<Transaction> tx;
+  late ObservableFuture<MobileWalletTransaction?> tx;
 
   @observable
-  List<Transaction> list = [];
+  List<MobileWalletTransaction> list = [];
 
   @observable
   String? errorMessage = '';
@@ -26,8 +26,17 @@ abstract class _TxListStore with Store {
   bool get loading => listFuture.status == FutureStatus.pending;
 
   @action
-  Future fetchList(String myAddress) async {
-    final future = _client.fetchTxList(myAddress);
+  Future fetchList({int limit = 50, int offset = 0}) async {
+    final future = _client
+        .fetchWalletHistory(query: {'limit': limit, 'offset': offset})
+        .then((response) {
+      final data = response.data as Map<String, dynamic>? ?? const {};
+      final items = (data['transactions'] as List<dynamic>? ?? const []);
+      return items
+          .whereType<Map<String, dynamic>>()
+          .map(MobileWalletTransaction.fromJson)
+          .toList();
+    });
 
     listFuture = ObservableFuture(future);
 
@@ -39,6 +48,9 @@ abstract class _TxListStore with Store {
   }
 
   @action
-  Future fetchDetails(String hash) =>
-      tx = ObservableFuture(_client.fetchTxDetails(txHash: hash));
+  Future fetchDetails(String id) async {
+    tx = ObservableFuture(
+      Future.value(list.firstWhere((item) => item.id == id, orElse: () => null)),
+    );
+  }
 }

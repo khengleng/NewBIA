@@ -6,20 +6,15 @@ import 'package:tw_wallet_ui/common/theme/color.dart';
 import 'package:tw_wallet_ui/common/theme/font.dart';
 import 'package:tw_wallet_ui/models/identity/decentralized_identity.dart';
 import 'package:tw_wallet_ui/router/routers.dart';
-import 'package:tw_wallet_ui/service/api_provider.dart';
 import 'package:tw_wallet_ui/store/identity_store.dart';
+import 'package:tw_wallet_ui/store/mobile/mobile_session_controller.dart';
 
 class IdentityBasicInfoWidget extends StatelessWidget {
   final IdentityStore identityStore = Get.find();
   final String id;
-  final ApiProvider _apiProvider = Get.find();
+  final MobileSessionController session = Get.find();
 
   IdentityBasicInfoWidget({required this.id});
-
-  void getPoints() {
-    final DecentralizedIdentity? identity = identityStore.getIdentityById(id);
-    _apiProvider.issuePoints(identity!.address);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -149,36 +144,33 @@ class IdentityBasicInfoWidget extends StatelessWidget {
                   color: WalletColor.middleGrey,
                   margin: const EdgeInsets.only(top: 13, bottom: 21),
                 ),
-                GestureDetector(
-                  onTap: getPoints,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          SvgPicture.asset('assets/icons/get-points.svg'),
-                          Container(
-                            margin: const EdgeInsets.only(left: 10),
-                            child: Text(
-                              'Get DC/EP',
-                              style: WalletFont.font_14(
-                                textStyle: TextStyle(color: WalletColor.grey),
-                              ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        SvgPicture.asset('assets/icons/get-points.svg'),
+                        Container(
+                          margin: const EdgeInsets.only(left: 10),
+                          child: Text(
+                            'Wallet Access',
+                            style: WalletFont.font_14(
+                              textStyle: TextStyle(color: WalletColor.grey),
                             ),
-                          )
-                        ],
-                      ),
-                      Text(
-                        'Click to Get',
-                        style: WalletFont.font_14(
-                          textStyle: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: WalletColor.primary,
                           ),
+                        )
+                      ],
+                    ),
+                    Text(
+                      session.me.value?.user.email ?? 'Mobile Wallet',
+                      style: WalletFont.font_14(
+                        textStyle: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: WalletColor.primary,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 )
               ],
             ),

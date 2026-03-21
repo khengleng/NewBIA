@@ -20,13 +20,13 @@ mixin _$TxListStore on _TxListStore, Store {
       Atom(name: '_TxListStore.listFuture', context: context);
 
   @override
-  ObservableFuture<List<Transaction>> get listFuture {
+  ObservableFuture<List<MobileWalletTransaction>> get listFuture {
     _$listFutureAtom.reportRead();
     return super.listFuture;
   }
 
   @override
-  set listFuture(ObservableFuture<List<Transaction>> value) {
+  set listFuture(ObservableFuture<List<MobileWalletTransaction>> value) {
     _$listFutureAtom.reportWrite(value, super.listFuture, () {
       super.listFuture = value;
     });
@@ -35,13 +35,13 @@ mixin _$TxListStore on _TxListStore, Store {
   late final _$txAtom = Atom(name: '_TxListStore.tx', context: context);
 
   @override
-  ObservableFuture<Transaction> get tx {
+  ObservableFuture<MobileWalletTransaction?> get tx {
     _$txAtom.reportRead();
     return super.tx;
   }
 
   @override
-  set tx(ObservableFuture<Transaction> value) {
+  set tx(ObservableFuture<MobileWalletTransaction?> value) {
     _$txAtom.reportWrite(value, super.tx, () {
       super.tx = value;
     });
@@ -50,13 +50,13 @@ mixin _$TxListStore on _TxListStore, Store {
   late final _$listAtom = Atom(name: '_TxListStore.list', context: context);
 
   @override
-  List<Transaction> get list {
+  List<MobileWalletTransaction> get list {
     _$listAtom.reportRead();
     return super.list;
   }
 
   @override
-  set list(List<Transaction> value) {
+  set list(List<MobileWalletTransaction> value) {
     _$listAtom.reportWrite(value, super.list, () {
       super.list = value;
     });
@@ -82,19 +82,20 @@ mixin _$TxListStore on _TxListStore, Store {
       AsyncAction('_TxListStore.fetchList', context: context);
 
   @override
-  Future<dynamic> fetchList(String myAddress) {
-    return _$fetchListAsyncAction.run(() => super.fetchList(myAddress));
+  Future<dynamic> fetchList({int limit = 50, int offset = 0}) {
+    return _$fetchListAsyncAction
+        .run(() => super.fetchList(limit: limit, offset: offset));
   }
 
   late final _$_TxListStoreActionController =
       ActionController(name: '_TxListStore', context: context);
 
   @override
-  Future<dynamic> fetchDetails(String hash) {
+  Future<dynamic> fetchDetails(String id) {
     final _$actionInfo = _$_TxListStoreActionController.startAction(
         name: '_TxListStore.fetchDetails');
     try {
-      return super.fetchDetails(hash);
+      return super.fetchDetails(id);
     } finally {
       _$_TxListStoreActionController.endAction(_$actionInfo);
     }

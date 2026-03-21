@@ -390,6 +390,13 @@ model Syndicate {
   totalTokens   Float?
   tokensSold    Float   @default(0)
 
+  tokenContractAddress String?
+  tokenChainId         Int?
+  mintTxHash           String?
+  onchainStatus        OnchainStatus?
+  launchpadEscrowAddress String?
+
+
   status      SyndicateStatus @default(FORMING)
   dealId      String?
   closingDate DateTime?
@@ -918,6 +925,13 @@ enum SyndicateStatus {
   CLOSED
   FUNDED
   DISSOLVED
+}
+
+enum OnchainStatus {
+  PENDING
+  MINTED
+  FAILED
+  SKIPPED
 }
 
 enum SyndicateMemberStatus {
@@ -1823,6 +1837,8 @@ model Wallet {
   id       String @id @default(cuid())
   tenantId String
   userId   String @unique
+  walletAddress String?
+
 
   balance       Float  @default(0)
   frozenBalance Float  @default(0) // For open orders or pending withdrawals

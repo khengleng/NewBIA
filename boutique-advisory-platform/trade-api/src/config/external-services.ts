@@ -56,6 +56,15 @@ export const rwaConfig = {
   },
 };
 
+// Blockchain Gateway Integration
+export const blockchainConfig = {
+  api: {
+    baseURL: process.env.BLOCKCHAIN_GATEWAY_URL || '',
+    timeout: 15000,
+  },
+  mode: process.env.BLOCKCHAIN_GATEWAY_MODE || 'disabled',
+};
+
 // Create axios instances for external services
 export const didApiClient = axios.create({
   baseURL: didConfig.apiGateway.baseURL,
@@ -76,6 +85,14 @@ export const cmApiClient = axios.create({
 export const rwaApiClient = axios.create({
   baseURL: rwaConfig.api.baseURL,
   timeout: rwaConfig.api.timeout,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+export const blockchainApiClient = axios.create({
+  baseURL: blockchainConfig.api.baseURL || 'http://localhost:9100',
+  timeout: blockchainConfig.api.timeout,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -108,6 +125,19 @@ export const checkRwaHealth = async (): Promise<boolean> => {
     return response.status === 200;
   } catch (error) {
     console.error('RWA service health check failed:', error);
+    return false;
+  }
+};
+
+export const checkBlockchainHealth = async (): Promise<boolean> => {
+  if (!blockchainConfig.api.baseURL || blockchainConfig.mode === 'disabled') {
+    return false;
+  }
+  try {
+    const response = await blockchainApiClient.get('/api/blockchain/health');
+    return response.status === 200;
+  } catch (error) {
+    console.error('Blockchain gateway health check failed:', error);
     return false;
   }
 };

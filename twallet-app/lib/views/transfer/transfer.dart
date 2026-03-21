@@ -1,4 +1,3 @@
-import 'package:decimal/decimal.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -10,12 +9,9 @@ import 'package:tw_wallet_ui/common/application.dart';
 import 'package:tw_wallet_ui/common/theme/color.dart';
 import 'package:tw_wallet_ui/common/theme/font.dart';
 import 'package:tw_wallet_ui/common/theme/index.dart';
-import 'package:tw_wallet_ui/models/amount.dart';
-import 'package:tw_wallet_ui/models/did.dart';
-import 'package:tw_wallet_ui/models/identity/decentralized_identity.dart';
-import 'package:tw_wallet_ui/models/tx_status.dart';
 import 'package:tw_wallet_ui/router/routers.dart';
-import 'package:tw_wallet_ui/store/identity_store.dart';
+import 'package:tw_wallet_ui/service/mobile_api_provider.dart';
+import 'package:tw_wallet_ui/store/mobile/mobile_session_controller.dart';
 import 'package:tw_wallet_ui/views/transfer/transfer_store.dart';
 import 'package:tw_wallet_ui/views/transfer/widgets/transfer_input.dart';
 import 'package:tw_wallet_ui/views/transfer_confirm/widgets/input_pin.dart';
@@ -33,18 +29,20 @@ class TransferPageState extends State<TransferPage> {
   final GlobalKey<InputPinWidgetState> inputPinWidgetKey =
       GlobalKey<InputPinWidgetState>();
   final TransferStore _transferStore = TransferStore();
-  final IdentityStore iStore = Get.find();
+  final MobileSessionController session = Get.find();
+  final MobileApiProvider apiProvider = Get.find();
   final TextEditingController _payeeAddressController = TextEditingController();
   YYDialog? confirmDialogInstance;
-  late DecentralizedIdentity identity;
+  Map<String, dynamic> wallet = {};
 
   @override
   void initState() {
     super.initState();
     _transferStore.setupErrorDisposers();
-    identity = Get.find<IdentityStore>().selectedIdentity!;
-    _transferStore.payerDID = identity.did.toString();
-    _transferStore.balance = identity.accountInfo.balance?.humanReadable;
+    _transferStore.payerAccount = session.me.value?.user.email ??
+        session.me.value?.user.id ??
+        '';
+    _loadWallet();
   }
 
   @override
@@ -121,7 +119,7 @@ class TransferPageState extends State<TransferPage> {
                     alignment: Alignment.centerLeft,
                     margin: const EdgeInsets.only(top: 8),
                     child: Text(
-                      _transferStore.payeeDID!,
+                      _transferStore.payeeAccount!,
                       style: WalletFont.font_16(),
                     ),
                   )
@@ -179,13 +177,20 @@ class TransferPageState extends State<TransferPage> {
   Future<Object?> onConfirm() async {
     final bool pinValidation =
         await inputPinWidgetKey.currentState!.validatePin();
-    final String payeeAddress = '0x${_transferStore.payeeDID!.substring(7)}';
+    final String payeeAccount = _transferStore.payeeAccount!;
     final String amount = _transferStore.amount!;
     if (pinValidation) {
-      final bool transferSuccess = await iStore.selectedIdentity!.transferPoint(
-        toAddress: payeeAddress,
-        amount: Amount(Decimal.parse(amount)),
-      );
+      bool transferSuccess = false;
+      try {
+        await apiProvider.transfer({
+          'recipient': payeeAccount,
+          'amount': double.parse(amount),
+          'memo': 'P2P transfer'
+        });
+        transferSuccess = true;
+      } catch (_) {
+        transferSuccess = false;
+      }
 
       if (transferSuccess && mounted) {
         Navigator.pushNamed<dynamic>(
@@ -194,10 +199,9 @@ class TransferPageState extends State<TransferPage> {
           arguments: TxListDetailsPageArgs(
             amount: amount,
             time: parseDateTime(DateTime.now()),
-            status: TxStatus.transferring,
-            fromAddress: iStore.selectedIdentityAddress,
-            toAddress: payeeAddress,
-            fromAddressName: iStore.selectedIdentityName,
+            status: 'SUCCESS',
+            type: 'WITHDRAWAL',
+            description: 'P2P transfer',
             isExpense: true,
             shouldBackToHome: true,
           ),
@@ -210,8 +214,8 @@ class TransferPageState extends State<TransferPage> {
   bool btnDisabled() {
     return _transferStore.amount == null ||
         _transferStore.amount!.isEmpty ||
-        _transferStore.payeeDID == null ||
-        _transferStore.payeeDID!.isEmpty;
+        _transferStore.payeeAccount == null ||
+        _transferStore.payeeAccount!.isEmpty;
   }
 
   @override
@@ -233,11 +237,13 @@ class TransferPageState extends State<TransferPage> {
   }
 
   Widget buildHeader() {
+    final balance = wallet['balance']?.toString() ?? '--';
+    final currency = wallet['currency']?.toString() ?? '';
     return Container(
       margin: const EdgeInsets.only(top: 34),
       alignment: Alignment.center,
       child: Text(
-        iStore.selectedIdentityBalance.humanReadableWithSymbol,
+        '$balance $currency',
         style:
             WalletFont.font_24(textStyle: TextStyle(color: WalletColor.white)),
       ),
@@ -277,7 +283,7 @@ class TransferPageState extends State<TransferPage> {
             Container(
               margin: const EdgeInsets.only(top: 40, bottom: 16),
               child: Text(
-                'Receive Account',
+                'Receive Account (Email or ID)',
                 style: WalletFont.font_14(
                   textStyle: const TextStyle(fontWeight: FontWeight.w600),
                 ),
@@ -304,9 +310,8 @@ class TransferPageState extends State<TransferPage> {
                     }
 
                     try {
-                      final DID did = DID.parse(scanResult);
-                      _payeeAddressController.text = did.toString();
-                      _transferStore.payeeDID = did.toString();
+                      _payeeAddressController.text = scanResult;
+                      _transferStore.payeeAccount = scanResult;
                     } catch (_) {
                       if (!mounted) return;
                       await hintDialogHelper(
@@ -324,10 +329,10 @@ class TransferPageState extends State<TransferPage> {
               errorText: _transferStore.error.payeeDID,
               keyboardType: TextInputType.text,
               inputFormatters: <TextInputFormatter>[
-                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9\:]+'))
+                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9@\.\-_]+'))
               ],
               controller: _payeeAddressController,
-              onChange: (value) => _transferStore.payeeDID = value,
+              onChange: (value) => _transferStore.payeeAccount = value,
             ),
           ],
         ),
@@ -370,5 +375,17 @@ class TransferPageState extends State<TransferPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _loadWallet() async {
+    try {
+      final response = await apiProvider.fetchWallet();
+      setState(() {
+        wallet = (response.data as Map<String, dynamic>?)?['wallet']
+                as Map<String, dynamic>? ??
+            {};
+        _transferStore.balance = wallet['balance']?.toString();
+      });
+    } catch (_) {}
   }
 }

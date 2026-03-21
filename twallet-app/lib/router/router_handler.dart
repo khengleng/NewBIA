@@ -3,10 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:tw_wallet_ui/views/backup_mnemonics/backup_mnemonics.dart';
 import 'package:tw_wallet_ui/views/confirm_mnemonics/confirm_mnemonics.dart';
 import 'package:tw_wallet_ui/views/dapp/dapp.dart';
-import 'package:tw_wallet_ui/views/health_certificate/health_certificate.dart';
-import 'package:tw_wallet_ui/views/health_code/health_code.dart';
-import 'package:tw_wallet_ui/views/health_code/health_code_store.dart';
-import 'package:tw_wallet_ui/views/home/discovery/health_certification_page.dart';
 import 'package:tw_wallet_ui/views/home/home.dart';
 import 'package:tw_wallet_ui/views/home/identity/identity_new_page.dart';
 import 'package:tw_wallet_ui/views/home/my/message_page.dart';
@@ -19,13 +15,6 @@ import 'package:tw_wallet_ui/views/new_wallet/new_wallet_widget.dart';
 import 'package:tw_wallet_ui/views/profile/profile.dart';
 import 'package:tw_wallet_ui/views/qr_scanner/qr_scanner.dart';
 import 'package:tw_wallet_ui/views/restore_mnemonics/restore_mnemonics.dart';
-import 'package:tw_wallet_ui/views/ssi/apply_vc_page.dart';
-import 'package:tw_wallet_ui/views/ssi/compose_vc_page.dart';
-import 'package:tw_wallet_ui/views/ssi/new_vc_page.dart';
-import 'package:tw_wallet_ui/views/ssi/own_vc_page.dart';
-import 'package:tw_wallet_ui/views/ssi/pass_page.dart';
-import 'package:tw_wallet_ui/views/ssi/verification_scenario_page.dart';
-import 'package:tw_wallet_ui/views/ssi/verification_scenario_qr_page.dart';
 import 'package:tw_wallet_ui/views/transfer/transfer.dart';
 import 'package:tw_wallet_ui/views/transfer_confirm/transfer_confirm.dart';
 import 'package:tw_wallet_ui/views/tx_list/tx_list_details_page.dart';
@@ -115,12 +104,6 @@ Handler transferConfirmHandler = Handler(
   },
 );
 
-Handler certificateHandler = Handler(
-  handlerFunc: (BuildContext? context, Map<String, List<String>> params) {
-    final String id = params['id']!.first;
-    return HealthCertificatePage(id: id);
-  },
-);
 
 Handler qrPageHandler = Handler(
   handlerFunc: (BuildContext? context, Map<String, List<String>> params) {
@@ -134,31 +117,6 @@ Handler qrScannerHandler = Handler(
   },
 );
 
-Handler healthCodeHandler = Handler(
-  handlerFunc: (BuildContext? context, Map<String, List<String>> params) {
-    return HealthCodePage(
-      params['id']!.first,
-      _extract(params['firstRefresh']),
-    );
-  },
-);
-
-FirstRefreshState _extract(List<String>? list) {
-  if (list == null || list.isEmpty) {
-    return FirstRefreshState.enabled;
-  }
-  if (list.first.toLowerCase() == 'true') {
-    return FirstRefreshState.enabled;
-  } else {
-    return FirstRefreshState.disabled;
-  }
-}
-
-Handler healthCertificationPageHandler = Handler(
-  handlerFunc: (BuildContext? context, Map<String, List<String>> params) {
-    return HealthCertificationPage();
-  },
-);
 
 Handler messagePageHandler = Handler(
   handlerFunc: (BuildContext? context, Map<String, List<String>> params) {
@@ -193,48 +151,6 @@ Handler restoreMnemonicsHandler = Handler(
   },
 );
 
-Handler ownVcPageHandler = Handler(
-  handlerFunc: (BuildContext? context, Map<String, List<String>> params) {
-    return OwnVcPage();
-  },
-);
-
-Handler composeVcPageHandler = Handler(
-  handlerFunc: (BuildContext? context, Map<String, List<String>> params) {
-    return ComposeVcPage();
-  },
-);
-
-Handler passPageHandler = Handler(
-  handlerFunc: (BuildContext? context, Map<String, List<String>> parms) {
-    return PassPage();
-  },
-);
-
-Handler applyVcPageHandler = Handler(
-  handlerFunc: (BuildContext? context, Map<String, List<String>> params) {
-    return ApplyVcPage();
-  },
-);
-
-Handler verificationScenarioPageHandler = Handler(
-  handlerFunc: (BuildContext? context, Map<String, List<String>> parms) {
-    return VerificationScenarioPage();
-  },
-);
-
-Handler verificationScenarioQrPageHandler = Handler(
-  handlerFunc: (BuildContext? context, Map<String, List<String>> parms) {
-    final name = context!.settings!.arguments! as String;
-    return VerificationScenarioQrPage(name: name);
-  },
-);
-
-Handler newVcPageHandler = Handler(
-  handlerFunc: (BuildContext? context, Map<String, List<String>> params) {
-    return NewVcPage();
-  },
-);
 
 Handler magicLoginPageHandler = Handler(
   handlerFunc: (BuildContext? context, Map<String, List<String>> params) {

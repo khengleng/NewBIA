@@ -10,11 +10,22 @@ import { prisma, prismaReplica } from '../database';
 import { shouldUseDatabase } from '../migration-manager';
 import { io } from '../socket';
 import { WalletService } from '../services/wallet';
+import { getTokenBalance } from '../services/blockchain-gateway';
 
 const router = Router();
 
 // Platform fee percentage
 const PLATFORM_FEE = 0.01; // 1%
+
+function toUnits(amount: number, decimals: number): bigint {
+    const [whole, frac = ''] = String(amount).split('.');
+    if (decimals === 0 && frac.length > 0) {
+        throw new Error('Token amount must be an integer for zero-decimal tokens');
+    }
+    const paddedFrac = (frac + '0'.repeat(decimals)).slice(0, decimals);
+    const normalized = `${whole}${paddedFrac || ''}`.replace(/^0+(?=\\d)/, '');
+    return BigInt(normalized || '0');
+}
 
 // Get all syndicate token listings
 router.get('/listings', authorize('secondary_trading.list'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
@@ -140,6 +151,38 @@ router.post('/listings', authorize('secondary_trading.create_listing'), async (r
                 error: `Insufficient tokens. You have ${currentTokens.toFixed(2)} tokens, but ${tokensLockedInListings.toFixed(2)} are already listed. Available: ${availableToSell.toFixed(2)}`
             });
             return;
+        }
+
+        // Optional on-chain balance check (if tokenized + contract address + wallet address exist)
+        if (membership.syndicate.onchainStatus === 'MINTED' && membership.syndicate.tokenContractAddress) {
+            const wallet = await prisma.wallet.findUnique({ where: { userId: req.user?.id } });
+            if (!wallet?.walletAddress) {
+                res.status(400).json({ error: 'Wallet address not configured for on-chain balance validation' });
+                return;
+            }
+
+            const onchain = await getTokenBalance({
+                tokenAddress: membership.syndicate.tokenContractAddress,
+                walletAddress: wallet.walletAddress
+            });
+
+            if (onchain.status === 'FAILED') {
+                res.status(502).json({ error: onchain.error || 'On-chain balance check failed' });
+                return;
+            }
+
+            if (onchain.status !== 'SKIPPED') {
+                const onchainBalance = BigInt(onchain.balance || '0');
+                const required = toUnits(tokensAvailable, Number(onchain.decimals || 0));
+                if (onchainBalance < required) {
+                    res.status(400).json({
+                        error: 'Insufficient on-chain balance for listing',
+                        onchainBalance: onchain.balance,
+                        required: required.toString()
+                    });
+                    return;
+                }
+            }
         }
 
         // Create listing

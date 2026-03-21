@@ -1,13 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_mobx/flutter_mobx.dart';
-import 'package:get/get.dart';
-import 'package:mobx/mobx.dart';
 import 'package:tw_wallet_ui/common/application.dart';
-import 'package:tw_wallet_ui/models/amount.dart';
-import 'package:tw_wallet_ui/models/tw_balance.dart';
 import 'package:tw_wallet_ui/router/routers.dart';
-import 'package:tw_wallet_ui/store/identity_store.dart';
+import 'package:tw_wallet_ui/service/mobile_api_provider.dart';
 import 'package:tw_wallet_ui/views/home/assets/home_list_item.dart';
 import 'package:tw_wallet_ui/views/home/assets/home_list_view.dart';
 
@@ -47,58 +42,41 @@ class PointTab extends StatefulWidget {
 }
 
 class _PointTabState extends State<PointTab> {
-  final IdentityStore _identityStore = Get.find();
-
-  ReactionDisposer? reactionDispose;
+  final MobileApiProvider apiProvider = MobileApiProvider();
+  String balanceLabel = '--';
 
   Future<void> _refresh() async {
-    _identityStore.fetchLatestPoint();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    reactionDispose!();
+    try {
+      final response = await apiProvider.fetchWallet();
+      final wallet = (response.data as Map<String, dynamic>?)?['wallet']
+              as Map<String, dynamic>? ??
+          {};
+      final balance = wallet['balance']?.toString() ?? '--';
+      final currency = wallet['currency']?.toString() ?? '';
+      if (mounted) {
+        setState(() {
+          balanceLabel = '$balance $currency';
+        });
+      }
+    } catch (_) {}
   }
 
   @override
   void initState() {
     super.initState();
-    reactionDispose = reaction(
-      (_) => _identityStore.selectedIdentity!.id,
-      (_) => _refresh(),
-    );
-    _identityStore.fetchLatestPoint(withLoading: false);
+    _refresh();
   }
 
   @override
-  Widget build(BuildContext context) => Observer(
-        builder: (_) {
-          Amount? amount;
-          final ObservableFuture<TwBalance> future =
-              _identityStore.fetchBalanceFutureStream!.value!;
-
-          switch (future.status) {
-            case FutureStatus.fulfilled:
-              amount = (future.result as TwBalance).amount;
-              break;
-            case FutureStatus.pending:
-              amount = null;
-              break;
-            default:
-              amount = _identityStore.selectedIdentityBalance;
-              break;
-          }
-
-          return HomeListView(
-            onRefresh: _refresh,
-            children: [
-              _pointItem(
-                point: amount?.humanReadableWithSymbol ?? '--',
-                context: context,
-              )
-            ],
-          );
-        },
-      );
+  Widget build(BuildContext context) {
+    return HomeListView(
+      onRefresh: _refresh,
+      children: [
+        _pointItem(
+          point: balanceLabel,
+          context: context,
+        )
+      ],
+    );
+  }
 }
