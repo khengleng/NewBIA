@@ -1,0 +1,6 @@
+[
+  "enode://<bootnode_pubkey>@<bootnode_host>:30303?discport=0",
+  "enode://<validator1_pubkey>@<validator1_host>:30303?discport=0",
+  "enode://<validator2_pubkey>@<validator2_host>:30303?discport=0",
+  "enode://<rpc_pubkey>@<rpc_host>:30303?discport=0"
+]

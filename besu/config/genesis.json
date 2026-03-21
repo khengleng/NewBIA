@@ -1,0 +1,4 @@
+{
+  "_note": "Run besu/scripts/generate-network.sh to generate a valid IBFT2 genesis.json",
+  "_status": "placeholder"
+}

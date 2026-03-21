@@ -1,0 +1,15 @@
+# Update these enodes after generating keys and Railway hostnames.
+# Use ?discport=0 to disable UDP discovery for Railway.
+
+nodes-allowlist=[
+  "enode://<bootnode_pubkey>@<bootnode_host>:30303?discport=0",
+  "enode://<validator1_pubkey>@<validator1_host>:30303?discport=0",
+  "enode://<validator2_pubkey>@<validator2_host>:30303?discport=0",
+  "enode://<rpc_pubkey>@<rpc_host>:30303?discport=0"
+]
+
+# Optional: allowlisted tx sender accounts
+accounts-allowlist=[
+  "0x<allowed_sender_1>",
+  "0x<allowed_sender_2>"
+]
