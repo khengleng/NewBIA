@@ -16,7 +16,7 @@ gen_extra_key() {
   local role=$1
   mkdir -p "$OUT_DIR/$role"
   head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$OUT_DIR/$role/key"
-  besu public-key export --node-private-key-file="$OUT_DIR/$role/key" > "$OUT_DIR/$role/key.pub"
+  besu public-key export --node-private-key-file="$OUT_DIR/$role/key" > "$OUT_DIR/$role/key.pub" 2>/dev/null
 }
 
 # Generate extra keys for bootnode and rpc node
@@ -29,40 +29,43 @@ if [[ ! -f "$GENESIS_PATH" ]]; then
   exit 1
 fi
 
-printf "\n===== BESU KEYGEN OUTPUT =====\n"
-printf "GENESIS_JSON_BASE64=\n"
-base64 < "$GENESIS_PATH" | tr -d '\n'
-printf "\n"
-printf "\n\nVALIDATOR_KEYS (private hex)\n"
+GENESIS_B64="$(base64 < "$GENESIS_PATH" | tr -d '\n')"
+
+OUTPUT="===== BESU KEYGEN OUTPUT =====\n"
+OUTPUT+="GENESIS_JSON_BASE64=${GENESIS_B64}\n\n"
+OUTPUT+="VALIDATOR_KEYS (private hex)\n"
+
 INDEX=1
 while IFS= read -r KEY_PATH; do
   PUB_PATH="${KEY_PATH}.pub"
   if [[ -f "$KEY_PATH" ]]; then
     KEY_VALUE="$(sed 's/^0x//' "$KEY_PATH")"
-    printf "validator%d_private_key=0x%s\n" "$INDEX" "$KEY_VALUE"
+    OUTPUT+="validator${INDEX}_private_key=0x${KEY_VALUE}\n"
   fi
   if [[ -f "$PUB_PATH" ]]; then
     PUB_VALUE="$(sed 's/^0x//' "$PUB_PATH")"
-    printf "validator%d_public_key=0x%s\n" "$INDEX" "$PUB_VALUE"
+    OUTPUT+="validator${INDEX}_public_key=0x${PUB_VALUE}\n"
   fi
-  printf "\n"
+  OUTPUT+="\n"
   INDEX=$((INDEX+1))
 done < <(find "$OUT_DIR/keys" -type f -name key 2>/dev/null | sort)
 
-printf "\nBOOTNODE_AND_RPC_KEYS (private hex)\n"
+OUTPUT+="BOOTNODE_AND_RPC_KEYS (private hex)\n"
 for ROLE in bootnode rpc; do
   KEY_PATH="$OUT_DIR/$ROLE/key"
   PUB_PATH="$OUT_DIR/$ROLE/key.pub"
   if [[ -f "$KEY_PATH" ]]; then
     KEY_VALUE="$(sed 's/^0x//' "$KEY_PATH")"
-    printf "%s_private_key=0x%s\n" "$ROLE" "$KEY_VALUE"
+    OUTPUT+="${ROLE}_private_key=0x${KEY_VALUE}\n"
   fi
   if [[ -f "$PUB_PATH" ]]; then
     PUB_VALUE="$(sed 's/^0x//' "$PUB_PATH")"
-    printf "%s_public_key=0x%s\n" "$ROLE" "$PUB_VALUE"
+    OUTPUT+="${ROLE}_public_key=0x${PUB_VALUE}\n"
   fi
-  printf "\n"
+  OUTPUT+="\n"
 done
 
-printf "NOTE: Use the validator public keys above to fill static-nodes.json and permissions_config.toml.\n"
-printf "Replace <host> with the Railway internal hostnames.\n\n"
+OUTPUT+="NOTE: Use the validator public keys above to fill static-nodes.json and permissions_config.toml.\n"
+OUTPUT+="Replace <host> with the Railway internal hostnames.\n"
+
+printf "%b" "$OUTPUT"
