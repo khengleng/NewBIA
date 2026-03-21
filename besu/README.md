@@ -38,6 +38,9 @@ Create four Railway services pointing to:
 - `besu/validator2/Dockerfile`
 - `besu/rpc/Dockerfile`
 
+Optional one-time key generator service:
+- `besu/keygen/Dockerfile`
+
 Expose ports:
 - Bootnode: UDP 30303, TCP 30303
 - Validators: TCP 30303
@@ -54,3 +57,16 @@ Expose ports:
    - Railway internal hostnames for each service.
 4. Commit the updated `besu/config/genesis.json`, `besu/config/static-nodes.json`, `besu/config/permissions_config.toml`.
 5. In Railway, set `BESU_NODE_PRIVATE_KEY` for each node (bootnode/validator1/validator2/rpc).
+
+## Railway-Only Generation (No Local Docker)
+1. Create a temporary Railway service from `besu/keygen/Dockerfile`.
+2. Deploy and open logs. Copy:
+   - `GENESIS_JSON_BASE64`
+   - `validator1_private_key`, `validator2_private_key`
+   - `validator1_public_key`, `validator2_public_key`
+3. Build `static-nodes.json` + `permissions_config.toml` using the public keys and Railway internal hostnames.
+4. Base64 those JSON/TOML files and set:
+   - `BESU_GENESIS_B64`
+   - `BESU_STATIC_NODES_B64`
+   - `BESU_PERMISSIONS_B64`
+   for each Besu service.

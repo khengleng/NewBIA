@@ -10,6 +10,18 @@ NETWORK_ID=${BESU_NETWORK_ID:-20260321}
 
 mkdir -p "$DATA_PATH"
 
+if [[ -n "${BESU_GENESIS_B64:-}" ]]; then
+  echo "$BESU_GENESIS_B64" | base64 -d > "$GENESIS"
+fi
+
+if [[ -n "${BESU_STATIC_NODES_B64:-}" ]]; then
+  echo "$BESU_STATIC_NODES_B64" | base64 -d > "$STATIC_NODES"
+fi
+
+if [[ -n "${BESU_PERMISSIONS_B64:-}" ]]; then
+  echo "$BESU_PERMISSIONS_B64" | base64 -d > "$PERM_CONFIG"
+fi
+
 NODE_KEY_ARGS=""
 if [[ -n "${BESU_NODE_PRIVATE_KEY:-}" ]]; then
   echo -n "$BESU_NODE_PRIVATE_KEY" > "$DATA_PATH/key"
