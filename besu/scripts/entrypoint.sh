@@ -61,7 +61,6 @@ fi
 COMMON_ARGS=(
   "--data-path=$DATA_PATH"
   "--genesis-file=$GENESIS"
-  "--static-nodes-file=$STATIC_NODES"
   "--network-id=$NETWORK_ID"
   "--sync-mode=FULL"
   "--min-gas-price=0"
@@ -69,6 +68,12 @@ COMMON_ARGS=(
   "--p2p-port=30303"
   "--discovery-enabled=false"
 )
+
+if [[ "${BESU_SKIP_STATIC_NODES:-false}" != "true" ]]; then
+  if [[ -f "$STATIC_NODES" ]] && [[ -s "$STATIC_NODES" ]]; then
+    COMMON_ARGS+=("--static-nodes-file=$STATIC_NODES")
+  fi
+fi
 
 if [[ "${BESU_PERMISSIONS_ENABLED:-true}" == "true" ]]; then
   COMMON_ARGS+=("--permissions-nodes-config-file-enabled" "--permissions-nodes-config-file=$PERM_CONFIG")
