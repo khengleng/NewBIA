@@ -15,7 +15,7 @@ mkdir -p "$ROOT_DIR/generated"
 docker run --rm \
   -v "$ROOT_DIR":/workspace \
   -w /workspace \
-  hyperledger/besu:24.3.1 \
+  hyperledger/besu:latest \
   operator generate-blockchain-config \
   --config-file=config/ibftConfigFile.json \
   --to=generated \

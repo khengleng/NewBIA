@@ -1,4 +1,4 @@
-FROM hyperledger/besu:24.3.1
+FROM hyperledger/besu:latest
 WORKDIR /opt/besu
 
 COPY besu/config/ibftConfigFile.json /opt/besu/ibftConfigFile.json
