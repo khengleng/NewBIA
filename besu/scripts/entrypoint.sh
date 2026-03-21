@@ -90,12 +90,21 @@ case "$ROLE" in
     exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS --miner-enabled --miner-coinbase="$BESU_COINBASE"
     ;;
   rpc)
-    exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS \
-      --rpc-http-enabled \
-      --rpc-http-api=ETH,NET,WEB3,TXPOOL,PERM,IBFT \
-      --rpc-http-host=0.0.0.0 \
-      --rpc-http-port=8545 \
-      --rpc-http-cors-origins='*'
+    RPC_ARGS=(
+      "--rpc-http-enabled"
+      "--rpc-http-api=ETH,NET,WEB3,TXPOOL,PERM,IBFT"
+      "--rpc-http-host=0.0.0.0"
+      "--rpc-http-port=8545"
+      "--rpc-http-cors-origins=*"
+    )
+    if [[ "${BESU_ENABLE_MINER:-false}" == "true" ]]; then
+      if [[ -z "${BESU_COINBASE:-}" ]]; then
+        echo "BESU_COINBASE is required when BESU_ENABLE_MINER=true" >&2
+        exit 1
+      fi
+      RPC_ARGS+=("--miner-enabled" "--miner-coinbase=$BESU_COINBASE")
+    fi
+    exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS "${RPC_ARGS[@]}"
     ;;
   *)
     echo "Unknown BESU_ROLE: $ROLE" >&2
