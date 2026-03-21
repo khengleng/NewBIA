@@ -24,11 +24,25 @@ fi
 
 if [[ -f "$STATIC_NODES" ]]; then
   HOSTS=$(grep -oE '[a-z0-9-]+\\.railway\\.internal' "$STATIC_NODES" | sort -u || true)
+  resolve_host() {
+    local host=$1
+    if command -v getent >/dev/null 2>&1; then
+      getent hosts "$host" | awk '{print $1}' | head -n1
+      return
+    fi
+    if command -v nslookup >/dev/null 2>&1; then
+      nslookup "$host" 2>/dev/null | awk '/Address: / {print $2}' | tail -n1
+      return
+    fi
+    if command -v dig >/dev/null 2>&1; then
+      dig +short "$host" | head -n1
+      return
+    fi
+  }
   for HOST in $HOSTS; do
-    IP=$(getent hosts "$HOST" | awk '{print $1}' | head -n1)
+    IP=$(resolve_host "$HOST")
     if [[ -n "$IP" ]]; then
-      sed -i '' "s/${HOST}/${IP}/g" "$STATIC_NODES" "$PERM_CONFIG" 2>/dev/null || \
-      sed -i "s/${HOST}/${IP}/g" "$STATIC_NODES" "$PERM_CONFIG"
+      sed -i "s/${HOST}/${IP}/g" "$STATIC_NODES" "$PERM_CONFIG" 2>/dev/null || true
     fi
   done
 fi
