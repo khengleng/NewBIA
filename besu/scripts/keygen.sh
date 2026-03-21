@@ -12,6 +12,10 @@ besu operator generate-blockchain-config \
   --to=$OUT_DIR \
   --private-key-file-name=key
 
+# Generate extra keys for bootnode and rpc node
+besu operator generate-key-pair --directory="$OUT_DIR/bootnode"
+besu operator generate-key-pair --directory="$OUT_DIR/rpc"
+
 GENESIS_PATH="$OUT_DIR/genesis.json"
 if [[ ! -f "$GENESIS_PATH" ]]; then
   echo "genesis.json not found" >&2
@@ -36,7 +40,22 @@ while IFS= read -r KEY_PATH; do
   fi
   printf "\n"
   INDEX=$((INDEX+1))
-done < <(find "$OUT_DIR" -type f -name key | sort)
+done < <(find "$OUT_DIR/keys" -type f -name key 2>/dev/null | sort)
+
+printf "\nBOOTNODE_AND_RPC_KEYS (private hex)\n"
+for ROLE in bootnode rpc; do
+  KEY_PATH="$OUT_DIR/$ROLE/key"
+  PUB_PATH="$OUT_DIR/$ROLE/key.pub"
+  if [[ -f "$KEY_PATH" ]]; then
+    KEY_VALUE="$(sed 's/^0x//' "$KEY_PATH")"
+    printf "%s_private_key=0x%s\n" "$ROLE" "$KEY_VALUE"
+  fi
+  if [[ -f "$PUB_PATH" ]]; then
+    PUB_VALUE="$(sed 's/^0x//' "$PUB_PATH")"
+    printf "%s_public_key=0x%s\n" "$ROLE" "$PUB_VALUE"
+  fi
+  printf "\n"
+done
 
 printf "NOTE: Use the validator public keys above to fill static-nodes.json and permissions_config.toml.\n"
 printf "Replace <host> with the Railway internal hostnames.\n\n"
