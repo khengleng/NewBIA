@@ -22,6 +22,17 @@ if [[ -n "${BESU_PERMISSIONS_B64:-}" ]]; then
   echo "$BESU_PERMISSIONS_B64" | base64 -d > "$PERM_CONFIG"
 fi
 
+if [[ -f "$STATIC_NODES" ]]; then
+  HOSTS=$(grep -oE '[a-z0-9-]+\\.railway\\.internal' "$STATIC_NODES" | sort -u || true)
+  for HOST in $HOSTS; do
+    IP=$(getent hosts "$HOST" | awk '{print $1}' | head -n1)
+    if [[ -n "$IP" ]]; then
+      sed -i '' "s/${HOST}/${IP}/g" "$STATIC_NODES" "$PERM_CONFIG" 2>/dev/null || \
+      sed -i "s/${HOST}/${IP}/g" "$STATIC_NODES" "$PERM_CONFIG"
+    fi
+  done
+fi
+
 NODE_KEY_ARGS=""
 if [[ -n "${BESU_NODE_PRIVATE_KEY:-}" ]]; then
   echo -n "$BESU_NODE_PRIVATE_KEY" > "$DATA_PATH/key"
