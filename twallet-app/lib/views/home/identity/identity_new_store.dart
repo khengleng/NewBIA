@@ -9,6 +9,7 @@ import 'package:tw_wallet_ui/store/web3auth_store.dart';
 import 'package:tw_wallet_ui/views/home/identity/date_validator.dart';
 import 'package:tw_wallet_ui/service/mobile_api_provider.dart';
 import 'package:tw_wallet_ui/widgets/hint_dialog.dart';
+import 'package:tw_wallet_ui/common/secure_storage.dart';
 import 'package:uuid/uuid.dart';
 import 'package:validators/validators.dart';
 
@@ -161,15 +162,26 @@ Future<void> _bindDidIfPossible(DecentralizedIdentity identity) async {
   try {
     if (Get.isRegistered<MobileApiProvider>()) {
       final MobileApiProvider api = Get.find<MobileApiProvider>();
+      final SecureStorage storage = Get.find<SecureStorage>();
       final response = await api.bindDid(identity.did.toString());
       if (response.statusCode != null &&
           response.statusCode! >= 200 &&
           response.statusCode! < 300) {
+        await storage.delete(SecureStorageItem.pendingDidBind);
         showDialogSimple(DialogType.success, 'DID linked');
+      } else {
+        await storage.set(SecureStorageItem.pendingDidBind, identity.did.toString());
+        showDialogSimple(DialogType.warning, 'DID link pending. Please sign in.');
       }
     }
   } catch (_) {
     // Ignore bind failures for now (e.g., not logged in or offline).
+    try {
+      if (Get.isRegistered<SecureStorage>()) {
+        final SecureStorage storage = Get.find<SecureStorage>();
+        await storage.set(SecureStorageItem.pendingDidBind, identity.did.toString());
+      }
+    } catch (_) {}
   }
 }
 

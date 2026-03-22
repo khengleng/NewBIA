@@ -3,12 +3,14 @@ class MobileUser {
   final String email;
   final String firstName;
   final String lastName;
+  final String did;
 
   const MobileUser({
     required this.id,
     required this.email,
     required this.firstName,
     required this.lastName,
+    required this.did,
   });
 
   factory MobileUser.fromJson(Map<String, dynamic> json) {
@@ -17,6 +19,7 @@ class MobileUser {
       email: (json['email'] ?? '').toString(),
       firstName: (json['firstName'] ?? '').toString(),
       lastName: (json['lastName'] ?? '').toString(),
+      did: (json['did'] ?? '').toString(),
     );
   }
 }
