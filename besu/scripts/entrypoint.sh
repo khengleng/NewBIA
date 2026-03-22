@@ -12,6 +12,7 @@ P2P_HOST=${BESU_P2P_HOST:-}
 P2P_HOST_IPV6=${BESU_P2P_HOST_IPV6:-}
 DISCOVERY_ENABLED=${BESU_DISCOVERY_ENABLED:-false}
 V5_DISCOVERY_ENABLED=${BESU_V5_DISCOVERY_ENABLED:-false}
+SYNC_MIN_PEERS=${BESU_SYNC_MIN_PEERS:-1}
 RPC_HTTP_ENABLED=${BESU_RPC_HTTP_ENABLED:-false}
 RPC_HTTP_PORT=${BESU_RPC_HTTP_PORT:-${PORT:-8545}}
 
@@ -110,6 +111,7 @@ COMMON_ARGS=(
   "--genesis-file=$GENESIS"
   "--network-id=$NETWORK_ID"
   "--sync-mode=FULL"
+  "--sync-min-peers=$SYNC_MIN_PEERS"
   "--min-gas-price=0"
   "--host-allowlist=*"
   "--p2p-host=${P2P_HOST:-0.0.0.0}"
