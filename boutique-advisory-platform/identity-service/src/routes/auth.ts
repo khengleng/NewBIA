@@ -1096,6 +1096,7 @@ router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Resp
         role: user.role,
         firstName: user.firstName,
         lastName: user.lastName,
+        did: user.did,
         twoFactorEnabled: user.twoFactorEnabled,
         language: user.language || 'EN',
         preferences: user.preferences

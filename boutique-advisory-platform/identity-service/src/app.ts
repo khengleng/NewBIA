@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 
 import authRoutes from './routes/auth';
+import identityRoutes from './routes/identity';
 import type { IdentityServiceConfig } from './config';
 
 export function createApp(config: IdentityServiceConfig) {
@@ -59,6 +60,7 @@ export function createApp(config: IdentityServiceConfig) {
   });
 
   app.use('/api/auth', authRoutes);
+  app.use('/api/identity', identityRoutes);
 
   app.use((req, res) => {
     res.status(404).json({

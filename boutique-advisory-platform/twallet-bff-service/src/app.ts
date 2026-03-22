@@ -458,6 +458,16 @@ export function createApp(config: TWalletBffConfig) {
     })
   }))
 
+  app.post('/api/mobile/identity/did/bind', asyncRoute(async (req, res) => {
+    const upstream = await forwardJson(config.identityServiceUrl, '/api/identity/did/bind', {
+      method: 'POST',
+      headers: jsonHeaders(getForwardHeaders(req)),
+      data: req.body,
+    })
+
+    relayJson(res, upstream)
+  }))
+
   app.get('/api/mobile/bootstrap', asyncRoute(async (req, res) => {
     const headers = jsonHeaders(getForwardHeaders(req))
     const [identityContext, wallet] = await Promise.all([

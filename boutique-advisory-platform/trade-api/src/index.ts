@@ -127,14 +127,16 @@ const WALLET_SERVICE_URL = process.env.WALLET_SERVICE_URL || 'http://wallet-serv
 const tradeServiceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
 if (tradeServiceMode === 'trading') {
   const enforceTradeIdentity = String(process.env.ENFORCE_TRADE_IDENTITY || 'true').toLowerCase() !== 'false';
+  const allowCoreIdentity = String(process.env.ALLOW_CORE_IDENTITY || 'false').toLowerCase() === 'true';
   const identityUrl = IDENTITY_SERVICE_URL.toLowerCase();
   const looksLikeTradeIdentity =
     identityUrl.includes('identity-trade') ||
     identityUrl.includes('identitytrade') ||
     identityUrl.includes('identity_trade');
 
-  if (enforceTradeIdentity && !looksLikeTradeIdentity) {
+  if (enforceTradeIdentity && !looksLikeTradeIdentity && !allowCoreIdentity) {
     console.error('[FATAL] Trade API is running in trading mode but IDENTITY_SERVICE_URL does not point to the trade identity service.');
+    console.error('        To use core identity, set ALLOW_CORE_IDENTITY=true.');
     console.error(`        IDENTITY_SERVICE_URL=${IDENTITY_SERVICE_URL}`);
     process.exit(1);
   }
