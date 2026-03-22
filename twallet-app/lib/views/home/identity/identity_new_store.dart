@@ -144,14 +144,22 @@ abstract class _IdentityNewStore with Store {
             ..profileInfo.email = email
             ..profileInfo.birthday = birthday,
         ),
-      )
-          .then((identity) {
-        return identity.register(store.credentials).then((success) async {
+      ).then((identity) async {
+        try {
+          final success = await identity.register(store.credentials);
           if (success) {
             await _bindDidIfPossible(identity);
+            return true;
           }
-          return success;
-        });
+        } catch (_) {
+          // fall through to local-only identity
+        }
+
+        // Fallback: save locally without on-chain registration
+        await _saveIdentityLocally(identity);
+        await _bindDidIfPossible(identity);
+        showDialogSimple(DialogType.warning, 'Saved locally (on-chain pending)');
+        return true;
       });
     }
     return false;
@@ -183,6 +191,14 @@ Future<void> _bindDidIfPossible(DecentralizedIdentity identity) async {
       }
     } catch (_) {}
   }
+}
+
+Future<void> _saveIdentityLocally(DecentralizedIdentity identity) async {
+  try {
+    if (Get.isRegistered<IdentityStore>()) {
+      await Get.find<IdentityStore>().addIdentity(identity: identity);
+    }
+  } catch (_) {}
 }
 
 class FormErrorState = _FormErrorState with _$FormErrorState;
