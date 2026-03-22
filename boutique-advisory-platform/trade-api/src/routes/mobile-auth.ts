@@ -8,6 +8,7 @@ import axios from 'axios';
 
 const router = Router();
 const IDENTITY_SERVICE_URL = process.env.IDENTITY_SERVICE_URL || 'http://identity-service:3007';
+const DEFAULT_PAYMENT_MODE = 'P2P_C2B_C2C';
 
 function getTradingFrontendBaseUrl(): string {
   const configured = String(process.env.TRADING_FRONTEND_URL || '').trim();
@@ -15,6 +16,155 @@ function getTradingFrontendBaseUrl(): string {
     return configured.replace(/\/$/, '');
   }
   return 'https://trade.cambobia.com';
+}
+
+function normalizeRole(role: string | null | undefined): string {
+  return String(role ?? '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+}
+
+function mapRoleToMobileRole(role: string): string | null {
+  const normalized = normalizeRole(role);
+  if (normalized === 'SME_OWNER') return 'SME_OWNER';
+  if (normalized === 'SME') return 'SME_OWNER';
+  if (normalized === 'INVESTOR' || normalized === 'TRADER') return 'INVESTOR';
+  if (normalized === 'ADVISOR') return 'ADVISOR';
+  if (normalized === 'PLATFORM_OPERATOR') return 'PLATFORM_OPERATOR';
+  if (normalized === 'ADMIN') return 'ADMIN';
+  if (normalized === 'SUPER_ADMIN') return 'SUPER_ADMIN';
+  return null;
+}
+
+function extractRoleStrings(user?: Record<string, any> | null): string[] {
+  if (!user) return [];
+  const rawRoles = user.roles;
+  if (Array.isArray(rawRoles)) {
+    return rawRoles.map((role) => String(role));
+  }
+  if (typeof rawRoles === 'string') {
+    return rawRoles.split(/[,;|]/).map((role) => role.trim()).filter(Boolean);
+  }
+
+  const roleValue = user.role;
+  if (typeof roleValue === 'string' && roleValue.trim()) {
+    return roleValue.split(/[,;|]/).map((role) => role.trim()).filter(Boolean);
+  }
+
+  const primaryRole = user.primaryRole;
+  if (typeof primaryRole === 'string' && primaryRole.trim()) {
+    return [primaryRole.trim()];
+  }
+
+  return [];
+}
+
+function buildMobileAccess(roleInputs: string[], primaryRole?: string) {
+  const mappedRoles = roleInputs
+    .map((role) => mapRoleToMobileRole(role))
+    .filter((role): role is string => Boolean(role));
+
+  const roles = Array.from(new Set(mappedRoles));
+
+  const permissionsByRole: Record<string, string[]> = {
+    SME_OWNER: [
+      'wallet.read',
+      'wallet.update',
+      'wallet.write',
+      'payment.create',
+      'deal.list',
+      'messages.read',
+      'messages.write',
+    ],
+    INVESTOR: [
+      'wallet.read',
+      'wallet.update',
+      'wallet.write',
+      'payment.create',
+      'deal.list',
+      'secondary_trading.list',
+      'messages.read',
+      'messages.write',
+    ],
+    ADVISOR: [
+      'wallet.read',
+      'wallet.update',
+      'wallet.write',
+      'payment.create',
+      'deal.list',
+      'messages.read',
+      'messages.write',
+    ],
+    PLATFORM_OPERATOR: [
+      'wallet.read',
+      'wallet.update',
+      'wallet.write',
+      'payment.create',
+      'deal.list',
+      'secondary_trading.list',
+      'messages.read',
+      'messages.write',
+    ],
+    ADMIN: [
+      'wallet.read',
+      'wallet.update',
+      'wallet.write',
+      'payment.create',
+      'deal.list',
+      'secondary_trading.list',
+      'messages.read',
+      'messages.write',
+    ],
+    SUPER_ADMIN: [
+      'wallet.read',
+      'wallet.update',
+      'wallet.write',
+      'payment.create',
+      'deal.list',
+      'secondary_trading.list',
+      'messages.read',
+      'messages.write',
+    ],
+  };
+
+  const permissions = Array.from(
+    new Set(
+      roles.flatMap((role) => permissionsByRole[role] || [])
+    )
+  );
+
+  const platforms = {
+    core: roles.some((role) => ['SME_OWNER', 'ADVISOR', 'PLATFORM_OPERATOR', 'ADMIN', 'SUPER_ADMIN'].includes(role)),
+    trading: roles.some((role) => ['INVESTOR', 'PLATFORM_OPERATOR', 'ADMIN', 'SUPER_ADMIN'].includes(role)),
+  };
+
+  return {
+    roles,
+    permissions,
+    platforms,
+    primaryRole: primaryRole || roles[0],
+  };
+}
+
+function buildAccessFromUser(user?: Record<string, any> | null) {
+  const roleInputs = extractRoleStrings(user);
+  const primaryRole = user?.primaryRole || user?.role;
+  return buildMobileAccess(roleInputs, primaryRole ? mapRoleToMobileRole(String(primaryRole)) || undefined : undefined);
+}
+
+async function fetchIdentityMe(accessToken: string): Promise<Record<string, any> | null> {
+  if (!accessToken) return null;
+  try {
+    const response = await axios.get(`${IDENTITY_SERVICE_URL}/api/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      validateStatus: () => true,
+    });
+    if (response.status >= 400) return null;
+    return response.data?.user || null;
+  } catch (error: any) {
+    console.error('Mobile auth me fetch error:', error.message);
+    return null;
+  }
 }
 
 function getSetCookieHeader(headers: Record<string, any>): string[] {
@@ -85,12 +235,20 @@ router.post('/login', async (req: Request, res: Response) => {
     extractCookieValue(setCookies, 'token') ||
     accessToken;
 
+  const user = response.data?.user || null;
+  const access = buildAccessFromUser(user);
+
   return res.status(response.status).json({
     ...(response.data || {}),
     platform: 'twallet',
     accessToken,
     refreshToken,
     token,
+    roles: access.roles,
+    permissions: access.permissions,
+    platforms: access.platforms,
+    primaryRole: access.primaryRole,
+    paymentMode: DEFAULT_PAYMENT_MODE,
   });
 });
 
@@ -117,11 +275,20 @@ router.post('/refresh', async (req: Request, res: Response) => {
     response.data?.token ||
     accessToken;
 
+  const user = await fetchIdentityMe(accessToken || '');
+  const access = buildAccessFromUser(user);
+
   return res.status(response.status).json({
     ...(response.data || {}),
     accessToken,
     refreshToken,
     token,
+    user,
+    roles: access.roles,
+    permissions: access.permissions,
+    platforms: access.platforms,
+    primaryRole: access.primaryRole,
+    paymentMode: DEFAULT_PAYMENT_MODE,
   });
 });
 

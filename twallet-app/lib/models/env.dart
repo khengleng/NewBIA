@@ -32,11 +32,11 @@ abstract class Env extends Object implements Built<Env, EnvBuilder> {
   factory Env.fromDefault() {
     const defaultApiBaseUrl = String.fromEnvironment(
       'CAMBOBIA_API_BASE_URL',
-      defaultValue: 'https://trade.cambobia.com/api-proxy',
+      defaultValue: 'https://bia-trade-api-production.up.railway.app',
     );
     const defaultRpcUrl = String.fromEnvironment(
       'CAMBOBIA_WEB3_RPC_URL',
-      defaultValue: 'https://trade.cambobia.com/api-proxy/api/mobile/chain-rpc',
+      defaultValue: 'https://bia-trade-api-production.up.railway.app/api/mobile/chain-rpc',
     );
     const defaultDidPrefix = String.fromEnvironment(
       'CAMBOBIA_DID_PREFIX',
@@ -50,13 +50,13 @@ abstract class Env extends Object implements Built<Env, EnvBuilder> {
       'CAMBOBIA_TOKEN_SYMBOL',
       defaultValue: 'CBU',
     );
-    const defaultChainId = int.fromEnvironment('CAMBOBIA_CHAIN_ID', defaultValue: 2026);
+    const defaultChainId = int.fromEnvironment('CAMBOBIA_CHAIN_ID', defaultValue: 20260321);
     const defaultTokenPrecision = int.fromEnvironment('CAMBOBIA_TOKEN_PRECISION', defaultValue: 2);
     const defaultReadablePrecision = int.fromEnvironment('CAMBOBIA_TOKEN_HUMAN_PRECISION', defaultValue: 2);
     const defaultConnectTimeout = int.fromEnvironment('CAMBOBIA_API_TIMEOUT_MS', defaultValue: 30000);
     const defaultPublicKey = String.fromEnvironment(
       'CAMBOBIA_CENTRAL_BANK_PUBLIC_KEY',
-      defaultValue: 'MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAI5SXpw1SSsM3FN43JVKn4gb+oGXfjL7rCDluqydAyHZ8vV7ySqi8oM1CoHRC9U2ST7IldydsQ+4cjC9xfzexxcCAwEAAQ==',
+      defaultValue: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAz44smLLhwLm5CbyHSwzpUytwabLZbT8ZMQsp8VuvNXG3YcneEsy7qkxZwbYlTRGTtHWz/EG2OWQZp2+Lzb0Oy3/kmlHh1Mo/kwLxVRA/ujJLe3FNM9SoKQ4tPonO7loNSy9ZlCgLIPoiA/JSdNynvJtkK3Exrz/AYby0mKWvIk9wtChJxszZOvtlaY+drqDq1aS6gyBTekejWaKtCs2UNhZFF5R3YJwQjMiuZYUsjM2N9XDpKbAsjmTL+IMO2YnGcJHZdmv4pC1h7x92kghBI3dAP4LidCOyTVxNLKMLreZMy86tlqQNkbnWzs+witF/la5lHrzP4yWJF0VgtxgnVQIDAQAB',
     );
 
     return Env(
