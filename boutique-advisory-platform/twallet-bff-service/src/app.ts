@@ -462,7 +462,7 @@ export function createApp(config: TWalletBffConfig) {
     const upstream = await forwardJson(config.identityServiceUrl, '/api/identity/did/bind', {
       method: 'POST',
       headers: jsonHeaders(getForwardHeaders(req)),
-      data: req.body,
+      body: JSON.stringify(req.body ?? {}),
     })
 
     relayJson(res, upstream)
