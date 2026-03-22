@@ -121,4 +121,8 @@ class MobileApiProvider {
   Future<Response> updateWalletAddress(Map<String, dynamic> payload) {
     return _httpClient.post('/api/mobile/wallet/address', payload, throwError: true);
   }
+
+  Future<Response> bindDid(String did) {
+    return _httpClient.post('/api/mobile/identity/did/bind', {'did': did}, throwError: true);
+  }
 }

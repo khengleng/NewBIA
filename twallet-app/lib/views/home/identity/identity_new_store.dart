@@ -7,6 +7,7 @@ import 'package:tw_wallet_ui/store/identity_store.dart';
 import 'package:tw_wallet_ui/store/mnemonics.dart';
 import 'package:tw_wallet_ui/store/web3auth_store.dart';
 import 'package:tw_wallet_ui/views/home/identity/date_validator.dart';
+import 'package:tw_wallet_ui/service/mobile_api_provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:validators/validators.dart';
 
@@ -84,10 +85,10 @@ abstract class _IdentityNewStore with Store {
 
   void validateUsername(String value) {
     if (isNull(value) || value.isEmpty) {
-      error.username = '不能为空';
+      error.username = 'Required';
     } else if (_identityStore.identities
         .any((identity) => identity.profileInfo.name == value)) {
-      error.username = '此名称已存在';
+      error.username = 'Name already exists';
     } else {
       error.username = null;
     }
@@ -97,7 +98,7 @@ abstract class _IdentityNewStore with Store {
     error.phone = value.isNotEmpty
         ? Util.isValidPhone(phone)
             ? null
-            : '不是有效的手机号'
+            : 'Invalid phone number'
         : null;
   }
 
@@ -105,7 +106,7 @@ abstract class _IdentityNewStore with Store {
     error.email = value.isNotEmpty
         ? isEmail(value)
             ? null
-            : '不是有效的电子邮件'
+            : 'Invalid email'
         : null;
   }
 
@@ -113,7 +114,7 @@ abstract class _IdentityNewStore with Store {
     error.birthday = value.isNotEmpty
         ? isValidDate(value)
             ? null
-            : '不是有效的日期'
+            : 'Invalid date'
         : null;
   }
 
@@ -143,10 +144,26 @@ abstract class _IdentityNewStore with Store {
         ),
       )
           .then((identity) {
-        return identity.register(store.credentials);
+        return identity.register(store.credentials).then((success) async {
+          if (success) {
+            await _bindDidIfPossible(identity);
+          }
+          return success;
+        });
       });
     }
     return false;
+  }
+}
+
+Future<void> _bindDidIfPossible(DecentralizedIdentity identity) async {
+  try {
+    if (Get.isRegistered<MobileApiProvider>()) {
+      final MobileApiProvider api = Get.find<MobileApiProvider>();
+      await api.bindDid(identity.did.toString());
+    }
+  } catch (_) {
+    // Ignore bind failures for now (e.g., not logged in or offline).
   }
 }
 
