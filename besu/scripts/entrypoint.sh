@@ -30,7 +30,8 @@ if [[ -n "${BESU_PERMISSIONS_B64:-}" ]]; then
 fi
 
 if [[ -f "$STATIC_NODES" ]]; then
-  HOSTS=$(grep -oE '[a-z0-9-]+(\\.[a-z0-9-]+)*\\.railway\\.internal' "$STATIC_NODES" | sort -u || true)
+  HOSTS=$(awk -F'[@:]' '{for (i=1;i<=NF;i++) if ($i ~ /\\.railway\\.internal$/) print $i}' "$STATIC_NODES" | sort -u || true)
+  echo "Resolved hosts: ${HOSTS:-none}"
   resolve_host() {
     local host=$1
     local ipv4=""
