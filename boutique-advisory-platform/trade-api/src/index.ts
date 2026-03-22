@@ -115,6 +115,7 @@ import { validateSecurityConfiguration } from './utils/securityValidator';
 // Middleware
 import { authenticateToken, authorizeRoles } from './middleware/jwt-auth';
 import axios from 'axios';
+import { IDENTITY_REGISTRY_ABI } from './lib/contractRegistry';
 
 const DOCUMENT_SERVICE_URL = process.env.DOCUMENT_SERVICE_URL || 'http://document-service:3005';
 const ADVISORY_SERVICE_URL = process.env.ADVISORY_SERVICE_URL || 'http://advisory-service:3006';
@@ -123,6 +124,8 @@ console.log(`[config] IDENTITY_SERVICE_URL=${IDENTITY_SERVICE_URL}`);
 const MARKET_SERVICE_URL = process.env.MARKET_SERVICE_URL || 'http://market-service:3008';
 const FUNDING_SERVICE_URL = process.env.FUNDING_SERVICE_URL || 'http://funding-service:3009';
 const WALLET_SERVICE_URL = process.env.WALLET_SERVICE_URL || 'http://wallet-service:3004';
+const BESU_RPC_URL = process.env.BESU_RPC_URL;
+const IDENTITIES_CONTRACT_ADDRESS = process.env.IDENTITIES_CONTRACT_ADDRESS;
 
 const tradeServiceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
 if (tradeServiceMode === 'trading') {
@@ -753,7 +756,9 @@ app.use('/api', (req: express.Request, res: express.Response, next: express.Next
     || req.path.startsWith('/auth/logout')
     || req.path.startsWith('/auth/sso')
     || fullPath.includes('/auth/login')
-    || fullPath.includes('/auth/logout');
+    || fullPath.includes('/auth/logout')
+    || req.path.startsWith('/mobile/chain-rpc')
+    || fullPath.includes('/mobile/chain-rpc');
 
   if (isBypassRoute) {
     return next();
@@ -776,6 +781,45 @@ app.use('/api', (req: express.Request, res: express.Response, next: express.Next
 app.use('/api/auth', authLimiter, proxyService(IDENTITY_SERVICE_URL));
 app.use('/api/wallet', authenticateToken, proxyService(WALLET_SERVICE_URL));
 app.use('/api/webhooks', webhookRoutes);
+app.post('/api/mobile/chain-rpc', async (req: express.Request, res: express.Response) => {
+  try {
+    if (!BESU_RPC_URL) {
+      return res.status(500).json({ error: 'BESU_RPC_URL not configured' });
+    }
+
+    const response = await axios.post(BESU_RPC_URL, req.body, {
+      headers: { 'content-type': 'application/json' },
+      validateStatus: () => true,
+    });
+
+    return res.status(response.status).json(response.data);
+  } catch (error: any) {
+    console.error('Error proxying chain RPC:', error.message);
+    return res.status(502).json({ error: 'Chain RPC unavailable' });
+  }
+});
+
+app.get('/v1/contracts/:name', (req: express.Request, res: express.Response) => {
+  const name = String(req.params.name || '').toLowerCase();
+
+  if (name !== 'identities' && name !== 'identity' && name !== 'identity-registry') {
+    return res.status(404).json({ code: 404, msg: 'Contract not found' });
+  }
+
+  if (!IDENTITIES_CONTRACT_ADDRESS) {
+    return res.status(500).json({ code: 500, msg: 'IDENTITIES_CONTRACT_ADDRESS not configured' });
+  }
+
+  return res.json({
+    code: 0,
+    msg: 'success',
+    result: {
+      name: 'IdentityRegistry',
+      address: IDENTITIES_CONTRACT_ADDRESS,
+      abi: IDENTITY_REGISTRY_ABI
+    }
+  });
+});
 
 if (isTradingService) {
   // Mode-specific routes (common features handled below)
