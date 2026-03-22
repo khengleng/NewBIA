@@ -109,17 +109,45 @@ function normalizeRole(role: string | null | undefined): string {
 
 function mapRoleToMobileRole(role: string): string | null {
   const normalized = normalizeRole(role)
+  if (normalized === 'SME_OWNER') return 'SME_OWNER'
   if (normalized === 'SME') return 'SME_OWNER'
   if (normalized === 'INVESTOR' || normalized === 'TRADER') return 'INVESTOR'
   if (normalized === 'ADVISOR') return 'ADVISOR'
+  if (normalized === 'PLATFORM_OPERATOR') return 'PLATFORM_OPERATOR'
   if (normalized === 'ADMIN') return 'ADMIN'
   if (normalized === 'SUPER_ADMIN') return 'SUPER_ADMIN'
   return null
 }
 
-function buildMobileAccess(userRole: string | null | undefined): MobileAccess {
-  const mapped = mapRoleToMobileRole(userRole || '')
-  const roles = mapped ? [mapped] : []
+function extractRoleStrings(user?: JsonRecord | null): string[] {
+  if (!user) return []
+  const rawRoles = user.roles
+  if (Array.isArray(rawRoles)) {
+    return rawRoles.map((role) => String(role))
+  }
+  if (typeof rawRoles === 'string') {
+    return rawRoles.split(/[,;|]/).map((role) => role.trim()).filter(Boolean)
+  }
+
+  const roleValue = user.role
+  if (typeof roleValue === 'string' && roleValue.trim()) {
+    return roleValue.split(/[,;|]/).map((role) => role.trim()).filter(Boolean)
+  }
+
+  const primaryRole = user.primaryRole
+  if (typeof primaryRole === 'string' && primaryRole.trim()) {
+    return [primaryRole.trim()]
+  }
+
+  return []
+}
+
+function buildMobileAccess(roleInputs: string[], primaryRole?: string): MobileAccess {
+  const mappedRoles = roleInputs
+    .map((role) => mapRoleToMobileRole(role))
+    .filter((role): role is string => Boolean(role))
+
+  const roles = Array.from(new Set(mappedRoles))
 
   const permissionsByRole: Record<string, string[]> = {
     SME_OWNER: [
@@ -147,6 +175,16 @@ function buildMobileAccess(userRole: string | null | undefined): MobileAccess {
       'wallet.write',
       'payment.create',
       'deal.list',
+      'messages.read',
+      'messages.write',
+    ],
+    PLATFORM_OPERATOR: [
+      'wallet.read',
+      'wallet.update',
+      'wallet.write',
+      'payment.create',
+      'deal.list',
+      'secondary_trading.list',
       'messages.read',
       'messages.write',
     ],
@@ -179,16 +217,36 @@ function buildMobileAccess(userRole: string | null | undefined): MobileAccess {
   )
 
   const platforms = {
-    core: roles.some((role) => ['SME_OWNER', 'ADVISOR', 'ADMIN', 'SUPER_ADMIN'].includes(role)),
-    trading: roles.some((role) => ['INVESTOR', 'ADMIN', 'SUPER_ADMIN'].includes(role)),
+    core: roles.some((role) => ['SME_OWNER', 'ADVISOR', 'PLATFORM_OPERATOR', 'ADMIN', 'SUPER_ADMIN'].includes(role)),
+    trading: roles.some((role) => ['INVESTOR', 'PLATFORM_OPERATOR', 'ADMIN', 'SUPER_ADMIN'].includes(role)),
   }
 
   return {
     roles,
     permissions,
     platforms,
-    primaryRole: roles[0],
+    primaryRole: primaryRole || roles[0],
   }
+}
+
+function resolvePrimaryRole(coreUser?: JsonRecord | null, tradeUser?: JsonRecord | null): string | undefined {
+  const candidate =
+    coreUser?.primaryRole ||
+    coreUser?.role ||
+    tradeUser?.primaryRole ||
+    tradeUser?.role
+
+  return candidate ? mapRoleToMobileRole(String(candidate)) || undefined : undefined
+}
+
+function mergeMobileAccess(coreUser?: JsonRecord | null, tradeUser?: JsonRecord | null): MobileAccess {
+  const roleInputs = [
+    ...extractRoleStrings(coreUser),
+    ...extractRoleStrings(tradeUser),
+  ]
+
+  const primaryRole = resolvePrimaryRole(coreUser, tradeUser)
+  return buildMobileAccess(roleInputs, primaryRole)
 }
 
 async function fetchIdentityProfile(
@@ -201,20 +259,41 @@ async function fetchIdentityProfile(
   })
 }
 
+async function resolveMobileContext(
+  config: TWalletBffConfig,
+  req: Request,
+  res?: Response
+): Promise<{ user?: JsonRecord; tradeUser?: JsonRecord; access?: MobileAccess; failed?: boolean }> {
+  const identity = await fetchIdentityProfile(config.identityServiceUrl, req)
+  if (identity.status >= 400) {
+    if (res) relayJson(res, identity)
+    return { failed: true }
+  }
+
+  const user = (identity.data as JsonRecord)?.user as JsonRecord | undefined
+
+  let tradeUser: JsonRecord | undefined
+  if (config.tradeIdentityServiceUrl) {
+    const tradeIdentity = await fetchIdentityProfile(config.tradeIdentityServiceUrl, req)
+    if (tradeIdentity.status < 400) {
+      tradeUser = (tradeIdentity.data as JsonRecord)?.user as JsonRecord | undefined
+    }
+  }
+
+  const access = mergeMobileAccess(user, tradeUser)
+  return { user, tradeUser, access }
+}
+
 async function requireMobilePermission(
   config: TWalletBffConfig,
   req: Request,
   res: Response,
   permission: string
 ): Promise<MobileAccess | null> {
-  const identity = await fetchIdentityProfile(config.identityServiceUrl, req)
-  if (identity.status >= 400) {
-    relayJson(res, identity)
-    return null
-  }
+  const context = await resolveMobileContext(config, req, res)
+  if (context.failed || !context.access) return null
 
-  const user = (identity.data as JsonRecord)?.user as JsonRecord | undefined
-  const access = buildMobileAccess(String(user?.role || ''))
+  const access = context.access
   if (!access.permissions.includes(permission)) {
     res.status(403).json({
       error: 'Insufficient permissions',
@@ -363,14 +442,11 @@ export function createApp(config: TWalletBffConfig) {
   }))
 
   app.get('/api/mobile/me', asyncRoute(async (req, res) => {
-    const identity = await fetchIdentityProfile(config.identityServiceUrl, req)
-    if (identity.status >= 400) {
-      relayJson(res, identity)
-      return
-    }
+    const context = await resolveMobileContext(config, req, res)
+    if (context.failed || !context.access) return
 
-    const user = (identity.data as JsonRecord)?.user as JsonRecord | undefined
-    const access = buildMobileAccess(String(user?.role || ''))
+    const user = context.user
+    const access = context.access
 
     res.json({
       user,
@@ -384,16 +460,19 @@ export function createApp(config: TWalletBffConfig) {
 
   app.get('/api/mobile/bootstrap', asyncRoute(async (req, res) => {
     const headers = jsonHeaders(getForwardHeaders(req))
-    const [identity, wallet] = await Promise.all([
-      fetchIdentityProfile(config.identityServiceUrl, req),
+    const [identityContext, wallet] = await Promise.all([
+      resolveMobileContext(config, req),
       forwardJson(config.walletServiceUrl, '/api/wallet', {
         method: 'GET',
         headers,
       }),
     ])
 
-    if (identity.status >= 400) {
-      relayJson(res, identity)
+    if (identityContext.failed || !identityContext.access) {
+      res.status(502).json({
+        error: 'Identity unavailable',
+        service: config.serviceName,
+      })
       return
     }
 
@@ -402,18 +481,17 @@ export function createApp(config: TWalletBffConfig) {
       return
     }
 
-    const user = (identity.data as JsonRecord).user as JsonRecord
-    const access = buildMobileAccess(String(user?.role || ''))
+    const user = identityContext.user as JsonRecord
 
     res.json({
       platform: 'twallet',
       user,
       wallet: (wallet.data as JsonRecord).wallet,
       transactions: (wallet.data as JsonRecord).transactions || [],
-      roles: access.roles,
-      permissions: access.permissions,
-      platforms: access.platforms,
-      primaryRole: access.primaryRole,
+      roles: identityContext.access.roles,
+      permissions: identityContext.access.permissions,
+      platforms: identityContext.access.platforms,
+      primaryRole: identityContext.access.primaryRole,
       paymentMode: 'P2P_C2B_C2C',
     })
   }))
@@ -508,8 +586,12 @@ export function createApp(config: TWalletBffConfig) {
     const items = ((portfolio.data as JsonRecord | undefined)?.items as JsonRecord[] | undefined) || []
 
     if (!walletAddress || !config.blockchainGatewayUrl) {
+      const portfolioPayload = (portfolio.data && typeof portfolio.data === 'object')
+        ? (portfolio.data as JsonRecord)
+        : {}
+
       res.json({
-        ...portfolio.data,
+        ...portfolioPayload,
         walletAddress: walletAddress || null,
         items,
       })
@@ -589,7 +671,38 @@ export function createApp(config: TWalletBffConfig) {
   app.get('/api/mobile/deals', asyncRoute(async (req, res) => {
     const access = await requireMobilePermission(config, req, res, 'deal.list')
     if (!access) return
-    const upstream = await forwardJson(config.tradeApiUrl, '/api/deals', {
+
+    const platformParam = String(req.query?.platform || '').trim().toLowerCase()
+    const primaryRole = access.primaryRole || ''
+
+    const useTrading = platformParam === 'trading'
+      || (!platformParam && access.platforms.trading && primaryRole === 'INVESTOR')
+      || (!platformParam && access.platforms.trading && !access.platforms.core)
+
+    const useCore = platformParam === 'core'
+      || (!platformParam && access.platforms.core && primaryRole !== 'INVESTOR')
+      || (!platformParam && access.platforms.core && !access.platforms.trading)
+
+    const query = new URLSearchParams()
+    for (const [key, value] of Object.entries(req.query || {})) {
+      if (key === 'platform') continue
+      if (Array.isArray(value)) {
+        value.forEach((entry) => query.append(key, String(entry)))
+      } else if (value !== undefined) {
+        query.append(key, String(value))
+      }
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : ''
+
+    const upstreamBase = useCore && config.coreBackendUrl
+      ? config.coreBackendUrl
+      : config.tradeApiUrl
+
+    const upstreamPath = useCore && config.coreBackendUrl
+      ? `/api/pipeline/deals${suffix}`
+      : `/api/deals${suffix}`
+
+    const upstream = await forwardJson(upstreamBase, upstreamPath, {
       method: 'GET',
       headers: jsonHeaders(getForwardHeaders(req)),
     })
