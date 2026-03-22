@@ -60,7 +60,14 @@ abstract class DecentralizedIdentity extends Object
       );
 
   Future<bool> register(Credentials creds) async {
-    return Get.find<ContractService>()
+    final contractService = Get.find<ContractService>();
+    if (contractService.identitiesContract == null) {
+      // No on-chain identity contract configured (mobile-only mode).
+      await Get.find<IdentityStore>().addIdentity(identity: this);
+      return true;
+    }
+
+    return contractService
         .identitiesContract!
         .sendTransaction(creds, 'registerIdentity', [
       profileInfo.name,

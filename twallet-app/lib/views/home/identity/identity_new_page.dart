@@ -45,7 +45,8 @@ class _IdentityNewPageState extends State<IdentityNewPage> {
     if (!store.error.hasErrors && !isAdding) {
       isAdding = true;
       _dialog.show();
-      await store.addIdentity().then((success) {
+      try {
+        final success = await store.addIdentity();
         store.clearError();
         _dialog.dismiss();
         if (success as bool) {
@@ -53,9 +54,15 @@ class _IdentityNewPageState extends State<IdentityNewPage> {
             DialogType.success,
             S.of(context).pageNewIdentityCreatedSuccessfully,
           ).then((_) => Application.router.pop(context));
+        } else {
+          showDialogSimple(DialogType.error, 'Identity creation failed');
         }
+      } catch (_) {
+        _dialog.dismiss();
+        showDialogSimple(DialogType.error, 'Identity creation failed');
+      } finally {
         isAdding = false;
-      });
+      }
     }
   }
 
