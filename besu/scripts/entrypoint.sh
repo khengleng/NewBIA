@@ -154,7 +154,7 @@ case "$ROLE" in
     fi
     ;;
   validator)
-    COMMON_ARGS+=("--miner-enabled=true")
+    # IBFT validators do not require a mining flag; consensus is enabled via genesis.
     if [[ "${RPC_HTTP_ENABLED}" == "true" ]]; then
       RPC_ARGS=(
         "--rpc-http-enabled=true"
