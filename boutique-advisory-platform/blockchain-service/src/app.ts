@@ -7,6 +7,7 @@ import { config } from './config';
 import healthRoutes from './routes/health';
 import tokenRoutes from './routes/token';
 import escrowRoutes from './routes/escrow';
+import dcepRoutes from './routes/dcep';
 
 export function createApp(): Express {
   const app = express();
@@ -23,6 +24,7 @@ export function createApp(): Express {
   app.use('/api/blockchain', healthRoutes);
   app.use('/api/blockchain/token', tokenRoutes);
   app.use('/api/blockchain/escrow', escrowRoutes);
+  app.use('/api/blockchain/dcep', dcepRoutes);
 
   return app;
 }

@@ -1,12 +1,12 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest, authenticateToken } from '../middleware/jwt-auth';
-import redis from '../redis';
 import { generateSecureToken } from '../utils/security';
 import { createSign } from 'crypto';
+import axios from 'axios';
+import { ethers } from 'ethers';
 
 const router = Router();
-
-const dcepKey = (address: string) => `dcep:wallet:${address.toLowerCase()}`;
+const BLOCKCHAIN_SERVICE_URL = process.env.BLOCKCHAIN_SERVICE_URL || 'http://blockchain-service:9100';
 
 router.use(authenticateToken);
 
@@ -39,12 +39,23 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const address = String(req.query.address || '').toLowerCase();
     if (!address) return res.status(400).json({ code: 400, msg: 'address is required' });
-    if (!redis || redis.status !== 'ready') {
-      return res.status(503).json({ code: 503, msg: 'DCEP store unavailable' });
+
+    const response = await axios.get(`${BLOCKCHAIN_SERVICE_URL}/api/blockchain/dcep/list`, {
+      params: { owner: address },
+      validateStatus: () => true,
+    });
+
+    if (response.status >= 400) {
+      return res.status(response.status).json({ code: response.status, msg: 'DCEP list failed' });
     }
 
-    const raw = await redis.get(dcepKey(address));
-    const items = raw ? JSON.parse(raw) : [];
+    const items = (response.data?.items || []).map((item: any) => ({
+      serial_number: item.serialNumber,
+      owner: item.owner,
+      money_type: item.moneyType,
+      signature: item.signature,
+    }));
+
     return res.json({ code: 0, msg: 'success', result: items });
   } catch (error) {
     console.error('DCEP list error:', error);
@@ -59,19 +70,14 @@ router.post('/mint', async (req: AuthenticatedRequest, res: Response) => {
     if (!address || !moneyType) {
       return res.status(400).json({ code: 400, msg: 'address and moneyType are required' });
     }
-    if (!redis || redis.status !== 'ready') {
-      return res.status(503).json({ code: 503, msg: 'DCEP store unavailable' });
-    }
     const privateKey = loadPrivateKey();
     if (!privateKey) {
       return res.status(500).json({ code: 500, msg: 'Central bank signing key not configured' });
     }
 
-    const raw = await redis.get(dcepKey(address));
-    const items = raw ? JSON.parse(raw) : [];
-
     const serialNumber = generateSecureToken(24);
     const signature = signSerialNumber(serialNumber, privateKey);
+    const tokenId = ethers.toBigInt(ethers.hexlify(ethers.toUtf8Bytes(serialNumber))).toString();
 
     const dcep = {
       serial_number: serialNumber,
@@ -80,8 +86,21 @@ router.post('/mint', async (req: AuthenticatedRequest, res: Response) => {
       signature,
     };
 
-    items.push(dcep);
-    await redis.set(dcepKey(address), JSON.stringify(items));
+    const response = await axios.post(
+      `${BLOCKCHAIN_SERVICE_URL}/api/blockchain/dcep/mint`,
+      {
+        ownerAddress: address,
+        tokenId,
+        moneyType,
+        serialNumber,
+        signature,
+      },
+      { validateStatus: () => true },
+    );
+
+    if (response.status >= 400) {
+      return res.status(response.status).json({ code: response.status, msg: 'DCEP mint failed' });
+    }
 
     return res.json({ code: 0, msg: 'success', result: dcep });
   } catch (error) {
@@ -93,35 +112,33 @@ router.post('/mint', async (req: AuthenticatedRequest, res: Response) => {
 router.post('/transfer', async (req: AuthenticatedRequest, res: Response) => {
   try {
     const fromAddress = String(req.body?.fromAddress || '').toLowerCase();
-    if (!fromAddress) {
-      return res.status(400).json({ code: 400, msg: 'fromAddress is required' });
-    }
-    if (!redis || redis.status !== 'ready') {
-      return res.status(503).json({ code: 503, msg: 'DCEP store unavailable' });
-    }
-
-    const toAddress = String(req.body?.toAddress || '').toLowerCase();
-    if (!toAddress) {
-      // NOTE: The current mobile payload does not include a destination address.
-      // Return success to unblock the flow while preserving stored DCEP.
-      return res.json({ code: 0, msg: 'success', result: { mock: true } });
+    const fromPublicKey = String(req.body?.fromPublicKey || '').trim();
+    const signedTransactionRawData = String(req.body?.signedTransactionRawData || '').trim();
+    if (!fromAddress || !signedTransactionRawData) {
+      return res.status(400).json({ code: 400, msg: 'fromAddress and signedTransactionRawData are required' });
     }
 
-    const raw = await redis.get(dcepKey(fromAddress));
-    const items = raw ? JSON.parse(raw) : [];
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ code: 400, msg: 'No DCEP available to transfer' });
+    if (fromPublicKey) {
+      const computed = ethers.computeAddress(fromPublicKey);
+      if (computed.toLowerCase() !== fromAddress) {
+        return res.status(400).json({ code: 400, msg: 'fromPublicKey does not match fromAddress' });
+      }
     }
 
-    const moved = items.shift();
-    await redis.set(dcepKey(fromAddress), JSON.stringify(items));
+    const response = await axios.post(
+      `${BLOCKCHAIN_SERVICE_URL}/api/blockchain/dcep/transfer`,
+      {
+        fromAddress,
+        signedTransactionRawData,
+      },
+      { validateStatus: () => true },
+    );
 
-    const destRaw = await redis.get(dcepKey(toAddress));
-    const destItems = destRaw ? JSON.parse(destRaw) : [];
-    destItems.push({ ...moved, owner: toAddress });
-    await redis.set(dcepKey(toAddress), JSON.stringify(destItems));
+    if (response.status >= 400) {
+      return res.status(response.status).json({ code: response.status, msg: response.data?.error || 'DCEP transfer failed' });
+    }
 
-    return res.json({ code: 0, msg: 'success', result: { transferred: true } });
+    return res.json({ code: 0, msg: 'success', result: response.data });
   } catch (error) {
     console.error('DCEP transfer error:', error);
     return res.status(500).json({ code: 500, msg: 'failed' });

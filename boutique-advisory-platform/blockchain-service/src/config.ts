@@ -12,4 +12,5 @@ export const config = {
   tokenFactoryAddress: process.env.TOKEN_FACTORY_ADDRESS || '',
   escrowContractAddress: process.env.ESCROW_CONTRACT_ADDRESS || '',
   tokenOwnerAddress: process.env.TOKEN_OWNER_ADDRESS || '',
+  dcepContractAddress: process.env.DCEP_CONTRACT_ADDRESS || '',
 };

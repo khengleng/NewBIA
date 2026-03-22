@@ -17,6 +17,13 @@ const ERC20_ABI = [
   'function decimals() view returns (uint8)',
 ];
 
+const DCEP_NFT_ABI = [
+  'function mint(address to, uint256 tokenId, string moneyType, string serialNumber, string signature) external',
+  'function tokensOfOwner(address owner) view returns (uint256[])',
+  'function tokenData(uint256 tokenId) view returns (address owner, string moneyType, string serialNumber, string signature)',
+  'function safeTransferFrom(address from, address to, uint256 tokenId) external',
+];
+
 function getProvider(): ethers.JsonRpcProvider {
   if (!config.rpcUrl) {
     throw new Error('BESU_RPC_URL not configured');
@@ -122,5 +129,105 @@ export async function getTokenBalanceOnBesu(payload: { tokenAddress: string; wal
   return {
     balance: balance.toString(),
     decimals: Number(decimals),
+  };
+}
+
+function getDcepContractWithSigner() {
+  if (!config.dcepContractAddress) {
+    throw new Error('DCEP_CONTRACT_ADDRESS not configured');
+  }
+  const signer = getSigner();
+  return new ethers.Contract(config.dcepContractAddress, DCEP_NFT_ABI, signer);
+}
+
+function getDcepContractReadOnly() {
+  if (!config.dcepContractAddress) {
+    throw new Error('DCEP_CONTRACT_ADDRESS not configured');
+  }
+  const provider = getProvider();
+  return new ethers.Contract(config.dcepContractAddress, DCEP_NFT_ABI, provider);
+}
+
+export async function mintDcepOnBesu(payload: {
+  ownerAddress: string;
+  tokenId: string;
+  moneyType: string;
+  serialNumber: string;
+  signature: string;
+}) {
+  const contract = getDcepContractWithSigner();
+  const tx = await contract.mint(
+    payload.ownerAddress,
+    ethers.toBigInt(payload.tokenId),
+    payload.moneyType,
+    payload.serialNumber,
+    payload.signature
+  );
+  const receipt = await tx.wait();
+  return { txHash: tx.hash, chainId: config.chainId, blockNumber: receipt?.blockNumber };
+}
+
+export async function listDcepOnBesu(ownerAddress: string) {
+  const contract = getDcepContractReadOnly();
+  const tokenIds: bigint[] = await contract.tokensOfOwner(ownerAddress);
+  const items = [];
+  for (const tokenId of tokenIds) {
+    const data = await contract.tokenData(tokenId);
+    items.push({
+      tokenId: tokenId.toString(),
+      owner: data[0],
+      moneyType: data[1],
+      serialNumber: data[2],
+      signature: data[3],
+    });
+  }
+  return items;
+}
+
+export async function transferSignedDcepOnBesu(payload: {
+  signedRawTransaction: string;
+  expectedFrom: string;
+  expectedTo?: string;
+}) {
+  if (!config.dcepContractAddress) {
+    throw new Error('DCEP_CONTRACT_ADDRESS not configured');
+  }
+  const provider = getProvider();
+  const tx = ethers.Transaction.from(payload.signedRawTransaction);
+
+  if (!tx.from) {
+    throw new Error('Unable to recover sender from signed transaction');
+  }
+
+  if (!tx.to) {
+    throw new Error('Signed transaction missing destination');
+  }
+
+  if (tx.to.toLowerCase() !== config.dcepContractAddress.toLowerCase()) {
+    throw new Error('Signed transaction target mismatch');
+  }
+
+  if (tx.from.toLowerCase() !== payload.expectedFrom.toLowerCase()) {
+    throw new Error('Signed transaction sender mismatch');
+  }
+
+  const iface = new ethers.Interface(DCEP_NFT_ABI);
+  const parsed = iface.parseTransaction({ data: tx.data, value: tx.value });
+  if (!parsed || parsed.name !== 'safeTransferFrom') {
+    throw new Error('Signed transaction is not a DCEP transfer');
+  }
+
+  const [, to] = parsed.args as [string, string, bigint];
+  if (payload.expectedTo && to.toLowerCase() !== payload.expectedTo.toLowerCase()) {
+    throw new Error('Signed transaction recipient mismatch');
+  }
+
+  const sent = await provider.broadcastTransaction(payload.signedRawTransaction);
+  const receipt = await sent.wait();
+  return {
+    txHash: sent.hash,
+    chainId: config.chainId,
+    blockNumber: receipt?.blockNumber,
+    to,
   };
 }

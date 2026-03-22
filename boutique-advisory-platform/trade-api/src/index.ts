@@ -126,8 +126,10 @@ console.log(`[config] IDENTITY_SERVICE_URL=${IDENTITY_SERVICE_URL}`);
 const MARKET_SERVICE_URL = process.env.MARKET_SERVICE_URL || 'http://market-service:3008';
 const FUNDING_SERVICE_URL = process.env.FUNDING_SERVICE_URL || 'http://funding-service:3009';
 const WALLET_SERVICE_URL = process.env.WALLET_SERVICE_URL || 'http://wallet-service:3004';
+const BLOCKCHAIN_SERVICE_URL = process.env.BLOCKCHAIN_SERVICE_URL || 'http://blockchain-service:9100';
 const BESU_RPC_URL = process.env.BESU_RPC_URL;
 const IDENTITIES_CONTRACT_ADDRESS = process.env.IDENTITIES_CONTRACT_ADDRESS;
+const DCEP_CONTRACT_ADDRESS = process.env.DCEP_CONTRACT_ADDRESS;
 
 const tradeServiceMode = (process.env.SERVICE_MODE || 'core').toLowerCase();
 if (tradeServiceMode === 'trading') {
@@ -810,26 +812,47 @@ app.post('/api/mobile/chain-rpc', async (req: express.Request, res: express.Resp
   }
 });
 
+const DCEP_NFT_ABI = [
+  'function mint(address to, uint256 tokenId, string moneyType, string serialNumber, string signature) external',
+  'function tokensOfOwner(address owner) view returns (uint256[])',
+  'function tokenData(uint256 tokenId) view returns (address owner, string moneyType, string serialNumber, string signature)',
+  'function safeTransferFrom(address from, address to, uint256 tokenId) external',
+];
+
 app.get('/v1/contracts/:name', (req: express.Request, res: express.Response) => {
   const name = String(req.params.name || '').toLowerCase();
 
-  if (name !== 'identities' && name !== 'identity' && name !== 'identity-registry') {
-    return res.status(404).json({ code: 404, msg: 'Contract not found' });
-  }
-
-  if (!IDENTITIES_CONTRACT_ADDRESS) {
-    return res.status(500).json({ code: 500, msg: 'IDENTITIES_CONTRACT_ADDRESS not configured' });
-  }
-
-  return res.json({
-    code: 0,
-    msg: 'success',
-    result: {
-      name: 'IdentityRegistry',
-      address: IDENTITIES_CONTRACT_ADDRESS,
-      abi: IDENTITY_REGISTRY_ABI
+  if (name === 'identities' || name === 'identity' || name === 'identity-registry') {
+    if (!IDENTITIES_CONTRACT_ADDRESS) {
+      return res.status(500).json({ code: 500, msg: 'IDENTITIES_CONTRACT_ADDRESS not configured' });
     }
-  });
+    return res.json({
+      code: 0,
+      msg: 'success',
+      result: {
+        name: 'IdentityRegistry',
+        address: IDENTITIES_CONTRACT_ADDRESS,
+        abi: IDENTITY_REGISTRY_ABI
+      }
+    });
+  }
+
+  if (name === 'nft-dcep' || name === 'dcep' || name === 'dcep-nft') {
+    if (!DCEP_CONTRACT_ADDRESS) {
+      return res.status(500).json({ code: 500, msg: 'DCEP_CONTRACT_ADDRESS not configured' });
+    }
+    return res.json({
+      code: 0,
+      msg: 'success',
+      result: {
+        name: 'DcepNFT',
+        address: DCEP_CONTRACT_ADDRESS,
+        abi: DCEP_NFT_ABI
+      }
+    });
+  }
+
+  return res.status(404).json({ code: 404, msg: 'Contract not found' });
 });
 
 if (isTradingService) {

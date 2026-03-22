@@ -18,12 +18,15 @@ function compileContracts() {
   const sources: Record<string, { content: string }> = {
     'TokenFactory.sol': { content: fs.readFileSync(path.join(baseDir, 'TokenFactory.sol'), 'utf8') },
     'Escrow.sol': { content: fs.readFileSync(path.join(baseDir, 'Escrow.sol'), 'utf8') },
+    'IdentityRegistry.sol': { content: fs.readFileSync(path.join(baseDir, 'IdentityRegistry.sol'), 'utf8') },
+    'DcepNFT.sol': { content: fs.readFileSync(path.join(baseDir, 'DcepNFT.sol'), 'utf8') },
   };
 
   const input = {
     language: 'Solidity',
     sources,
     settings: {
+      evmVersion: 'paris',
       outputSelection: {
         '*': {
           '*': ['abi', 'evm.bytecode']
@@ -48,9 +51,13 @@ async function deploy() {
 
   const factoryArtifact = contracts['TokenFactory.sol']['TokenFactory'];
   const escrowArtifact = contracts['Escrow.sol']['LaunchpadEscrow'];
+  const identityArtifact = contracts['IdentityRegistry.sol']['IdentityRegistry'];
+  const dcepArtifact = contracts['DcepNFT.sol']['DcepNFT'];
 
   const factory = new ethers.ContractFactory(factoryArtifact.abi, factoryArtifact.evm.bytecode.object, wallet);
   const escrow = new ethers.ContractFactory(escrowArtifact.abi, escrowArtifact.evm.bytecode.object, wallet);
+  const identity = new ethers.ContractFactory(identityArtifact.abi, identityArtifact.evm.bytecode.object, wallet);
+  const dcep = new ethers.ContractFactory(dcepArtifact.abi, dcepArtifact.evm.bytecode.object, wallet);
 
   const factoryContract = await factory.deploy();
   await factoryContract.waitForDeployment();
@@ -58,11 +65,21 @@ async function deploy() {
   const escrowContract = await escrow.deploy();
   await escrowContract.waitForDeployment();
 
+  const identityContract = await identity.deploy();
+  await identityContract.waitForDeployment();
+
+  const dcepContract = await dcep.deploy(wallet.address, 'DCEP Bill', 'DCEP');
+  await dcepContract.waitForDeployment();
+
   const factoryAddress = await factoryContract.getAddress();
   const escrowAddress = await escrowContract.getAddress();
+  const identityAddress = await identityContract.getAddress();
+  const dcepAddress = await dcepContract.getAddress();
 
   console.log('TOKEN_FACTORY_ADDRESS=' + factoryAddress);
   console.log('ESCROW_CONTRACT_ADDRESS=' + escrowAddress);
+  console.log('IDENTITIES_CONTRACT_ADDRESS=' + identityAddress);
+  console.log('DCEP_CONTRACT_ADDRESS=' + dcepAddress);
   console.log('TOKEN_OWNER_ADDRESS=' + wallet.address);
 }
 
