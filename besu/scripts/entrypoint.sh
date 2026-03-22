@@ -30,7 +30,12 @@ if [[ -n "${BESU_PERMISSIONS_B64:-}" ]]; then
 fi
 
 if [[ -f "$STATIC_NODES" ]]; then
-  HOSTS=$(sed -n 's/.*\([a-z0-9-][a-z0-9-]*\.railway\.internal\).*/\1/p' "$STATIC_NODES" | sort -u || true)
+  HOSTS=$(awk '{
+    while (match($0, /[a-z0-9-]+\.railway\.internal/)) {
+      print substr($0, RSTART, RLENGTH)
+      $0 = substr($0, RSTART + RLENGTH)
+    }
+  }' "$STATIC_NODES" | sort -u || true)
   resolve_host() {
     local host=$1
     local ipv4=""
