@@ -67,10 +67,19 @@ router.get('/listings', authorize('secondary_trading.list'), async (req: Authent
             return;
         }
 
+        const normalizeQueryValue = (value: unknown): string => {
+            if (Array.isArray(value)) {
+                return value.find((entry) => entry !== undefined && entry !== null)?.toString() || '';
+            }
+            return value !== undefined && value !== null ? String(value) : '';
+        };
+
         const { status, dealId, sellerId, minPrice, maxPrice, page, limit, includeTrades } = req.query;
-        const parsedLimit = Math.min(Math.max(parseInt(String(limit || '20'), 10) || 20, 1), 100);
-        const parsedPage = Math.max(parseInt(String(page || '1'), 10) || 1, 1);
-        const includeTradesFlag = String(includeTrades || '').toLowerCase() === 'true';
+        const normalizedLimit = normalizeQueryValue(limit);
+        const normalizedPage = normalizeQueryValue(page);
+        const parsedLimit = Math.min(Math.max(parseInt(normalizedLimit || '20', 10) || 20, 1), 100);
+        const parsedPage = Math.max(parseInt(normalizedPage || '1', 10) || 1, 1);
+        const includeTradesFlag = normalizeQueryValue(includeTrades).toLowerCase() === 'true';
 
         const where: any = {
             tenantId,
@@ -78,10 +87,15 @@ router.get('/listings', authorize('secondary_trading.list'), async (req: Authent
                 status: { not: 'DELETED' }
             }
         };
-        if (status) where.status = status;
-        if (sellerId) where.sellerId = sellerId;
-        if (minPrice) where.pricePerShare = { ...where.pricePerShare, gte: parseFloat(minPrice as string) };
-        if (maxPrice) where.pricePerShare = { ...where.pricePerShare, lte: parseFloat(maxPrice as string) };
+        const normalizedStatus = normalizeQueryValue(status);
+        const normalizedSellerId = normalizeQueryValue(sellerId);
+        const normalizedMinPrice = normalizeQueryValue(minPrice);
+        const normalizedMaxPrice = normalizeQueryValue(maxPrice);
+
+        if (normalizedStatus) where.status = normalizedStatus;
+        if (normalizedSellerId) where.sellerId = normalizedSellerId;
+        if (normalizedMinPrice) where.pricePerShare = { ...where.pricePerShare, gte: parseFloat(normalizedMinPrice) };
+        if (normalizedMaxPrice) where.pricePerShare = { ...where.pricePerShare, lte: parseFloat(normalizedMaxPrice) };
 
         const listings = await prismaReplica.secondaryListing.findMany({
             where,
@@ -446,7 +460,15 @@ router.get('/trades/recent', authorize('secondary_trading.list'), async (req: Au
             return;
         }
 
-        const limit = Math.max(1, Math.min(100, Number(req.query.limit || 30)));
+        const normalizeQueryValue = (value: unknown): string => {
+            if (Array.isArray(value)) {
+                return value.find((entry) => entry !== undefined && entry !== null)?.toString() || '';
+            }
+            return value !== undefined && value !== null ? String(value) : '';
+        };
+
+        const normalizedLimit = normalizeQueryValue(req.query.limit);
+        const limit = Math.max(1, Math.min(100, Number(normalizedLimit || 30)));
         const trades = await prismaReplica.secondaryTrade.findMany({
             where: {
                 status: 'COMPLETED',
