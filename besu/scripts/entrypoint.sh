@@ -12,6 +12,8 @@ P2P_HOST=${BESU_P2P_HOST:-}
 P2P_HOST_IPV6=${BESU_P2P_HOST_IPV6:-}
 DISCOVERY_ENABLED=${BESU_DISCOVERY_ENABLED:-false}
 V5_DISCOVERY_ENABLED=${BESU_V5_DISCOVERY_ENABLED:-false}
+RPC_HTTP_ENABLED=${BESU_RPC_HTTP_ENABLED:-false}
+RPC_HTTP_PORT=${BESU_RPC_HTTP_PORT:-${PORT:-8545}}
 
 mkdir -p "$DATA_PATH"
 
@@ -72,6 +74,8 @@ echo "BESU_STATIC_NODES=$STATIC_NODES"
 echo "BESU_PERM_CONFIG=$PERM_CONFIG"
 echo "BESU_NETWORK_ID=$NETWORK_ID"
 echo "BESU_P2P_HOST=${P2P_HOST:-}"
+echo "BESU_RPC_HTTP_ENABLED=${RPC_HTTP_ENABLED}"
+echo "BESU_RPC_HTTP_PORT=${RPC_HTTP_PORT}"
 
 if [[ -z "$P2P_HOST" ]]; then
   if command -v hostname >/dev/null 2>&1; then
@@ -135,17 +139,39 @@ fi
 
 case "$ROLE" in
   bootnode)
-    exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS
+    if [[ "${RPC_HTTP_ENABLED}" == "true" ]]; then
+      RPC_ARGS=(
+        "--rpc-http-enabled"
+        "--rpc-http-api=ETH,NET,WEB3,TXPOOL,PERM,IBFT"
+        "--rpc-http-host=0.0.0.0"
+        "--rpc-http-port=${RPC_HTTP_PORT}"
+        "--rpc-http-cors-origins=*"
+      )
+      exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS "${RPC_ARGS[@]}"
+    else
+      exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS
+    fi
     ;;
   validator)
-    exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS
+    if [[ "${RPC_HTTP_ENABLED}" == "true" ]]; then
+      RPC_ARGS=(
+        "--rpc-http-enabled"
+        "--rpc-http-api=ETH,NET,WEB3,TXPOOL,PERM,IBFT"
+        "--rpc-http-host=0.0.0.0"
+        "--rpc-http-port=${RPC_HTTP_PORT}"
+        "--rpc-http-cors-origins=*"
+      )
+      exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS "${RPC_ARGS[@]}"
+    else
+      exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS
+    fi
     ;;
   rpc)
     RPC_ARGS=(
       "--rpc-http-enabled"
       "--rpc-http-api=ETH,NET,WEB3,TXPOOL,PERM,IBFT"
       "--rpc-http-host=0.0.0.0"
-      "--rpc-http-port=8545"
+      "--rpc-http-port=${RPC_HTTP_PORT}"
       "--rpc-http-cors-origins=*"
     )
     exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS "${RPC_ARGS[@]}"
