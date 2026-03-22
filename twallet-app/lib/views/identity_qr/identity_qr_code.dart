@@ -91,9 +91,8 @@ class IdentityQRPage extends StatelessWidget {
   Widget _buildQRCode(String did) {
     return Container(
       margin: const EdgeInsets.only(top: 30),
-      child: QrImage(
+      child: QrImageView(
         data: did,
-//        size: 200.0,
       ),
     );
   }

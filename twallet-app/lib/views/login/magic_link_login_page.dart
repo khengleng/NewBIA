@@ -23,7 +23,7 @@ class _MagicLinkLoginPageState extends State<MagicLinkLoginPage> {
   Future loginFunction({required String email}) async {
     try {
       final didToken =
-          await magic.auth.loginWithMagicLink(email: _emailController.text);
+          await magic.auth.loginWithEmailOTP(email: _emailController.text);
       if (!mounted) return;
       Application.router.navigateTo(context, Routes.home);
       debugPrint('did token: $didToken');
@@ -73,9 +73,9 @@ class _MagicLinkLoginPageState extends State<MagicLinkLoginPage> {
                                   (idToken) => debugPrint('id Token: $idToken'),
                                 );
 
-                            magic.user.getMetadata().then(
-                                  (metadata) => debugPrint(
-                                    'metadata: ${metadata.issuer}, ${metadata.email}, ${metadata.publicAddress}',
+                            magic.user.getInfo().then(
+                                  (userInfo) => debugPrint(
+                                    'user: ${userInfo.issuer}, ${userInfo.email}, ${userInfo.publicAddress}',
                                   ),
                                 );
 

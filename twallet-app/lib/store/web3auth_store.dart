@@ -1,20 +1,26 @@
 import 'package:tw_wallet_ui/models/identity/account_info.dart';
 import 'package:tw_wallet_ui/store/account_store.dart';
+import 'package:web3auth_flutter/enums.dart';
+import 'package:web3auth_flutter/input.dart';
 import 'package:web3auth_flutter/web3auth_flutter.dart';
 import 'package:web3dart/credentials.dart';
 
 Future<void> web3authInit() async {
   await Web3AuthFlutter.init(
-    clientId: const String.fromEnvironment(
-      'CAMBOBIA_WEB3AUTH_CLIENT_ID',
-      defaultValue: '',
+    Web3AuthOptions(
+      clientId: const String.fromEnvironment(
+        'CAMBOBIA_WEB3AUTH_CLIENT_ID',
+        defaultValue: '',
+      ),
+      network: Network.testnet,
+      redirectUrl: Uri.parse(
+        const String.fromEnvironment(
+          'CAMBOBIA_WEB3AUTH_REDIRECT_URI',
+          defaultValue: 'com.cambobia.mobile://auth',
+        ),
+      ),
+      whiteLabel: WhiteLabelData(),
     ),
-    network: Network.testnet,
-    redirectUri: const String.fromEnvironment(
-      'CAMBOBIA_WEB3AUTH_REDIRECT_URI',
-      defaultValue: 'com.cambobia.mobile://auth',
-    ),
-    whiteLabelData: WhiteLabelData(),
   );
 }
 

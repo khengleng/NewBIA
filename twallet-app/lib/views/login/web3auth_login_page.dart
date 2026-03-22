@@ -6,6 +6,9 @@ import 'package:tw_wallet_ui/common/theme/index.dart';
 import 'package:tw_wallet_ui/router/routers.dart';
 import 'package:tw_wallet_ui/store/web3auth_store.dart';
 import 'package:tw_wallet_ui/widgets/layouts/common_layout.dart';
+import 'package:web3auth_flutter/enums.dart';
+import 'package:web3auth_flutter/input.dart';
+import 'package:web3auth_flutter/output.dart';
 import 'package:web3auth_flutter/web3auth_flutter.dart';
 
 class Web3authLoginPage extends StatefulWidget {
@@ -21,7 +24,8 @@ class _Web3authLoginPageState extends State<Web3authLoginPage> {
     return () async {
       try {
         final Web3AuthResponse response = await method();
-        final web3AuthStore = Web3authStore(response.privKey);
+        final String privKey = response.privKey ?? '';
+        final web3AuthStore = Web3authStore(privKey);
         Get.put(web3AuthStore);
         if (!mounted) return;
         Application.router.navigateTo(context, Routes.home);
@@ -35,22 +39,28 @@ class _Web3authLoginPageState extends State<Web3authLoginPage> {
 
   Future<Web3AuthResponse> _withGoogle() {
     return Web3AuthFlutter.login(
-      provider: Provider.google,
-      mfaLevel: MFALevel.DEFAULT,
+      LoginParams(
+        loginProvider: Provider.google,
+        mfaLevel: MFALevel.DEFAULT,
+      ),
     );
   }
 
   Future<Web3AuthResponse> _withFacebook() {
     return Web3AuthFlutter.login(
-      provider: Provider.facebook,
-      mfaLevel: MFALevel.DEFAULT,
+      LoginParams(
+        loginProvider: Provider.facebook,
+        mfaLevel: MFALevel.DEFAULT,
+      ),
     );
   }
 
   Future<Web3AuthResponse> _withGithub() {
     return Web3AuthFlutter.login(
-      provider: Provider.github,
-      mfaLevel: MFALevel.DEFAULT,
+      LoginParams(
+        loginProvider: Provider.github,
+        mfaLevel: MFALevel.DEFAULT,
+      ),
     );
   }
 

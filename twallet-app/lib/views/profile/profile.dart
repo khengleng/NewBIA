@@ -9,6 +9,7 @@ import 'package:tw_wallet_ui/router/routers.dart';
 import 'package:tw_wallet_ui/store/identity_store.dart';
 import 'package:tw_wallet_ui/views/profile/widgets/profile_row.dart';
 import 'package:tw_wallet_ui/widgets/avatar.dart';
+import 'package:tw_wallet_ui/widgets/hint_dialog.dart';
 import 'package:tw_wallet_ui/widgets/layouts/common_layout.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -45,25 +46,28 @@ class ProfilePage extends StatelessWidget {
                   ProfileRowWidget(
                     assetIcon: 'assets/icons/name.svg',
                     name: 'Name*',
-                    value: identity.profileInfo.name,
+                    value: identity?.profileInfo.name ?? '',
                   ),
                   ProfileRowWidget(
                     assetIcon: 'assets/icons/email.svg',
                     name: 'Mail',
-                    value: identity.profileInfo.email,
+                    value: identity?.profileInfo.email ?? '',
                   ),
                   ProfileRowWidget(
                     assetIcon: 'assets/icons/phone.svg',
                     name: 'Phone',
-                    value: identity.profileInfo.phone,
+                    value: identity?.profileInfo.phone ?? '',
                   ),
                   ProfileRowWidget(
                     assetIcon: 'assets/icons/birth.svg',
                     name: 'Birthday',
-                    value: identity.profileInfo.birthday ?? '',
+                    value: identity?.profileInfo.birthday ?? '',
                   ),
                   GestureDetector(
                     onLongPress: () async {
+                      if (identity == null) {
+                        return;
+                      }
                       return Clipboard.setData(
                         ClipboardData(text: identity.did.toString()),
                       ).then(
@@ -72,7 +76,7 @@ class ProfilePage extends StatelessWidget {
                     child: ProfileRowWidget(
                       assetIcon: 'assets/icons/eye.svg',
                       name: 'DID',
-                      value: identity.did.toString(),
+                      value: identity?.did.toString() ?? '',
                     ),
                   ),
                   ProfileRowWidget(
@@ -90,7 +94,10 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildQR(BuildContext context, DecentralizedIdentity id) {
+  Widget _buildQR(BuildContext context, DecentralizedIdentity? id) {
+    if (id == null) {
+      return const SizedBox.shrink();
+    }
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => Navigator.pushNamed(context, Routes.qrPage, arguments: id),

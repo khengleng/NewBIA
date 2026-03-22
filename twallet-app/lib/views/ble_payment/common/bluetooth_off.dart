@@ -24,7 +24,7 @@ class BluetoothOffScreen extends StatelessWidget {
               '蓝牙不可用，请打开蓝牙功能',
               style: Theme.of(context)
                   .primaryTextTheme
-                  .subtitle1
+                  .titleMedium
                   ?.copyWith(color: Colors.white),
             ),
           ],

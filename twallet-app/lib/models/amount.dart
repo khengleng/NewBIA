@@ -8,8 +8,11 @@ class Amount {
   const Amount(this.value);
   final Decimal value;
 
-  Decimal get original =>
-      value * Decimal.fromInt(10).pow(Application.globalEnv.tokenPrecision);
+  Decimal get original {
+    final scaleFactor =
+        Decimal.fromInt(10).pow(Application.globalEnv.tokenPrecision).toDecimal();
+    return value * scaleFactor;
+  }
   String get humanReadable => Util.formatDecimal(
         value,
         Application.globalEnv.tokenHumanReadablePrecision,
@@ -31,10 +34,10 @@ class Amount {
   }
 
   factory Amount.parse(dynamic value) {
+    final scaleFactor =
+        Decimal.fromInt(10).pow(Application.globalEnv.tokenPrecision).toDecimal();
     return Amount(
-      (Decimal.parse(value as String) /
-              Decimal.fromInt(10).pow(Application.globalEnv.tokenPrecision))
-          .toDecimal(),
+      (Decimal.parse(value as String) / scaleFactor).toDecimal(),
     );
   }
 

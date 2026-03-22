@@ -1,3 +1,4 @@
+import 'package:collection/collection.dart';
 import 'package:mobx/mobx.dart';
 import 'package:tw_wallet_ui/models/mobile/mobile_wallet_transaction.dart';
 import 'package:tw_wallet_ui/service/mobile_api_provider.dart';
@@ -50,7 +51,7 @@ abstract class _TxListStore with Store {
   @action
   Future fetchDetails(String id) async {
     tx = ObservableFuture(
-      Future.value(list.firstWhere((item) => item.id == id, orElse: () => null)),
+      Future.value(list.firstWhereOrNull((item) => item.id == id)),
     );
   }
 }

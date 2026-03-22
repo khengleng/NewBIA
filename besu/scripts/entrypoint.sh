@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+set -x
 
 ROLE=${BESU_ROLE:-rpc}
 DATA_PATH=${BESU_DATA_PATH:-/opt/besu/data}
@@ -7,6 +8,10 @@ GENESIS=${BESU_GENESIS:-/opt/besu/genesis.json}
 STATIC_NODES=${BESU_STATIC_NODES:-/opt/besu/static-nodes.json}
 PERM_CONFIG=${BESU_PERMISSIONS_CONFIG:-/opt/besu/permissions_config.toml}
 NETWORK_ID=${BESU_NETWORK_ID:-20260321}
+P2P_HOST=${BESU_P2P_HOST:-}
+P2P_HOST_IPV6=${BESU_P2P_HOST_IPV6:-}
+DISCOVERY_ENABLED=${BESU_DISCOVERY_ENABLED:-false}
+V5_DISCOVERY_ENABLED=${BESU_V5_DISCOVERY_ENABLED:-false}
 
 mkdir -p "$DATA_PATH"
 
@@ -26,20 +31,29 @@ if [[ -f "$STATIC_NODES" ]]; then
   HOSTS=$(grep -oE '[a-z0-9-]+\\.railway\\.internal' "$STATIC_NODES" | sort -u || true)
   resolve_host() {
     local host=$1
+    local ipv4=""
+    local ipv6=""
     if command -v getent >/dev/null 2>&1; then
-      getent hosts "$host" | awk '{print $1}' | head -n1
-      return
+      ipv4=$(getent hosts "$host" | awk '{print $1}' | grep -E '^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$' | head -n1 || true)
+      ipv6=$(getent hosts "$host" | awk '{print $1}' | grep -E ':' | head -n1 || true)
     fi
     if command -v nslookup >/dev/null 2>&1; then
-      nslookup "$host" 2>/dev/null | awk '/Address: / {print $2}' | tail -n1
-      return
+      ipv4=${ipv4:-$(nslookup "$host" 2>/dev/null | awk '/Address: / {print $2}' | grep -E '^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$' | tail -n1 || true)}
+      ipv6=${ipv6:-$(nslookup "$host" 2>/dev/null | awk '/Address: / {print $2}' | grep -E ':' | tail -n1 || true)}
     fi
     if command -v dig >/dev/null 2>&1; then
-      dig +short "$host" | head -n1
-      return
+      ipv4=${ipv4:-$(dig +short "$host" | grep -E '^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$' | head -n1 || true)}
+      ipv6=${ipv6:-$(dig +short "$host" | grep -E ':' | head -n1 || true)}
     fi
     if command -v ping >/dev/null 2>&1; then
-      ping -c1 -W1 "$host" 2>/dev/null | head -n1 | sed -n 's/.*(\\([0-9.]*\\)).*/\\1/p'
+      ipv4=${ipv4:-$(ping -c1 -W1 "$host" 2>/dev/null | head -n1 | sed -n 's/.*(\\([0-9.]*\\)).*/\\1/p' | grep -E '^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$' | head -n1 || true)}
+    fi
+    if [[ -n "$ipv4" ]]; then
+      echo "$ipv4"
+      return
+    fi
+    if [[ -n "$ipv6" ]]; then
+      echo "[$ipv6]"
       return
     fi
   }
@@ -50,6 +64,33 @@ if [[ -f "$STATIC_NODES" ]]; then
     fi
   done
 fi
+
+echo "BESU_ROLE=$ROLE"
+echo "BESU_DATA_PATH=$DATA_PATH"
+echo "BESU_GENESIS=$GENESIS"
+echo "BESU_STATIC_NODES=$STATIC_NODES"
+echo "BESU_PERM_CONFIG=$PERM_CONFIG"
+echo "BESU_NETWORK_ID=$NETWORK_ID"
+echo "BESU_P2P_HOST=${P2P_HOST:-}"
+
+if [[ -z "$P2P_HOST" ]]; then
+  if command -v hostname >/dev/null 2>&1; then
+    P2P_HOST=$(hostname -i 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$' | head -n1 || true)
+  fi
+fi
+
+if [[ -n "$P2P_HOST" ]] && [[ "$P2P_HOST" == *:* ]]; then
+  P2P_HOST_IPV6=""
+fi
+
+if [[ -z "$P2P_HOST_IPV6" ]] && [[ "$P2P_HOST" != *:* ]]; then
+  if command -v hostname >/dev/null 2>&1; then
+    P2P_HOST_IPV6=$(hostname -i 2>/dev/null | tr ' ' '\n' | grep -E ':' | head -n1 || true)
+  fi
+fi
+
+echo "Resolved P2P_HOST=${P2P_HOST:-0.0.0.0}"
+echo "Resolved P2P_HOST_IPV6=${P2P_HOST_IPV6:-}"
 
 NODE_KEY_ARGS=""
 if [[ -n "${BESU_NODE_PRIVATE_KEY:-}" ]]; then
@@ -65,9 +106,18 @@ COMMON_ARGS=(
   "--sync-mode=FULL"
   "--min-gas-price=0"
   "--host-allowlist=*"
+  "--p2p-host=${P2P_HOST:-0.0.0.0}"
   "--p2p-port=30303"
-  "--discovery-enabled=false"
+  "--discovery-enabled=${DISCOVERY_ENABLED}"
 )
+
+if [[ -n "$P2P_HOST_IPV6" ]]; then
+  COMMON_ARGS+=("--p2p-host-ipv6=$P2P_HOST_IPV6")
+fi
+
+if [[ "${V5_DISCOVERY_ENABLED}" == "true" ]]; then
+  COMMON_ARGS+=("--Xv5-discovery-enabled")
+fi
 
 if [[ "${BESU_SKIP_STATIC_NODES:-false}" != "true" ]]; then
   if [[ -f "$STATIC_NODES" ]] && [[ -s "$STATIC_NODES" ]]; then
@@ -88,11 +138,7 @@ case "$ROLE" in
     exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS
     ;;
   validator)
-    if [[ -z "${BESU_COINBASE:-}" ]]; then
-      echo "BESU_COINBASE is required for validator" >&2
-      exit 1
-    fi
-    exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS --miner-enabled --miner-coinbase="$BESU_COINBASE"
+    exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS
     ;;
   rpc)
     RPC_ARGS=(
@@ -102,13 +148,6 @@ case "$ROLE" in
       "--rpc-http-port=8545"
       "--rpc-http-cors-origins=*"
     )
-    if [[ "${BESU_ENABLE_MINER:-false}" == "true" ]]; then
-      if [[ -z "${BESU_COINBASE:-}" ]]; then
-        echo "BESU_COINBASE is required when BESU_ENABLE_MINER=true" >&2
-        exit 1
-      fi
-      RPC_ARGS+=("--miner-enabled" "--miner-coinbase=$BESU_COINBASE")
-    fi
     exec besu "${COMMON_ARGS[@]}" $NODE_KEY_ARGS "${RPC_ARGS[@]}"
     ;;
   *)

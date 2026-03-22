@@ -36,7 +36,7 @@ class _TxListPageState extends State<TxListPage> {
       Routes.txListDetails,
       arguments: TxListDetailsPageArgs(
         amount: item.amount.toString(),
-        time: parseDateTime(item.createTime),
+        time: parseDateTime(item.createdAt),
         status: item.status,
         type: item.type,
         description: item.description,
@@ -47,6 +47,12 @@ class _TxListPageState extends State<TxListPage> {
 
   @override
   void initState() {
+    if (!session.hasPermission('wallet.read')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).maybePop();
+      });
+      return;
+    }
     store.fetchList();
     _loadWallet();
     super.initState();
@@ -65,8 +71,14 @@ class _TxListPageState extends State<TxListPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!session.hasPermission('wallet.read')) {
+      return CommonLayout(
+        title: 'Wallet',
+        child: const Center(child: Text('You do not have access to wallet history.')),
+      );
+    }
     return CommonLayout(
-      title: 'DC/EP',
+      title: 'Wallet',
       child: Observer(
         builder: (context) => Column(
           children: <Widget>[buildHeader(), buildBody(), buildFooter()],
@@ -178,7 +190,7 @@ class _TxListPageState extends State<TxListPage> {
           item.type,
           _amountWithSignal(_isExpense(item.type), item.amount),
           item.status,
-          item.createTime,
+          item.createdAt,
           () => _onTap(item),
         );
       },

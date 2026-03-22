@@ -89,7 +89,7 @@ class TWallet extends StatelessWidget {
         theme: ThemeData(
           primaryColor: WalletColor.white,
           textTheme: TextTheme(
-            bodyText2: WalletFont.font_14(
+            bodyMedium: WalletFont.font_14(
               textStyle: TextStyle(
                 color: WalletColor.primary,
                 fontWeight: FontWeight.w400,

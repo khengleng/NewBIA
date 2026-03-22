@@ -27,29 +27,29 @@ class PinInputWidget extends StatelessWidget {
     TextEditingController textEditingController,
     ValueChanged<String> onChanged,
   ) {
-    return PinCodeTextField(
-      showCursor: false,
-      appContext: Get.context!,
-      pinTheme: PinTheme(
-        activeColor: WalletColor.black,
-        inactiveColor: WalletColor.black,
-        shape: PinCodeFieldShape.box,
-        selectedFillColor: WalletColor.primary,
-        borderRadius: BorderRadius.circular(5),
-        fieldHeight: 40,
-        fieldWidth: 40,
-        inactiveFillColor: Colors.white,
-        activeFillColor: Colors.white,
-        borderWidth: 1,
-      ),
+    final pinController =
+        PinInputController(textController: textEditingController);
+
+    return MaterialPinField(
+      pinController: pinController,
       length: 6,
+      theme: MaterialPinTheme(
+        shape: MaterialPinShape.outlined,
+        cellSize: const Size(40, 40),
+        borderRadius: BorderRadius.circular(5),
+        borderColor: WalletColor.black,
+        focusedBorderColor: WalletColor.black,
+        filledBorderColor: WalletColor.black,
+        fillColor: Colors.white,
+        focusedFillColor: Colors.white,
+        filledFillColor: Colors.white,
+        entryAnimation: MaterialPinAnimation.fade,
+        animationDuration: const Duration(milliseconds: 300),
+        showCursor: false,
+      ),
       obscureText: true,
-      animationType: AnimationType.fade,
-      animationDuration: const Duration(milliseconds: 300),
-      enableActiveFill: true,
       keyboardType: TextInputType.number,
       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      controller: textEditingController,
       onChanged: onChanged,
     );
   }

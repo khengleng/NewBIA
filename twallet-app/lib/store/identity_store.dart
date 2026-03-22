@@ -4,7 +4,7 @@ import 'dart:math';
 import 'package:get/get.dart';
 import 'package:json_store/json_store.dart';
 import 'package:mobx/mobx.dart';
-import 'package:more/tuple.dart';
+import 'package:tuple/tuple.dart';
 import 'package:tw_wallet_ui/models/amount.dart';
 import 'package:tw_wallet_ui/models/identity/decentralized_identity.dart';
 import 'package:tw_wallet_ui/models/tw_balance.dart';
@@ -197,11 +197,11 @@ abstract class IdentityStoreBase with Store {
         (identity) => identity
           ..id = const Uuid().v1()
           ..profileInfo.name = e.name
-          ..accountInfo.pubKey = keypair.first
-          ..accountInfo.priKey = keypair.second
+          ..accountInfo.pubKey = keypair.item1
+          ..accountInfo.priKey = keypair.item2
           ..accountInfo.index = e.index
           ..accountInfo.address =
-              BlockChainService.publicKeyToAddress(keypair.first)
+              BlockChainService.publicKeyToAddress(keypair.item1)
           ..dappId = e.dappId
           ..extra = e.extraInfo,
       );

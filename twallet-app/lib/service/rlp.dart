@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:more/tuple.dart';
+import 'package:tuple/tuple.dart';
 import 'package:web3dart/crypto.dart';
 // ignore: implementation_imports
 import 'package:web3dart/src/utils/rlp.dart' as rlp;
@@ -8,11 +8,11 @@ import 'package:web3dart/src/utils/rlp.dart' as rlp;
 List<Uint8List> decode(Uint8List data) {
   final Tuple2<dynamic, Uint8List> decoded = _decode(data);
 
-  if ((decoded.second).isNotEmpty) {
+  if ((decoded.item2).isNotEmpty) {
     throw Exception('invalid remainder');
   }
 
-  return (decoded.first as List<List<int>>)
+  return (decoded.item1 as List<List<int>>)
       .map((v) => Uint8List.fromList(v))
       .toList();
 }
@@ -79,8 +79,8 @@ Tuple2<List<dynamic>, Uint8List> _decode(Uint8List input) {
 
     while (innerRemainder.isNotEmpty) {
       tempDecoded = _decode(innerRemainder);
-      decoded.add(tempDecoded.first as List<int>);
-      innerRemainder = tempDecoded.second;
+      decoded.add(tempDecoded.item1 as List<int>);
+      innerRemainder = tempDecoded.item2;
     }
 
     return Tuple2(decoded, input.sublist(length));
@@ -103,8 +103,8 @@ Tuple2<List<dynamic>, Uint8List> _decode(Uint8List input) {
 
     while (innerRemainder.isNotEmpty) {
       tempDecoded = _decode(innerRemainder);
-      decoded.add(tempDecoded.first as List<int>);
-      innerRemainder = tempDecoded.second;
+      decoded.add(tempDecoded.item1 as List<int>);
+      innerRemainder = tempDecoded.item2;
     }
 
     return Tuple2(decoded, input.sublist(totalLength));

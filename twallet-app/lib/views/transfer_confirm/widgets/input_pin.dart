@@ -37,7 +37,7 @@ class InputPinWidget extends StatefulWidget {
 }
 
 class InputPinWidgetState extends State<InputPinWidget> {
-  late String pinValue;
+  String pinValue = '';
   bool showErrorMsg = false;
 
   Future<bool> validatePin() async {
@@ -87,54 +87,55 @@ class InputPinWidgetState extends State<InputPinWidget> {
       children: <Widget>[
         SizedBox(
           width: double.infinity,
-          child: PinCodeTextField(
-            appContext: context,
+          child: MaterialPinField(
+            pinController: PinInputController(text: pinValue),
             length: 6,
-            showCursor: false,
             obscureText: true,
-            animationType: AnimationType.fade,
-            pinTheme: PinTheme(
-              shape: PinCodeFieldShape.box,
+            theme: MaterialPinTheme(
+              shape: MaterialPinShape.outlined,
               borderWidth: widget.pincodeDialogInput?.borderWidth ?? 1,
               borderRadius: BorderRadius.all(
                 Radius.circular(
                   widget.pincodeDialogInput?.borderRadius ?? 8,
                 ),
               ),
-              fieldHeight: widget.pincodeDialogInput?.size ?? 40,
-              fieldWidth: widget.pincodeDialogInput?.size ?? 40,
-              inactiveColor: WalletTheme.rgbColor(
+              cellSize: Size(
+                widget.pincodeDialogInput?.size ?? 40,
+                widget.pincodeDialogInput?.size ?? 40,
+              ),
+              borderColor: WalletTheme.rgbColor(
                 widget.pincodeDialogInput?.borderColor ?? WalletColor.BLACK,
               ),
-              activeColor: WalletTheme.rgbColor(
+              focusedBorderColor: WalletTheme.rgbColor(
                 widget.pincodeDialogInput?.activeBorderColor ??
                     WalletColor.PRIMARY,
               ),
-              selectedColor: WalletTheme.rgbColor(
+              filledBorderColor: WalletTheme.rgbColor(
                 widget.pincodeDialogInput?.selectedBorderColor ??
                     WalletColor.PRIMARY,
               ),
-              inactiveFillColor: WalletTheme.rgbColor(
+              fillColor: WalletTheme.rgbColor(
                 widget.pincodeDialogInput?.filledColor ?? WalletColor.WHITE,
               ),
-              activeFillColor: WalletTheme.rgbColor(
+              focusedFillColor: WalletTheme.rgbColor(
                 widget.pincodeDialogInput?.activeFillColor ?? WalletColor.WHITE,
               ),
-              selectedFillColor: WalletTheme.rgbColor(
+              filledFillColor: WalletTheme.rgbColor(
                 widget.pincodeDialogInput?.selectedFillColor ??
                     WalletColor.PRIMARY,
               ),
-            ),
-            animationDuration: const Duration(milliseconds: 300),
-            textStyle: WalletFont.font_16(
-              textStyle: TextStyle(
-                color: WalletTheme.rgbColor(
-                  widget.pincodeDialogInput?.textColor ?? WalletColor.BLACK,
+              textStyle: WalletFont.font_16(
+                textStyle: TextStyle(
+                  color: WalletTheme.rgbColor(
+                    widget.pincodeDialogInput?.textColor ?? WalletColor.BLACK,
+                  ),
+                  fontSize: widget.pincodeDialogInput?.textSize ?? 16,
                 ),
-                fontSize: widget.pincodeDialogInput?.textSize ?? 16,
               ),
+              entryAnimation: MaterialPinAnimation.fade,
+              animationDuration: const Duration(milliseconds: 300),
+              showCursor: false,
             ),
-            enableActiveFill: true,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             onChanged: onChanged,

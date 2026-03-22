@@ -129,9 +129,10 @@ class PaymentPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: FlutterBluePlus.instance.state,
-      builder: (BuildContext context, AsyncSnapshot<BluetoothState> snapshot) {
-        if (BluetoothState.on == snapshot.data) {
+      stream: FlutterBluePlus.adapterState,
+      builder: (BuildContext context,
+          AsyncSnapshot<BluetoothAdapterState> snapshot) {
+        if (BluetoothAdapterState.on == snapshot.data) {
           return PaymentScreen(name, address, amount);
         } else {
           return const BluetoothOffScreen();

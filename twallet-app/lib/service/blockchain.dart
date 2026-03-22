@@ -4,7 +4,7 @@ import 'package:bip32/bip32.dart';
 import 'package:bip39/bip39.dart' as bip39;
 import 'package:convert/convert.dart';
 import 'package:ethereum_addresses/ethereum_addresses.dart';
-import 'package:more/tuple.dart';
+import 'package:tuple/tuple.dart';
 
 class BlockChainService {
   static BIP32 _hdWallet(String mnemonics) {

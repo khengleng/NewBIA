@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import 'package:get/get.dart';
 import 'package:tw_wallet_ui/common/application.dart';
 import 'package:tw_wallet_ui/common/dapp_list.dart';
@@ -27,7 +27,7 @@ Future<void> _cleanPrivateData(BuildContext context) async {
       .then((_) => Get.find<DcepStore>().clear())
       .then((_) => Get.find<HealthCertificationStore>().clear())
       .then((_) => Get.find<SecureStorage>().clearAll())
-      .then((_) => clearAllDappStorage(FlutterWebviewPlugin()))
+      .then((_) => clearAllDappStorage())
       .then(
         (_) => Future.delayed(const Duration(seconds: 1)).then((_) {
           dialog.dismiss();
@@ -37,15 +37,13 @@ Future<void> _cleanPrivateData(BuildContext context) async {
       );
 }
 
-Future<void> clearAllDappStorage(
-  FlutterWebviewPlugin flutterWebviewPlugin,
-) async {
-  // ignore: avoid_function_literals_in_foreach_calls
-  dappList.forEach((dapp) async {
-    await flutterWebviewPlugin.launch(dapp.url, hidden: true);
-    await flutterWebviewPlugin.clearCache();
-    await flutterWebviewPlugin.close();
-  });
+Future<void> clearAllDappStorage() async {
+  final WebViewCookieManager cookieManager = WebViewCookieManager();
+  await cookieManager.clearCookies();
+  // Best-effort: per-dapp cache clearing happens when users re-open a dapp.
+  for (final dapp in dappList) {
+    debugPrint('Cleared cookies for dapp: ${dapp.id}');
+  }
 }
 
 class MyPage extends StatelessWidget {

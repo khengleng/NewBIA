@@ -1,23 +1,7 @@
-buildscript {
-    ext.kotlin_version = '1.6.21'
-    ext.android_gradle_version = '7.2.0'
- 
-    repositories {
-        google()
-        jcenter()
-    }
-
-    dependencies {
-        classpath "com.android.tools.build:gradle:$android_gradle_version"
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath 'com.google.gms:google-services:4.3.10'
-    }
-}
-
 allprojects {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
 }
 
@@ -29,6 +13,53 @@ subprojects {
     project.evaluationDependsOn(':app')
 }
 
-task clean(type: Delete) {
-    delete rootProject.buildDir
+subprojects { project ->
+    def applyNamespaceIfMissing = {
+        def androidExt = project.extensions.findByName("android")
+        if (androidExt != null) {
+            def hasNamespaceProperty = androidExt.metaClass.hasProperty(androidExt, "namespace") != null
+            if (hasNamespaceProperty && (androidExt.namespace == null || androidExt.namespace.toString().trim().isEmpty())) {
+                def inferred = project.group?.toString()
+                if (inferred == null || inferred == "unspecified") {
+                    inferred = "com.cambobia.${project.name.replaceAll('[^A-Za-z0-9_]', '_')}"
+                }
+                androidExt.namespace = inferred
+            }
+        }
+    }
+
+    project.plugins.withId("com.android.library") {
+        applyNamespaceIfMissing()
+        project.beforeEvaluate {
+            project.android {
+                compileSdkVersion 36
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+    }
+    project.plugins.withId("com.android.application") {
+        applyNamespaceIfMissing()
+        project.beforeEvaluate {
+            project.android {
+                compileSdkVersion 36
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_17
+                    targetCompatibility JavaVersion.VERSION_17
+                }
+            }
+        }
+    }
+
+    project.tasks.withType(JavaCompile).configureEach {
+        sourceCompatibility = JavaVersion.VERSION_17.toString()
+        targetCompatibility = JavaVersion.VERSION_17.toString()
+        options.compilerArgs.add("-Xlint:-options")
+    }
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.layout.buildDirectory
 }

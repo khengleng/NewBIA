@@ -32,7 +32,7 @@ abstract class Env extends Object implements Built<Env, EnvBuilder> {
   factory Env.fromDefault() {
     const defaultApiBaseUrl = String.fromEnvironment(
       'CAMBOBIA_API_BASE_URL',
-      defaultValue: 'https://www.cambobia.com/api-proxy/api/',
+      defaultValue: 'https://trade.cambobia.com/api-proxy',
     );
     const defaultRpcUrl = String.fromEnvironment(
       'CAMBOBIA_WEB3_RPC_URL',

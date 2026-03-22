@@ -6,30 +6,30 @@ import 'package:tw_wallet_ui/common/http/loading_interceptor.dart';
 import 'package:tw_wallet_ui/models/api_error.dart';
 import 'package:tw_wallet_ui/widgets/hint_dialog.dart';
 
-void showErrorDialog(DioError err) {
+void showErrorDialog(DioException err) {
   String errorMessage = '未知错误';
   DialogType hintType = DialogType.error;
 
-  if (err.type == DioErrorType.connectTimeout ||
-      err.type == DioErrorType.sendTimeout ||
-      err.type == DioErrorType.receiveTimeout) {
+  if (err.type == DioExceptionType.connectionTimeout ||
+      err.type == DioExceptionType.sendTimeout ||
+      err.type == DioExceptionType.receiveTimeout) {
     hintType = DialogType.network;
   }
 
   switch (err.type) {
-    case DioErrorType.connectTimeout:
+    case DioExceptionType.connectionTimeout:
       errorMessage = '连接超时';
       break;
 
-    case DioErrorType.sendTimeout:
+    case DioExceptionType.sendTimeout:
       errorMessage = '发送超时';
       break;
 
-    case DioErrorType.receiveTimeout:
+    case DioExceptionType.receiveTimeout:
       errorMessage = '接收超时';
       break;
 
-    case DioErrorType.cancel:
+    case DioExceptionType.cancel:
       errorMessage = '用户取消';
       break;
 
@@ -62,7 +62,9 @@ Dio _initDio() {
   final Dio dio = Dio()
     ..options = BaseOptions(
       baseUrl: Application.globalEnv.apiGatewayBaseUrl,
-      connectTimeout: Application.globalEnv.apiGatewayConnectTimeout,
+      connectTimeout: Duration(
+        milliseconds: Application.globalEnv.apiGatewayConnectTimeout,
+      ),
     )
     ..interceptors.add(loadingInterceptor);
 
@@ -88,7 +90,8 @@ class HttpClient {
       if (throwError) {
         throw Exception(error);
       } else {
-        showErrorDialog(error as DioError);
+        showErrorDialog(error as DioException);
+        throw Exception(error);
       }
     });
   }
@@ -109,7 +112,8 @@ class HttpClient {
       if (throwError) {
         throw Exception(error);
       } else {
-        showErrorDialog(error as DioError);
+        showErrorDialog(error as DioException);
+        throw Exception(error);
       }
     });
   }
@@ -130,7 +134,8 @@ class HttpClient {
       if (throwError) {
         throw Exception(error);
       } else {
-        showErrorDialog(error as DioError);
+        showErrorDialog(error as DioException);
+        throw Exception(error);
       }
     });
   }

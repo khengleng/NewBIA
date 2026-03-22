@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart';
-import 'package:more/tuple.dart';
+import 'package:tuple/tuple.dart';
 import 'package:tw_wallet_ui/common/application.dart';
 import 'package:tw_wallet_ui/common/device_info.dart';
 import 'package:tw_wallet_ui/common/secure_storage.dart';
@@ -143,9 +143,9 @@ class DAppService {
     final DecentralizedIdentity identity = DecentralizedIdentity(
       (builder) => builder
         ..profileInfo.name = id
-        ..accountInfo.index = keyPair.first
-        ..accountInfo.pubKey = keyPair.second
-        ..accountInfo.priKey = keyPair.third,
+        ..accountInfo.index = keyPair.item1
+        ..accountInfo.pubKey = keyPair.item2
+        ..accountInfo.priKey = keyPair.item3,
     );
     resolve(id, identity.basicInfo());
   }
@@ -160,8 +160,8 @@ class DAppService {
           (identity) => identity
             ..profileInfo.name =
                 DateTime.now().millisecondsSinceEpoch.toString()
-            ..accountInfo.pubKey = keys.first
-            ..accountInfo.priKey = keys.second
+            ..accountInfo.pubKey = keys.item1
+            ..accountInfo.priKey = keys.item2
             ..dappId = dappid
             ..extra = createAccountParam.extra
             ..accountInfo.index = index,
@@ -265,7 +265,7 @@ class DAppService {
   }
 
   static void resolve(String id, dynamic data) {
-    webviewController?.runJavascript(
+    webviewController?.runJavaScript(
       'window.TWallet.resolvePromise("$id", ${json.encode(json.encode(data))})',
     );
   }
@@ -273,7 +273,7 @@ class DAppService {
   static void reject(String id, dynamic data) {
     webviewController
         // ignore: avoid_escaping_inner_quotes
-        ?.runJavascript(
+        ?.runJavaScript(
       'window.TWallet.rejectPromise("$id", ${json.encode(json.encode(data))});',
     );
   }

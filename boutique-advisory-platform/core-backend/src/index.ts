@@ -745,7 +745,14 @@ if (isTradingService) {
 
 
   const unifiedOperationalRoles = ['SUPER_ADMIN', 'PLATFORM_OPERATOR', 'TENANT_OWNER', 'COMPLIANCE_OFFICER'];
-  const pmoRoles = [...unifiedOperationalRoles, 'PORTFOLIO_MANAGER', 'DEAL_LEADER'];
+  const pmoRoles = [
+    ...unifiedOperationalRoles,
+    'PORTFOLIO_MANAGER',
+    'DEAL_LEADER',
+    'SME',
+    'ADVISOR',
+    'INVESTOR',
+  ];
 
 
   app.use('/api/pipeline', authenticateToken, authorizeRoles(...pmoRoles), pipelineRoutes);

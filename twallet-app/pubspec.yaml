@@ -13,8 +13,8 @@ description: A new Flutter project.
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 version: 0.4.0+1
 environment:
-  sdk: ">=2.15.0 <3.0.0"
-  flutter: ^3.0.5
+  sdk: ">=3.8.0 <4.0.0"
+  flutter: ">=3.22.0"
 
 dependencies:
   flutter:
@@ -26,68 +26,66 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.0
   flutter_mobx: ^2.0.4
-  flutter_secure_storage: ^4.2.0
+  flutter_secure_storage: ^9.2.4
   mobx: ^2.0.5
-  pin_code_fields: ^7.3.0
+  pin_code_fields: ^9.1.0
   random_string: ^2.0.1
   encrypt: ^5.0.0
   fluro: ^2.0.3
-  decimal: ^2.1.0
-  dio: ^4.0.4
+  decimal: ^3.2.4
+  dio: ^5.9.2
   bip32: ^2.0.0
   bip39: ^1.0.3
   ethereum_addresses: ^1.0.0
   validators: ^3.0.0
   cached_network_image: ^3.2.0
   json_store: ^2.0.0-nullsafety.0
-  more: ^3.5.0
+  more: ^4.7.0
   uuid: ^3.0.6
   date_format: ^2.0.6
-  magic_sdk: ^1.2.1
-  web3auth_flutter: ^0.0.2
+  magic_sdk: ^6.0.1
+  web3auth_flutter: ^6.3.0
   web3dart: ^2.3.3
-  http: ^0.13.4
+  http: ^1.6.0
   built_value: ^8.1.4
   built_value_generator: ^8.1.4
   built_collection: ^5.1.1
   mockito: ^5.1.0
   flutter_custom_dialog: ^1.3.0
   qr_flutter: ^4.0.0
-  ai_barcode: ^3.2.4
-  permission_handler: ^10.0.0
-  flutter_svg: ^1.0.3
+  mobile_scanner: ^6.0.6
+  permission_handler: ^12.0.1
+  flutter_svg: ^2.2.3
   flutter_screenutil: ^5.3.1
   custom_radio_grouped_button: ^2.1.1
   convert: ^2.1.1
-  package_info: ^2.0.2
-  device_info: ^2.0.0
+  device_info_plus: ^10.1.0
   get: ^4.6.1
-  intl: ^0.17.0
-  webview_flutter: ^3.0.4
-  sentry: ^6.9.0
+  intl: ^0.20.2
+  webview_flutter: ^4.9.0
+  sentry: ^9.15.0
   crypto: ^2.1.5
   flutter_native_splash: ^2.0.5
-  corsac_jwt: ^1.0.0-nullsafety.1
+  corsac_jwt: ^2.0.2
   path_provider: ^1.6.27
-  # keep eyes on https://github.com/fluttercommunity/flutter_webview_plugin/issues/921
-  flutter_webview_plugin: ^0.4.0
+  tuple: ^2.0.2
   collection: ^1.15.0
   flutter_ble_lib_ios_15: ^2.5.2
-  flutter_ble_peripheral: ^1.0.0
+  flutter_ble_peripheral: ^2.1.0
   crypton: ^2.0.3
   search_choices: ^2.1.1
-  connectivity: ^3.0.2
+  connectivity_plus: ^6.0.5
   quick_log: ^5.2.1
-  flutter_blue_plus: ^1.3.0
-  duration: ^3.0.10
+  flutter_blue_plus: ^2.2.1
+  duration: ^4.0.3
   rational: ^2.1.0
-  flutter_chat_ui: ^1.5.5
+  flutter_chat_ui: ^2.9.2
   flutter_chat_types: ^3.4.3
-  firebase_core: ^1.13.1
-  cloud_firestore: ^3.4.3
+  firebase_core: ^3.15.2
+  cloud_firestore: ^5.6.12
   flutter_firebase_chat_core: ^1.5.2
-  firebase_analytics: ^9.1.2
-  firebase_auth: ^3.6.2
+  firebase_analytics: ^11.6.0
+  firebase_auth: ^5.7.0
   json_annotation: ^4.6.0
 
 dev_dependencies:
@@ -95,16 +93,24 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   json_serializable: ^6.1.4
-  lint: ^1.2.0
+  lint: ^2.8.0
   mobx_codegen: ^2.0.5
 
 dependency_overrides:
   args: ^2.3.0
   convert: ^3.0.0
   crypto: ^3.0.0
+  crypto_keys:
+    path: third_party/crypto_keys
+  flutter_custom_dialog:
+    path: third_party/flutter_custom_dialog
+  flutter_ble_lib_ios_15:
+    path: third_party/flutter_ble_lib_ios_15
+  magic_sdk:
+    path: third_party/magic_sdk
   logging: ^1.0.0
   path_provider: ^2.0.9
-  pointycastle: ^3.5.1
+  pointycastle: 3.5.1
   sqflite: ^2.0.0+3
 
 # For information on the generic Dart part of this file, see the

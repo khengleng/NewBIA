@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_chat_core/flutter_chat_core.dart' as core;
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:flutter_firebase_chat_core/flutter_firebase_chat_core.dart';
@@ -24,6 +25,9 @@ class ChatPage extends StatefulWidget {
 }
 
 class _ChatPageState extends State<ChatPage> {
+  final core.InMemoryChatController _chatController =
+      core.InMemoryChatController();
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +49,7 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId = FirebaseChatCore.instance.firebaseUser?.uid ?? '';
     return CommonLayout(
       customTitle: ChatTitleBar(
         userName: widget.room.name ?? widget.user!.firstName ?? '',
@@ -63,17 +68,29 @@ class _ChatPageState extends State<ChatPage> {
               builder: (context, snapshot) {
                 return SafeArea(
                   bottom: false,
-                  child: Chat(
-                    theme: DarkChatTheme(
-                      inputBackgroundColor: WalletColor.white,
-                      inputTextColor: WalletColor.black,
-                      primaryColor: WalletColor.primary,
-                    ),
-                    messages: snapshot.data ?? [],
-                    onSendPressed: _handleSendPressed,
-                    user: types.User(
-                      id: FirebaseChatCore.instance.firebaseUser?.uid ?? '',
-                    ),
+                  child: Builder(
+                    builder: (context) {
+                      final coreMessages =
+                          (snapshot.data ?? const <types.Message>[])
+                              .map(_mapMessage)
+                              .toList();
+                      _chatController.setMessages(coreMessages);
+                      return Chat(
+                        theme: core.ChatTheme.fromThemeData(
+                          Theme.of(context).copyWith(
+                            colorScheme: Theme.of(context)
+                                .colorScheme
+                                .copyWith(primary: WalletColor.primary),
+                          ),
+                        ),
+                        chatController: _chatController,
+                        currentUserId: currentUserId,
+                        resolveUser: _resolveUser,
+                        onMessageSend: (text) => _handleSendPressed(
+                          types.PartialText(text: text),
+                        ),
+                      );
+                    },
                   ),
                 );
               },
@@ -82,6 +99,44 @@ class _ChatPageState extends State<ChatPage> {
         ),
       ),
     );
+  }
+
+  core.Message _mapMessage(types.Message message) {
+    final createdAt = message.createdAt != null
+        ? DateTime.fromMillisecondsSinceEpoch(message.createdAt!)
+        : null;
+
+    if (message is types.TextMessage) {
+      return core.Message.text(
+        id: message.id,
+        authorId: message.author.id,
+        createdAt: createdAt,
+        text: message.text,
+      );
+    }
+
+    if (message is types.ImageMessage) {
+      return core.Message.text(
+        id: message.id,
+        authorId: message.author.id,
+        createdAt: createdAt,
+        text: message.name ?? 'Image',
+      );
+    }
+
+    return core.Message.text(
+      id: message.id,
+      authorId: message.author.id,
+      createdAt: createdAt,
+      text: 'Unsupported message',
+    );
+  }
+
+  Future<core.User?> _resolveUser(core.UserID id) async {
+    if (widget.user != null && widget.user!.id == id) {
+      return core.User(id: id, name: widget.user!.firstName);
+    }
+    return core.User(id: id);
   }
 }
 

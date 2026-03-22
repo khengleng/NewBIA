@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:tw_wallet_ui/views/backup_mnemonics/backup_mnemonics.dart';
 import 'package:tw_wallet_ui/views/confirm_mnemonics/confirm_mnemonics.dart';
 import 'package:tw_wallet_ui/views/dapp/dapp.dart';
+import 'package:tw_wallet_ui/views/health_certificate/health_certificate.dart';
 import 'package:tw_wallet_ui/views/home/home.dart';
 import 'package:tw_wallet_ui/views/home/identity/identity_new_page.dart';
 import 'package:tw_wallet_ui/views/home/my/message_page.dart';
@@ -104,6 +105,11 @@ Handler transferConfirmHandler = Handler(
   },
 );
 
+Handler certificateHandler = Handler(
+  handlerFunc: (BuildContext? context, Map<String, List<String>> params) {
+    return HealthCertificatePage(id: params['id']!.first);
+  },
+);
 
 Handler qrPageHandler = Handler(
   handlerFunc: (BuildContext? context, Map<String, List<String>> params) {

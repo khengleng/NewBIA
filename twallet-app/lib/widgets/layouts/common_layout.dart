@@ -67,7 +67,7 @@ class CommonLayout extends StatelessWidget {
               displayColor: Colors.black,
               decorationColor: Colors.black,
             )
-            .bodyText2,
+            .bodyMedium,
         titleTextStyle: Theme.of(context)
             .textTheme
             .apply(
@@ -75,7 +75,7 @@ class CommonLayout extends StatelessWidget {
               displayColor: Colors.black,
               decorationColor: Colors.black,
             )
-            .headline6,
+            .titleLarge,
       ),
       bottomNavigationBar:
           Theme(data: Theme.of(context), child: Container(height: 0)),

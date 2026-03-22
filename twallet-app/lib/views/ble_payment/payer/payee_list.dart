@@ -211,12 +211,12 @@ class PayeeListPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder(
-      stream: flutter_blue.FlutterBluePlus.instance.state,
+      stream: flutter_blue.FlutterBluePlus.adapterState,
       builder: (
         BuildContext context,
-        AsyncSnapshot<flutter_blue.BluetoothState> snapshot,
+        AsyncSnapshot<flutter_blue.BluetoothAdapterState> snapshot,
       ) {
-        if (flutter_blue.BluetoothState.on == snapshot.data) {
+        if (flutter_blue.BluetoothAdapterState.on == snapshot.data) {
           return PayeeListScreen(_identity);
         } else {
           return const BluetoothOffScreen();

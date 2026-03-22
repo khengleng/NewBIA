@@ -31,7 +31,9 @@ class MobileDashboardStore extends GetxController {
       }
 
       if (_session.hasPermission('deal.list')) {
-        final response = await _apiProvider.fetchDeals();
+        final primaryRole = _session.me.value?.primaryRole ?? '';
+        final platform = primaryRole == 'INVESTOR' ? 'trading' : 'core';
+        final response = await _apiProvider.fetchDeals(platform: platform);
         final data = response.data as Map<String, dynamic>? ?? const {};
         deals.assignAll((data['deals'] as List<dynamic>? ?? data['items'] as List<dynamic>? ?? const []));
       }

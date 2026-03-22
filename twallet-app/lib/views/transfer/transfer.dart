@@ -39,6 +39,13 @@ class TransferPageState extends State<TransferPage> {
   void initState() {
     super.initState();
     _transferStore.setupErrorDisposers();
+    if (!session.hasPermission('payment.create')) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialogSimple(DialogType.error, 'You do not have permission to make payments.');
+        Navigator.of(context).maybePop();
+      });
+      return;
+    }
     _transferStore.payerAccount = session.me.value?.user.email ??
         session.me.value?.user.id ??
         '';

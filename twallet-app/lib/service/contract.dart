@@ -126,8 +126,12 @@ class Contract {
           ),
         )
         .listen(
-          (event) =>
-              onListen(listenedEvent.decodeResults(event.topics!, event.data!)),
+          (event) => onListen(
+            listenedEvent.decodeResults(
+              event.topics?.whereType<String>().toList() ?? const [],
+              event.data ?? '',
+            ),
+          ),
         );
   }
 

@@ -68,6 +68,7 @@ class _MobileDashboardPageState extends State<MobileDashboardPage> {
   Widget _buildRoleSummary() {
     final roles = _session.me.value?.roles ?? const [];
     final platforms = _session.me.value?.platforms ?? const {};
+    final paymentMode = _session.me.value?.paymentMode ?? 'P2P_C2B_C2C';
     return Card(
       elevation: 0,
       color: WalletColor.backgroundWhite,
@@ -82,6 +83,8 @@ class _MobileDashboardPageState extends State<MobileDashboardPage> {
             Text(
               'Trading: ${platforms['trading'] == true ? "Enabled" : "Disabled"}',
             ),
+            const SizedBox(height: 6),
+            Text('Payment Mode: $paymentMode'),
           ],
         ),
       ),

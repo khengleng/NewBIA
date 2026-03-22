@@ -1,7 +1,7 @@
 import 'package:fluro/fluro.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:more/tuple.dart';
+import 'package:tuple/tuple.dart';
 import 'package:tw_wallet_ui/common/application.dart';
 import 'package:tw_wallet_ui/common/theme/color.dart';
 import 'package:tw_wallet_ui/common/theme/font.dart';
@@ -32,7 +32,7 @@ class ConfirmMnemonicsState extends State<ConfirmMnemonicsPage> {
       wordWidgets.add(
         Container(
           padding: const EdgeInsets.all(10),
-          child: Text(tag.second, style: WalletFont.font_16()),
+          child: Text(tag.item2, style: WalletFont.font_16()),
         ),
       );
     }
@@ -91,7 +91,7 @@ class ConfirmMnemonicsState extends State<ConfirmMnemonicsPage> {
       words.shuffle();
     }
     final bool buttonDisabled =
-        selectedWords.map((tuple) => tuple.second).toList().join(' ') !=
+        selectedWords.map((tuple) => tuple.item2).toList().join(' ') !=
             store.mnemonics;
 
     return CommonLayout(

@@ -20,10 +20,16 @@ export const config = {
   mobileAppUrl: process.env.MOBILE_APP_URL || 'https://mobile-app-production-bf9a.up.railway.app',
   corsOrigins: normalizeOrigins(process.env.CORS_ORIGIN || process.env.MOBILE_APP_URL || 'https://mobile-app-production-bf9a.up.railway.app'),
   identityServiceUrl: requireEnv('IDENTITY_SERVICE_URL'),
+  tradeIdentityServiceUrl: process.env.TRADE_IDENTITY_SERVICE_URL
+    || process.env.RAILWAY_SERVICE_BIAIDENTITYTRADE_URL
+    || '',
   walletServiceUrl: requireEnv('WALLET_SERVICE_URL'),
   fundingServiceUrl: requireEnv('FUNDING_SERVICE_URL'),
   marketServiceUrl: requireEnv('MARKET_SERVICE_URL'),
   tradeApiUrl: requireEnv('TRADE_API_URL'),
+  coreBackendUrl: process.env.CORE_BACKEND_URL
+    || process.env.RAILWAY_SERVICE_BIA_CORE_BACKEND_URL
+    || '',
   blockchainGatewayUrl: process.env.BLOCKCHAIN_GATEWAY_URL || '',
   tradingFrontendHost: process.env.TRADING_FRONTEND_HOST || 'trade.cambobia.com',
 }

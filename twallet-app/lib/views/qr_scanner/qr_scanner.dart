@@ -1,6 +1,6 @@
-import 'package:ai_barcode/ai_barcode.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:tw_wallet_ui/common/application.dart';
 
@@ -11,15 +11,17 @@ class QrScannerPage extends StatefulWidget {
 
 class QrScannerPageState extends State<QrScannerPage>
     with WidgetsBindingObserver {
-  late ScannerController _scannerController;
+  final MobileScannerController _scannerController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+  );
 
-  Future checkAndRequirePermission() async {
+  Future<bool> checkAndRequirePermission() async {
     final PermissionStatus status = await Permission.camera.status;
     if (!status.isGranted) {
       if (status.isDenied ||
           status.isRestricted ||
           status.isPermanentlyDenied) {
-        return showCupertinoDialog(
+        await showCupertinoDialog(
           context: context,
           builder: (BuildContext context) {
             return CupertinoAlertDialog(
@@ -42,6 +44,7 @@ class QrScannerPageState extends State<QrScannerPage>
             );
           },
         );
+        return false;
       } else {
         await Permission.camera.request();
       }
@@ -54,40 +57,28 @@ class QrScannerPageState extends State<QrScannerPage>
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      return Future.delayed(const Duration(milliseconds: 500)).then((_) {
-        checkAndRequirePermission().then((isGranted) {
-          if (isGranted is bool && isGranted) {
-            _scannerController.startCamera();
-            _scannerController.startCameraPreview();
-          } else {
-            Navigator.pop(context, null);
-          }
-        });
-      });
+      await Future.delayed(const Duration(milliseconds: 500));
+      final isGranted = await checkAndRequirePermission();
+      if (!mounted) return;
+      if (isGranted) {
+        _scannerController.start();
+      } else {
+        Navigator.pop(context, null);
+      }
     });
 
     WidgetsBinding.instance.addObserver(this);
-    _scannerController = ScannerController(
-      scannerResult: (String result) {
-        Navigator.pop(context, result);
-      },
-    );
   }
 
   @override
   void dispose() {
-    _scannerController.stopCameraPreview();
-    _scannerController.stopCamera();
+    _scannerController.dispose();
     super.dispose();
   }
 
   @override
   void deactivate() {
-    if (_scannerController.isStartCameraPreview) {
-      _scannerController.stopCameraPreview();
-    } else {
-      _scannerController.startCameraPreview();
-    }
+    _scannerController.stop();
     super.deactivate();
   }
 
@@ -104,8 +95,17 @@ class QrScannerPageState extends State<QrScannerPage>
             return Stack(
               fit: StackFit.expand,
               children: <Widget>[
-                PlatformAiBarcodeScannerWidget(
-                  platformScannerController: _scannerController,
+                MobileScanner(
+                  controller: _scannerController,
+                  onDetect: (capture) {
+                    final barcode = capture.barcodes.isNotEmpty
+                        ? capture.barcodes.first
+                        : null;
+                    final value = barcode?.rawValue;
+                    if (value != null && value.isNotEmpty) {
+                      Navigator.pop(context, value);
+                    }
+                  },
                 ),
                 Container(
                   padding: EdgeInsets.only(
@@ -246,8 +246,16 @@ class QrScannerPageState extends State<QrScannerPage>
           ],
         ),
       );
-    } else {
-      return Container();
     }
+
+    return SizedBox(
+      width: borderWidth,
+      height: borderHeight,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.green, width: 3),
+        ),
+      ),
+    );
   }
 }

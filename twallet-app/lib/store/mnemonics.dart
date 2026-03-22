@@ -1,7 +1,7 @@
 import 'package:bip39/bip39.dart' as bip39;
 import 'package:get/get.dart';
 import 'package:mobx/mobx.dart';
-import 'package:more/tuple.dart';
+import 'package:tuple/tuple.dart';
 import 'package:tw_wallet_ui/common/secure_storage.dart';
 import 'package:tw_wallet_ui/models/identity/account_info.dart';
 import 'package:tw_wallet_ui/service/blockchain.dart';
@@ -24,12 +24,12 @@ class MnemonicsStore extends MnemonicsBase
   late Tuple2<String, String> indexZeroKeypair;
 
   MnemonicsStore(Tuple2<int, String> value) : super(value) {
-    generateIndexZeroKeys(value.second);
+    generateIndexZeroKeys(value.item2);
   }
 
-  String get firstPublicKey => indexZeroKeypair.first;
+  String get firstPublicKey => indexZeroKeypair.item1;
 
-  String get firstPrivateKey => indexZeroKeypair.second;
+  String get firstPrivateKey => indexZeroKeypair.item2;
 
   void generateIndexZeroKeys(String mnemonics) {
     indexZeroKeypair = BlockChainService.keypairFromMnenomics(mnemonics);
@@ -41,7 +41,7 @@ class MnemonicsStore extends MnemonicsBase
       mnemonics,
       nextIndex,
     );
-    return Tuple3(nextIndex, keyPair.first, keyPair.second);
+    return Tuple3(nextIndex, keyPair.item1, keyPair.item2);
   }
 
   Tuple2<String, String> indexKeys(int index) {
@@ -67,7 +67,7 @@ class MnemonicsStore extends MnemonicsBase
   void brandNew({String? mnemonics}) {
     //the index 0 is used to call save identities contract
     value = Tuple2(identityStartIndex, mnemonics ?? bip39.generateMnemonic());
-    generateIndexZeroKeys(value.second);
+    generateIndexZeroKeys(value.item2);
   }
 
   static Future<MnemonicsStore> init() async {
@@ -97,9 +97,9 @@ class MnemonicsStore extends MnemonicsBase
         AccountInfo(
           (accountInfo) => accountInfo
             ..index = index
-            ..address = BlockChainService.publicKeyToAddress(keypair.first)
-            ..pubKey = keypair.first
-            ..priKey = keypair.second,
+            ..address = BlockChainService.publicKeyToAddress(keypair.item1)
+            ..pubKey = keypair.item1
+            ..priKey = keypair.item2,
         ),
       ),
     );
@@ -116,16 +116,16 @@ abstract class MnemonicsBase with Store {
   Tuple2<int, String> value;
 
   @computed
-  int get index => value.first;
+  int get index => value.item1;
 
-  set index(int newIndex) => value = value.withFirst(newIndex);
+  set index(int newIndex) => value = value.withItem1(newIndex);
 
   @computed
-  String get mnemonics => value.second;
+  String get mnemonics => value.item2;
 
   @action
   Future<void> save({int newIndex = 0}) async {
-    value = Tuple2(newIndex, value.second);
+    value = Tuple2(newIndex, value.item2);
 
     final SecureStorage secureStorage = Get.find();
     await secureStorage.set(

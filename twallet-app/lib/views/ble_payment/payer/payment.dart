@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_ble_lib_ios_15/flutter_ble_lib.dart';
 import 'package:get/get.dart';
-import 'package:more/tuple.dart';
+import 'package:tuple/tuple.dart';
 import 'package:tw_wallet_ui/common/theme/color.dart';
 import 'package:tw_wallet_ui/common/theme/index.dart';
 import 'package:tw_wallet_ui/models/dcep/dcep.dart';
@@ -211,8 +211,8 @@ class _PaymentState extends State<Payment> {
               Session(
                 widget._identity.address,
                 widget._identity.accountInfo.pubKey,
-                characteristics.first,
-                characteristics.second,
+                characteristics.item1,
+                characteristics.item2,
               ).run(_onWaitSignPayment, _onStateUpdate);
             } else {
               _paymentProgress.value = PaymentProgress.notSupported;

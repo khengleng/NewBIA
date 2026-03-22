@@ -20,7 +20,7 @@ class IdentityDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final DecentralizedIdentity? identity = identityStore.getIdentityById(id);
     return CommonLayout(
-      title: identity.profileInfo.name,
+      title: identity?.profileInfo.name ?? '',
       child: Container(
         margin: const EdgeInsets.only(top: 24),
         padding: const EdgeInsets.symmetric(horizontal: 24),

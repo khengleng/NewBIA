@@ -2,7 +2,7 @@ import 'dart:collection';
 
 import 'dart:isolate';
 
-import 'package:connectivity/connectivity.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:get/get.dart';
 import 'package:json_store/json_store.dart';
 import 'package:quick_log/quick_log.dart';
@@ -26,7 +26,9 @@ class OfflineTxStore {
     }
 
     _connectivity.onConnectivityChanged.listen((res) {
-      if (res != ConnectivityResult.none) {
+      final bool isOffline =
+          res.isEmpty || res.contains(ConnectivityResult.none);
+      if (!isOffline) {
         if (txQueue.value.isNotEmpty) {
           for (final TxReceive? tx in txQueue.value) {
             _sendPort.send(tx);
@@ -47,8 +49,10 @@ class OfflineTxStore {
     const Logger log = Logger('offlineTxStore');
 
     receivePort.listen((tx) async {
-      if (!DeviceInfo.isPhysicalDevice ||
-          ConnectivityResult.none != await connectivity.checkConnectivity()) {
+      final results = await connectivity.checkConnectivity();
+      final bool isOffline =
+          results.isEmpty || results.contains(ConnectivityResult.none);
+      if (!DeviceInfo.isPhysicalDevice || !isOffline) {
         final TxReceive offlineTx = tx as TxReceive;
         try {
           await Get.find<ApiProvider>().transferDcepV2(
@@ -80,7 +84,10 @@ class OfflineTxStore {
     await _store.setItem(_itemKey(tx), tx.toJson()).then((_) async {
       txQueue.value.add(tx);
       txQueue.refresh();
-      if (ConnectivityResult.none != await _connectivity.checkConnectivity()) {
+      final results = await _connectivity.checkConnectivity();
+      final bool isOffline =
+          results.isEmpty || results.contains(ConnectivityResult.none);
+      if (!isOffline) {
         _sendPort.send(tx);
       }
     });

@@ -6,6 +6,7 @@ class MobileMe {
   final List<String> permissions;
   final Map<String, bool> platforms;
   final String? primaryRole;
+  final String? paymentMode;
 
   const MobileMe({
     required this.user,
@@ -13,6 +14,7 @@ class MobileMe {
     required this.permissions,
     required this.platforms,
     required this.primaryRole,
+    required this.paymentMode,
   });
 
   factory MobileMe.fromJson(Map<String, dynamic> json) {
@@ -36,6 +38,7 @@ class MobileMe {
       permissions: permissions,
       platforms: platforms,
       primaryRole: json['primaryRole']?.toString(),
+      paymentMode: json['paymentMode']?.toString(),
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'dart:collection';
 
-import 'package:connectivity/connectivity.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
@@ -136,7 +136,7 @@ class _BlePaymentHomeState extends State<BlePaymentHome> {
             '网络已关闭，请打开网络同步账户信息',
             style: Theme.of(context)
                 .primaryTextTheme
-                .subtitle1
+                .titleMedium
                 ?.copyWith(color: Colors.white),
           ),
         ],
@@ -230,11 +230,11 @@ class _BlePaymentHomeState extends State<BlePaymentHome> {
       final DecentralizedIdentity identity =
           Get.find<IdentityStore>().selectedIdentity!;
 
-      return FutureBuilder<ConnectivityResult>(
+      return FutureBuilder<List<ConnectivityResult>>(
         future: _connectivity.checkConnectivity(),
         builder: (
           BuildContext context,
-          AsyncSnapshot<ConnectivityResult?> snapshot,
+          AsyncSnapshot<List<ConnectivityResult>?> snapshot,
         ) {
           if (null == snapshot.data) {
             return Container();
@@ -244,13 +244,18 @@ class _BlePaymentHomeState extends State<BlePaymentHome> {
               stream: _connectivity.onConnectivityChanged,
               builder: (
                 BuildContext context,
-                AsyncSnapshot<ConnectivityResult> snapshot,
+                AsyncSnapshot<List<ConnectivityResult>> snapshot,
               ) {
+                final results = snapshot.data ?? const <ConnectivityResult>[];
+                final bool isOffline =
+                    results.isEmpty || results.contains(ConnectivityResult.none);
                 if (!isNonceSynced &&
-                    ConnectivityResult.none == snapshot.data) {
-                  return _buildNetworkOffScreen(snapshot.data);
+                    isOffline) {
+                  return _buildNetworkOffScreen(
+                    results.isEmpty ? ConnectivityResult.none : results.first,
+                  );
                 } else if (!isNonceSynced &&
-                    ConnectivityResult.none != snapshot.data) {
+                    !isOffline) {
                   return FutureBuilder<int>(
                     future: Get.find<ContractService>()
                         .nftTokenContract

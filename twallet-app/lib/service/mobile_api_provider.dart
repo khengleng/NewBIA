@@ -68,8 +68,11 @@ class MobileApiProvider {
     return _httpClient.post('/api/mobile/wallet/transfer', payload, throwError: true);
   }
 
-  Future<Response> fetchDeals() {
-    return _httpClient.get('/api/mobile/deals', throwError: true);
+  Future<Response> fetchDeals({String? platform}) {
+    final query = platform == null || platform.isEmpty
+        ? ''
+        : '?platform=${Uri.encodeQueryComponent(platform)}';
+    return _httpClient.get('/api/mobile/deals$query', throwError: true);
   }
 
   Future<Response> fetchListings({Map<String, dynamic>? query}) {
