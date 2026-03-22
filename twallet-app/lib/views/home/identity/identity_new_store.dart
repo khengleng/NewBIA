@@ -8,6 +8,7 @@ import 'package:tw_wallet_ui/store/mnemonics.dart';
 import 'package:tw_wallet_ui/store/web3auth_store.dart';
 import 'package:tw_wallet_ui/views/home/identity/date_validator.dart';
 import 'package:tw_wallet_ui/service/mobile_api_provider.dart';
+import 'package:tw_wallet_ui/widgets/hint_dialog.dart';
 import 'package:uuid/uuid.dart';
 import 'package:validators/validators.dart';
 
@@ -160,7 +161,12 @@ Future<void> _bindDidIfPossible(DecentralizedIdentity identity) async {
   try {
     if (Get.isRegistered<MobileApiProvider>()) {
       final MobileApiProvider api = Get.find<MobileApiProvider>();
-      await api.bindDid(identity.did.toString());
+      final response = await api.bindDid(identity.did.toString());
+      if (response.statusCode != null &&
+          response.statusCode! >= 200 &&
+          response.statusCode! < 300) {
+        showDialogSimple(DialogType.success, 'DID linked');
+      }
     }
   } catch (_) {
     // Ignore bind failures for now (e.g., not logged in or offline).
