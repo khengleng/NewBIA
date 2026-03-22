@@ -96,7 +96,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         // Initialize socket connection
         if (!socketRef.current) {
             const socket = io(socketOrigin, {
-                path: '/api-proxy/socket.io',
+                path: '/api-proxy/socket-io',
                 withCredentials: true,
                 transports: ['websocket'],
                 upgrade: false,

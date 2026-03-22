@@ -48,6 +48,12 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname.startsWith('/api-proxy/socket.io')) {
+    const url = req.nextUrl.clone();
+    url.pathname = pathname.replace('/api-proxy/socket.io', '/api-proxy/socket-io');
+    return NextResponse.rewrite(url);
+  }
+
   const isAuthenticated = hasCoreSessionCookie(req);
 
   // Root redirect logic
