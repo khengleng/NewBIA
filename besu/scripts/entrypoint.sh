@@ -30,12 +30,7 @@ if [[ -n "${BESU_PERMISSIONS_B64:-}" ]]; then
 fi
 
 if [[ -f "$STATIC_NODES" ]]; then
-  HOSTS=$(awk '{
-    while (match($0, /[a-z0-9-]+\.railway\.internal/)) {
-      print substr($0, RSTART, RLENGTH)
-      $0 = substr($0, RSTART + RLENGTH)
-    }
-  }' "$STATIC_NODES" | sort -u || true)
+  HOSTS=$(grep -oE '[a-z0-9-]+(\\.[a-z0-9-]+)*\\.railway\\.internal' "$STATIC_NODES" | sort -u || true)
   resolve_host() {
     local host=$1
     local ipv4=""
@@ -66,6 +61,7 @@ if [[ -f "$STATIC_NODES" ]]; then
   }
   for HOST in $HOSTS; do
     IP=$(resolve_host "$HOST")
+    echo "Resolved $HOST -> ${IP:-unresolved}"
     if [[ -n "$IP" ]]; then
       sed -i "s/${HOST}/${IP}/g" "$STATIC_NODES" "$PERM_CONFIG" 2>/dev/null || true
     fi
