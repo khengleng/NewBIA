@@ -55,7 +55,8 @@ function resolveBackendBase(): string {
 async function proxySocket(req: NextRequest): Promise<NextResponse> {
   const base = resolveBackendBase();
   const suffix = req.nextUrl.pathname.replace('/api-proxy/socket.io', '');
-  const upstreamUrl = `${base}/socket.io${suffix}${req.nextUrl.search}`;
+  const socketPath = suffix ? `/socket.io${suffix}` : '/socket.io/';
+  const upstreamUrl = `${base}${socketPath}${req.nextUrl.search}`;
 
   const headers = new Headers(req.headers);
   headers.set('x-forwarded-host', req.nextUrl.host);
