@@ -8,6 +8,12 @@ import 'package:tw_wallet_ui/models/identity/decentralized_identity.dart';
 
 class FirebaseService {
   Future<void> initFirebase() async {
+    // Disable Firebase initialization in debug to avoid invalid API key errors
+    // until proper google-services.json is configured.
+    if (const bool.fromEnvironment('dart.vm.product') == false) {
+      log('Firebase init skipped (debug build).');
+      return;
+    }
     try {
       await Firebase.initializeApp();
     } catch (e) {
