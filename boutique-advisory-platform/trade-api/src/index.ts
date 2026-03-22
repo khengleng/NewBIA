@@ -96,6 +96,7 @@ import adminDataGovernanceRoutes from './routes/admin-data-governance';
 import adminReconciliationRoutes from './routes/admin-reconciliation';
 import adminSecurityRoutes from './routes/admin-security';
 import mobileRoutes from './routes/mobile';
+import mobileAuthRoutes from './routes/mobile-auth';
 import adminBotRoutes from './routes/admin-bot';
 
 // Core Feature Routes
@@ -758,7 +759,8 @@ app.use('/api', (req: express.Request, res: express.Response, next: express.Next
     || fullPath.includes('/auth/login')
     || fullPath.includes('/auth/logout')
     || req.path.startsWith('/mobile/chain-rpc')
-    || fullPath.includes('/mobile/chain-rpc');
+    || fullPath.includes('/mobile/chain-rpc')
+    || fullPath.includes('/mobile/auth/sso/exchange');
 
   if (isBypassRoute) {
     return next();
@@ -781,6 +783,7 @@ app.use('/api', (req: express.Request, res: express.Response, next: express.Next
 app.use('/api/auth', authLimiter, proxyService(IDENTITY_SERVICE_URL));
 app.use('/api/wallet', authenticateToken, proxyService(WALLET_SERVICE_URL));
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/mobile/auth', mobileAuthRoutes);
 app.post('/api/mobile/chain-rpc', async (req: express.Request, res: express.Response) => {
   try {
     if (!BESU_RPC_URL) {

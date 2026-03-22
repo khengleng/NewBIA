@@ -2,11 +2,13 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get/get.dart';
 import 'package:tw_wallet_ui/common/dapp_list.dart';
 import 'package:tw_wallet_ui/common/device_info.dart';
 import 'package:tw_wallet_ui/common/theme/color.dart';
 import 'package:tw_wallet_ui/models/webview/webview_request.dart';
 import 'package:tw_wallet_ui/service/dapp.dart';
+import 'package:tw_wallet_ui/service/mobile_api_provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class DAppPage extends StatefulWidget {
@@ -62,14 +64,34 @@ class DAppPageState extends State<DAppPage> {
           },
         ),
       )
-      ..loadRequest(Uri.parse(getDappById(widget.id).url));
+      ..loadRequest(Uri.parse('about:blank'));
 
     DAppService.webviewController = _controller;
     DAppService.dappid = widget.id;
+
+    _loadInitialUrl();
   }
 
   DAppInfo getDappById(String? id) {
     return dappList.firstWhere((dapp) => dapp.id == id);
+  }
+
+  Future<void> _loadInitialUrl() async {
+    final dapp = getDappById(widget.id);
+    var url = dapp.url;
+    if (dapp.id == 'cambobia-trade') {
+      try {
+        if (Get.isRegistered<MobileApiProvider>()) {
+          final api = Get.find<MobileApiProvider>();
+          url = await api.fetchTradingSsoLink(next: '/dashboard');
+        }
+      } catch (_) {
+        // Fall back to the raw trading URL if SSO fails.
+        url = dapp.url;
+      }
+    }
+
+    await _controller.loadRequest(Uri.parse(url));
   }
 
   Future<bool> onBack() async {

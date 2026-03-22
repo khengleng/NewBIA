@@ -125,4 +125,20 @@ class MobileApiProvider {
   Future<Response> bindDid(String did) {
     return _httpClient.post('/api/mobile/identity/did/bind', {'did': did}, throwError: true);
   }
+
+  Future<String> fetchTradingSsoLink({String? next}) {
+    final suffix = (next != null && next.isNotEmpty)
+        ? '?next=${Uri.encodeQueryComponent(next)}'
+        : '';
+    return _httpClient
+        .get('/api/mobile/auth/sso-link$suffix', throwError: true)
+        .then((response) {
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final link = data['redirectUrl'] ?? data['url'];
+        if (link is String && link.isNotEmpty) return link;
+      }
+      throw Exception('SSO link not available');
+    });
+  }
 }
