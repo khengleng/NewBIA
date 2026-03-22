@@ -141,7 +141,7 @@ case "$ROLE" in
   bootnode)
     if [[ "${RPC_HTTP_ENABLED}" == "true" ]]; then
       RPC_ARGS=(
-        "--rpc-http-enabled"
+        "--rpc-http-enabled=true"
         "--rpc-http-api=ETH,NET,WEB3,TXPOOL,PERM,IBFT"
         "--rpc-http-host=0.0.0.0"
         "--rpc-http-port=${RPC_HTTP_PORT}"
@@ -153,9 +153,10 @@ case "$ROLE" in
     fi
     ;;
   validator)
+    COMMON_ARGS+=("--miner-enabled=true")
     if [[ "${RPC_HTTP_ENABLED}" == "true" ]]; then
       RPC_ARGS=(
-        "--rpc-http-enabled"
+        "--rpc-http-enabled=true"
         "--rpc-http-api=ETH,NET,WEB3,TXPOOL,PERM,IBFT"
         "--rpc-http-host=0.0.0.0"
         "--rpc-http-port=${RPC_HTTP_PORT}"
@@ -168,7 +169,7 @@ case "$ROLE" in
     ;;
   rpc)
     RPC_ARGS=(
-      "--rpc-http-enabled"
+      "--rpc-http-enabled=true"
       "--rpc-http-api=ETH,NET,WEB3,TXPOOL,PERM,IBFT"
       "--rpc-http-host=0.0.0.0"
       "--rpc-http-port=${RPC_HTTP_PORT}"

@@ -1,4 +1,19 @@
 {
-  "_note": "Run besu/scripts/generate-network.sh to generate a valid IBFT2 genesis.json",
-  "_status": "placeholder"
+  "config" : {
+    "chainId" : 20260321,
+    "berlinBlock" : 0,
+    "ibft2" : {
+      "blockperiodseconds" : 2,
+      "epochlength" : 30000,
+      "requesttimeoutseconds" : 4
+    }
+  },
+  "nonce" : "0x0",
+  "timestamp" : "0x58ee40ba",
+  "gasLimit" : "0x47b760",
+  "difficulty" : "0x1",
+  "mixHash" : "0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365",
+  "coinbase" : "0x0000000000000000000000000000000000000000",
+  "alloc" : { },
+  "extraData" : "0xf853a00000000000000000000000000000000000000000000000000000000000000000ea9426cff0c8f0646a20a49ab9e4cc76cd366cfc9a9f94903e02034a93412df7026bc60a87adbd073d6807808400000000c0"
 }
