@@ -7,7 +7,7 @@ FROM node:20-bookworm AS deps
 WORKDIR /app
 
 # Copy package files
-COPY boutique-advisory-platform/blockchain-service/package*.json ./
+COPY package*.json ./
 # Remove existing lockfile to ensure fresh binary downloads for the target architecture
 RUN rm -f package-lock.json
 
@@ -18,7 +18,7 @@ RUN npm install --no-audit --no-fund
 FROM node:20-bookworm AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY boutique-advisory-platform/blockchain-service/ .
+COPY . .
 RUN npm run build
 RUN if [ ! -f start.sh ]; then printf "#!/bin/sh\nnpm run start:prod\n" > start.sh; fi && chmod +x start.sh
 
