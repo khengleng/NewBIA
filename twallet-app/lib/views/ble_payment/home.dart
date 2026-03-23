@@ -36,7 +36,8 @@ class _BlePaymentHomeState extends State<BlePaymentHome> {
 
   final Connectivity _connectivity = Connectivity();
   final Rx<DcepType?> _redeemType = Rx(DcepType.rmb100);
-  final DcepStore _dcepStore = Get.find<DcepStore>();
+  final DcepStore _dcepStore =
+      Get.isRegistered<DcepStore>() ? Get.find<DcepStore>() : Get.put(DcepStore());
   final OfflineTxStore _txStore = Get.find<OfflineTxStore>();
 
   @override

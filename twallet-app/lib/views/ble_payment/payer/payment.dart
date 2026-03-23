@@ -75,7 +75,8 @@ class _PaymentState extends State<Payment> {
   final RxInt _amount = 0.obs;
   final RxString _hintText = RxString('');
   final Completer<bool> _confirmCompleter = Completer();
-  final DcepStore _dcepStore = Get.find<DcepStore>();
+  final DcepStore _dcepStore =
+      Get.isRegistered<DcepStore>() ? Get.find<DcepStore>() : Get.put(DcepStore());
   final Rx<PaymentProgress> _paymentProgress = Rx(PaymentProgress.connecting);
 
   Characteristic? _readCharacteristic;
