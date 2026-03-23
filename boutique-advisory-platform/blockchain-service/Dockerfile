@@ -6,8 +6,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl wget ne
 FROM node:20-bookworm AS deps
 WORKDIR /app
 
+# Allow builds from monorepo root
+ARG APP_DIR=boutique-advisory-platform/blockchain-service
+
 # Copy package files
-COPY package*.json ./
+COPY ${APP_DIR}/package*.json ./
 # Remove existing lockfile to ensure fresh binary downloads for the target architecture
 RUN rm -f package-lock.json
 
@@ -17,8 +20,9 @@ RUN npm install --no-audit --no-fund
 # Builder stage
 FROM node:20-bookworm AS builder
 WORKDIR /app
+ARG APP_DIR=boutique-advisory-platform/blockchain-service
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY ${APP_DIR}/ ./
 RUN npm run build
 RUN if [ ! -f start.sh ]; then printf "#!/bin/sh\nnpm run start:prod\n" > start.sh; fi && chmod +x start.sh
 
