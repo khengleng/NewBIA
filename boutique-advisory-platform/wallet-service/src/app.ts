@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 
 import walletRoutes from './routes/wallet';
+import dcepRoutes from './routes/dcep';
 import type { WalletServiceConfig } from './config';
 import { authenticateToken } from './middleware/jwt-auth';
 
@@ -63,6 +64,7 @@ export function createApp(config: WalletServiceConfig) {
   });
 
   app.use('/api/wallet', authenticateToken, walletRoutes);
+  app.use('/v2/token', authenticateToken, dcepRoutes);
 
   app.use((req, res) => {
     res.status(404).json({
