@@ -140,6 +140,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 { href: '/calendar', label: 'Calendar', icon: Calendar, roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'] },
                 { href: '/messages', label: 'Messages', icon: MessageSquare, roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'] },
                 { href: '/reports', label: t('navigation.reports'), icon: FileText, roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'] },
+                { href: '/wallet', label: 'My Wallet', icon: Wallet, roles: ['ADVISOR', 'INVESTOR', 'SME'], permission: 'wallet.read', owner: true },
+                { href: '/payments', label: 'Payments', icon: Wallet, roles: ['ADVISOR', 'INVESTOR', 'SME'], permission: 'payment.create' },
             ]
         },
         {
@@ -152,7 +154,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 { href: '/dataroom', label: 'Data Room', icon: FolderLock, roles: ['SME'] },
                 { href: '/documents', label: 'Documents', icon: FileText, roles: ['SME'] },
                 { href: '/advisory', label: 'Advisory Support', icon: Award, roles: ['SME'] },
-                { href: '/payments', label: 'Payments', icon: Wallet, roles: ['SME'] },
             ]
         },
         {
@@ -163,7 +164,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 { href: '/investor/portfolio', label: 'My Portfolio', icon: Briefcase, roles: ['INVESTOR'] },
                 { href: '/syndicates', label: 'Syndicates', icon: UsersRound, roles: ['INVESTOR'] },
                 { href: '/advisory', label: t('navigation.advisory'), icon: Award, roles: ['INVESTOR'] },
-                { href: '/wallet', label: 'My Wallet', icon: Wallet, roles: ['INVESTOR'] },
             ]
         },
         {
@@ -216,7 +216,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         if (section.roles && !section.roles.includes(normalizedRole)) return null
 
         const items = section.items.filter((item: any) => {
-            if (item.permission && !hasUiPermission(normalizedRole, item.permission)) return false
+            if (item.permission && !hasUiPermission(normalizedRole, item.permission, !!item.owner)) return false
             if (!item.roles) return true
             return item.roles.includes(normalizedRole)
         })
