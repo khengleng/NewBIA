@@ -217,7 +217,7 @@ export async function transferSignedDcepOnBesu(payload: {
     throw new Error('Signed transaction is not a DCEP transfer');
   }
 
-  const [, to] = parsed.args as [string, string, bigint];
+  const [, to] = parsed.args as unknown as [string, string, bigint];
   if (payload.expectedTo && to.toLowerCase() !== payload.expectedTo.toLowerCase()) {
     throw new Error('Signed transaction recipient mismatch');
   }
