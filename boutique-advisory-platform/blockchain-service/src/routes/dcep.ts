@@ -4,6 +4,10 @@ import { listDcepOnBesu, mintDcepOnBesu, transferSignedDcepOnBesu } from '../ser
 
 const router = Router();
 
+router.get('/ping', (_req, res) => {
+  return res.json({ status: 'ok' });
+});
+
 router.post('/mint', async (req, res) => {
   if (config.mode === 'disabled') {
     return res.status(503).json({ status: 'DISABLED', error: 'Blockchain gateway disabled' });
