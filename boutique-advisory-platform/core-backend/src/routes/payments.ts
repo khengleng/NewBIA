@@ -5,6 +5,7 @@ import { AuthenticatedRequest, authorize } from '../middleware/authorize';
 import { createAbaTransaction, verifyAbaCallback, generateAbaQr } from '../utils/aba'; // Update import
 import { prisma } from '../database';
 import { logAuditEvent } from '../utils/security';
+import { FeatureDisabledError, requireRoleFeature } from '../services/role-features';
 
 const router = Router();
 
@@ -63,6 +64,8 @@ function resolvePaymentReturnUrl(returnUrl?: string) {
 
 router.post('/create-payment-intent', authorize('payment.create'), async (req: AuthenticatedRequest, res: Response) => {
     try {
+        const tenantId = req.user?.tenantId || 'default';
+        await requireRoleFeature({ tenantId, role: req.user?.role, feature: 'paymentEnabled' });
         const { amount } = req.body;
 
 
@@ -73,6 +76,9 @@ router.post('/create-payment-intent', authorize('payment.create'), async (req: A
             message: 'Stripe has been removed. Using internal mock payment flow.'
         });
     } catch (error: any) {
+        if (error instanceof FeatureDisabledError) {
+            return res.status(403).json({ error: error.message });
+        }
         console.error('Payment error:', error);
         return res.status(500).json({ error: 'Failed to create payment intent' });
     }
@@ -85,6 +91,7 @@ router.post('/create-payment-intent', authorize('payment.create'), async (req: A
 // 1. Create Transaction (Initiate Payment)
 router.post('/aba/create-transaction', authorize('payment.create'), async (req: AuthenticatedRequest, res: Response) => {
     try {
+        await requireRoleFeature({ tenantId: req.user?.tenantId || 'default', role: req.user?.role, feature: 'paymentEnabled' });
         const { amount, bookingId, dealInvestorId, items, returnUrl } = req.body;
         const user = req.user!;
         const tenantId = user.tenantId || 'default';
@@ -170,6 +177,9 @@ router.post('/aba/create-transaction', authorize('payment.create'), async (req: 
         });
 
     } catch (error: any) {
+        if (error instanceof FeatureDisabledError) {
+            return res.status(403).json({ error: error.message });
+        }
         console.error('ABA Create Transaction Error:', error);
         if (error?.message?.includes('ABA PayWay is not configured')) {
             return res.status(400).json({ error: error.message });
@@ -213,6 +223,7 @@ router.get('/aba/status/:id', authorize('payment.read'), async (req: Authenticat
 // 4. Generate QR (Direct API)
 router.post('/aba/generate-qr', authorize('payment.create'), async (req: AuthenticatedRequest, res: Response) => {
     try {
+        await requireRoleFeature({ tenantId: req.user?.tenantId || 'default', role: req.user?.role, feature: 'paymentEnabled' });
         const { amount, bookingId, dealInvestorId, items } = req.body;
         const user = req.user!;
         const tenantId = user.tenantId || 'default';
@@ -317,6 +328,9 @@ router.post('/aba/generate-qr', authorize('payment.create'), async (req: Authent
         }
 
     } catch (error: any) {
+        if (error instanceof FeatureDisabledError) {
+            return res.status(403).json({ error: error.message });
+        }
         console.error('ABA Generate QR Route Error:', error.message);
         if (error?.message?.includes('ABA PayWay is not configured')) {
             return res.status(400).json({ error: error.message });

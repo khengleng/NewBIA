@@ -3,6 +3,7 @@ import { Router, Response } from 'express';
 import { prisma, prismaReplica } from '../database';
 import { authorize, AuthenticatedRequest } from '../middleware/authorize';
 import { WalletService } from '../services/wallet';
+import { FeatureDisabledError, requireRoleFeature } from '../services/role-features';
 
 const router = Router();
 
@@ -13,6 +14,7 @@ router.get('/', authorize('wallet.read', { getOwnerId: (req) => req.user?.id }),
         const tenantId = req.user?.tenantId || 'default';
 
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
+        await requireRoleFeature({ tenantId, role: req.user?.role, feature: 'walletEnabled' });
 
         const wallet = await WalletService.getOrCreateWallet(userId, tenantId);
 
@@ -27,6 +29,9 @@ router.get('/', authorize('wallet.read', { getOwnerId: (req) => req.user?.id }),
             transactions
         });
     } catch (error) {
+        if (error instanceof FeatureDisabledError) {
+            return res.status(403).json({ error: error.message });
+        }
         console.error('Error fetching wallet:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
@@ -36,7 +41,10 @@ router.get('/', authorize('wallet.read', { getOwnerId: (req) => req.user?.id }),
 router.get('/history', authorize('wallet.read', { getOwnerId: (req) => req.user?.id }), async (req: AuthenticatedRequest, res: Response) => {
     try {
         const userId = req.user?.id;
+        const tenantId = req.user?.tenantId || 'default';
         const { type, limit = 50, offset = 0 } = req.query;
+
+        await requireRoleFeature({ tenantId, role: req.user?.role, feature: 'walletEnabled' });
 
         const wallet = await (prismaReplica as any).wallet.findUnique({
             where: { userId }
@@ -59,6 +67,9 @@ router.get('/history', authorize('wallet.read', { getOwnerId: (req) => req.user?
 
         return res.json({ transactions, total });
     } catch (error) {
+        if (error instanceof FeatureDisabledError) {
+            return res.status(403).json({ error: error.message });
+        }
         console.error('Error fetching wallet history:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
@@ -70,6 +81,8 @@ router.post('/deposit', authorize('payment.create'), async (req: AuthenticatedRe
         const userId = req.user?.id;
         const tenantId = req.user?.tenantId || 'default';
         const { amount, simulate = false } = req.body;
+
+        await requireRoleFeature({ tenantId, role: req.user?.role, feature: 'paymentEnabled' });
 
         if (!userId || !amount || amount <= 0) {
             return res.status(400).json({ error: 'Invalid deposit amount' });
@@ -94,6 +107,9 @@ router.post('/deposit', authorize('payment.create'), async (req: AuthenticatedRe
             message: 'Deposit request initiated. Complete payment in your banking app.'
         });
     } catch (error) {
+        if (error instanceof FeatureDisabledError) {
+            return res.status(403).json({ error: error.message });
+        }
         console.error('Error in deposit:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }
@@ -105,6 +121,8 @@ router.post('/withdraw', authorize('payment.create'), async (req: AuthenticatedR
         const userId = req.user?.id;
         const tenantId = req.user?.tenantId || 'default';
         const { amount, simulate = true } = req.body;
+
+        await requireRoleFeature({ tenantId, role: req.user?.role, feature: 'paymentEnabled' });
 
         if (!userId || !amount || amount <= 0) {
             return res.status(400).json({ error: 'Invalid withdrawal amount' });
@@ -126,6 +144,9 @@ router.post('/withdraw', authorize('payment.create'), async (req: AuthenticatedR
             throw error;
         }
     } catch (error) {
+        if (error instanceof FeatureDisabledError) {
+            return res.status(403).json({ error: error.message });
+        }
         console.error('Error in withdrawal:', error);
         return res.status(500).json({ error: 'Internal server error' });
     }

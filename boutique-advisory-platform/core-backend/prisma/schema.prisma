@@ -50,6 +50,7 @@ model Tenant {
   reconciliationRuns       ReconciliationRun[]
   reconciliationExceptions ReconciliationException[]
   activityLogs             ActivityLog[]
+  roleFeatureConfigs       RoleFeatureConfig[]
   wallets                  Wallet[]
   walletTransactions       WalletTransaction[]
   LaunchpadOffering        LaunchpadOffering[]
@@ -123,6 +124,7 @@ model User {
   createdReconciliationRuns        ReconciliationRun[]          @relation("ReconciliationRunCreator")
   assignedReconciliationExceptions ReconciliationException[]    @relation("ReconciliationExceptionAssignee")
   invoices                         Invoice[]                    @relation("InvoiceCustomer")
+  roleFeatureConfigsUpdated        RoleFeatureConfig[]          @relation("RoleFeatureConfigUpdatedBy")
 
   wallet        Wallet?
   refreshTokens RefreshToken[]
@@ -1822,6 +1824,25 @@ model ActivityLog {
   user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("activity_logs")
+}
+
+// Role feature configuration (encrypted at rest)
+model RoleFeatureConfig {
+  id              String   @id @default(cuid())
+  tenantId        String
+  role            String
+  encryptedConfig String
+  configHash      String
+  updatedBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser User?  @relation("RoleFeatureConfigUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, role])
+  @@index([tenantId, role])
+  @@map("role_feature_configs")
 }
 
 enum AccessLevel {

@@ -6,6 +6,7 @@ import { canModifyAcrossTenant, isAllowedStatusTransition } from '../utils/admin
 import { checkPermissionDetailed, getPermissionsForRole, PERMISSIONS, UserRole } from '../lib/permissions';
 import { clearFailedAttempts, sanitizeEmail } from '../utils/security';
 import { normalizeRole } from '../lib/roles';
+import { listRoleFeatureConfigs, setRoleFeatureConfig } from '../services/role-features';
 
 const router = Router();
 
@@ -313,6 +314,68 @@ router.get('/rbac/denials', authorize('admin.read'), async (req: AuthenticatedRe
     } catch (error) {
         console.error('Error fetching RBAC denials:', error);
         return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ==================== Role Feature Configuration ====================
+
+router.get('/role-features', authorize('admin.user_manage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tenantId = req.user?.tenantId || 'default';
+        const roles = RBAC_ROLES;
+        const configs = await listRoleFeatureConfigs(tenantId, roles);
+        return res.json({ roles, configs });
+    } catch (error) {
+        console.error('Error fetching role feature configs:', error);
+        return res.status(500).json({ error: 'Failed to load role feature configs' });
+    }
+});
+
+router.put('/role-features/:role', authorize('admin.user_manage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tenantId = req.user?.tenantId || 'default';
+        const roleParam = req.params.role;
+        const targetRole = normalizeRole(roleParam);
+        const { walletEnabled, paymentEnabled } = req.body || {};
+
+        if (!targetRole || !RBAC_ROLES.includes(targetRole as UserRole)) {
+            return res.status(400).json({ error: 'Invalid role' });
+        }
+
+        const config = {
+            walletEnabled: Boolean(walletEnabled),
+            paymentEnabled: Boolean(paymentEnabled)
+        };
+
+        const result = await setRoleFeatureConfig({
+            tenantId,
+            role: targetRole,
+            config,
+            updatedBy: req.user?.id || null
+        });
+
+        await prisma.activityLog.create({
+            data: {
+                tenantId,
+                userId: req.user?.id,
+                action: 'ROLE_FEATURE_UPDATE',
+                entityId: targetRole,
+                entityType: 'ROLE_FEATURE',
+                metadata: {
+                    walletEnabled: config.walletEnabled,
+                    paymentEnabled: config.paymentEnabled
+                }
+            }
+        });
+
+        return res.json({
+            message: 'Role feature configuration updated',
+            role: targetRole,
+            config: result.config
+        });
+    } catch (error) {
+        console.error('Error updating role feature config:', error);
+        return res.status(500).json({ error: 'Failed to update role feature config' });
     }
 });
 

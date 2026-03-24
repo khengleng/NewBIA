@@ -31,6 +31,14 @@ interface RbacOverview {
     matrix: Array<{ role: string; permissions: string[] }>;
 }
 
+interface RoleFeatureConfig {
+    role: string;
+    config: {
+        walletEnabled: boolean;
+        paymentEnabled: boolean;
+    };
+}
+
 export default function UserManagementPage() {
     const { addToast } = useToast()
     const [users, setUsers] = useState<UserRecord[]>([])
@@ -53,11 +61,14 @@ export default function UserManagementPage() {
     const [rbacResult, setRbacResult] = useState<{ allowed: boolean; reason: string } | null>(null)
     const [isRbacChecking, setIsRbacChecking] = useState(false)
     const [recentDenials, setRecentDenials] = useState<Array<{ userRole: string; permission: string; reason: string; timestamp: string }>>([])
+    const [roleFeatureConfigs, setRoleFeatureConfigs] = useState<RoleFeatureConfig[]>([])
+    const [isSavingRoleFeatures, setIsSavingRoleFeatures] = useState(false)
 
     useEffect(() => {
         fetchUsers()
         fetchRbacOverview()
         fetchRecentDenials()
+        fetchRoleFeatures()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [statusFilter])
 
@@ -105,6 +116,50 @@ export default function UserManagementPage() {
             setRecentDenials(data.denials || [])
         } catch (error) {
             console.error('Error loading RBAC denials:', error)
+        }
+    }
+
+    const fetchRoleFeatures = async () => {
+        try {
+            const response = await authorizedRequest('/api/admin/role-features')
+            if (!response.ok) return
+            const data = await response.json()
+            if (Array.isArray(data.configs)) {
+                setRoleFeatureConfigs(data.configs)
+            }
+        } catch (error) {
+            console.error('Error loading role features:', error)
+        }
+    }
+
+    const updateRoleFeature = async (role: string, patch: Partial<RoleFeatureConfig['config']>) => {
+        setIsSavingRoleFeatures(true)
+        try {
+            const current = roleFeatureConfigs.find((cfg) => cfg.role === role)
+            const nextConfig = {
+                walletEnabled: Boolean(patch.walletEnabled ?? current?.config.walletEnabled),
+                paymentEnabled: Boolean(patch.paymentEnabled ?? current?.config.paymentEnabled)
+            }
+            const response = await authorizedRequest(`/api/admin/role-features/${role}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(nextConfig)
+            })
+            if (response.ok) {
+                const data = await response.json()
+                setRoleFeatureConfigs((prev) =>
+                    prev.map((item) => (item.role === role ? { role, config: data.config } : item))
+                )
+                addToast('success', 'Role feature settings updated')
+            } else {
+                const payload = await response.json().catch(() => ({}))
+                addToast('error', payload?.error || 'Failed to update role features')
+            }
+        } catch (error) {
+            console.error('Error updating role features:', error)
+            addToast('error', 'Failed to update role features')
+        } finally {
+            setIsSavingRoleFeatures(false)
         }
     }
 
@@ -259,6 +314,63 @@ export default function UserManagementPage() {
                             <option value="INVESTOR">Investor</option>
                             <option value="SME">SME</option>
                         </select>
+                    </div>
+                </div>
+
+                <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5 space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <Shield className="w-5 h-5 text-emerald-400" />
+                            <h2 className="text-white font-semibold">Role Feature Configuration</h2>
+                        </div>
+                        <span className="text-xs text-gray-400">Changes are encrypted and audited</span>
+                    </div>
+                    <p className="text-xs text-gray-400">
+                        Configure which roles can access Wallet and Payments. These settings are stored in the database and enforced in the UI and API.
+                    </p>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead>
+                                <tr className="text-xs uppercase text-gray-400">
+                                    <th className="py-2">Role</th>
+                                    <th className="py-2">Wallet</th>
+                                    <th className="py-2">Payments</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-700">
+                                {roleFeatureConfigs.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={3} className="py-4 text-gray-500">No role feature configs found.</td>
+                                    </tr>
+                                ) : roleFeatureConfigs.map((row) => (
+                                    <tr key={row.role}>
+                                        <td className="py-3 text-gray-200 font-medium">{row.role}</td>
+                                        <td className="py-3">
+                                            <label className="inline-flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={row.config.walletEnabled}
+                                                    disabled={isSavingRoleFeatures}
+                                                    onChange={(e) => updateRoleFeature(row.role, { walletEnabled: e.target.checked })}
+                                                />
+                                                <span className="text-gray-300">Enabled</span>
+                                            </label>
+                                        </td>
+                                        <td className="py-3">
+                                            <label className="inline-flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={row.config.paymentEnabled}
+                                                    disabled={isSavingRoleFeatures}
+                                                    onChange={(e) => updateRoleFeature(row.role, { paymentEnabled: e.target.checked })}
+                                                />
+                                                <span className="text-gray-300">Enabled</span>
+                                            </label>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 

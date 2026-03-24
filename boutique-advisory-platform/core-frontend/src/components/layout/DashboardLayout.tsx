@@ -60,6 +60,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     const [isLoading, setIsLoading] = useState(true)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
+    const [roleFeatures, setRoleFeatures] = useState<{ walletEnabled: boolean; paymentEnabled: boolean } | null>(null)
     const normalizedRole = normalizeRole(user?.role)
     const canSwitchPersona = (normalizedRole === 'SME' || normalizedRole === 'INVESTOR')
 
@@ -93,6 +94,26 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         }
         fetchUser()
     }, [router, pathname])
+
+    useEffect(() => {
+        const fetchFeatures = async () => {
+            if (!user) return;
+            try {
+                const response = await authorizedRequest('/api/features/me')
+                if (!response.ok) return;
+                const data = await response.json()
+                if (data?.features) {
+                    setRoleFeatures({
+                        walletEnabled: Boolean(data.features.walletEnabled),
+                        paymentEnabled: Boolean(data.features.paymentEnabled)
+                    })
+                }
+            } catch (error) {
+                console.error('Error fetching role features:', error)
+            }
+        }
+        fetchFeatures()
+    }, [user])
 
     const handleSwitchRole = async () => {
         if (!user || !canSwitchPersona) return;
@@ -140,8 +161,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 { href: '/calendar', label: 'Calendar', icon: Calendar, roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'] },
                 { href: '/messages', label: 'Messages', icon: MessageSquare, roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'] },
                 { href: '/reports', label: t('navigation.reports'), icon: FileText, roles: ['ADMIN', 'ADVISOR', 'INVESTOR', 'SME'] },
-                { href: '/wallet', label: 'My Wallet', icon: Wallet, roles: ['ADVISOR', 'INVESTOR', 'SME'], permission: 'wallet.read', owner: true },
-                { href: '/payments', label: 'Payments', icon: Wallet, roles: ['ADVISOR', 'INVESTOR', 'SME'], permission: 'payment.create' },
+                { href: '/wallet', label: 'My Wallet', icon: Wallet, roles: ['ADVISOR', 'INVESTOR', 'SME'], permission: 'wallet.read', owner: true, feature: 'walletEnabled' },
+                { href: '/payments', label: 'Payments', icon: Wallet, roles: ['ADVISOR', 'INVESTOR', 'SME'], permission: 'payment.create', feature: 'paymentEnabled' },
             ]
         },
         {
@@ -216,6 +237,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         if (section.roles && !section.roles.includes(normalizedRole)) return null
 
         const items = section.items.filter((item: any) => {
+            if (item.feature && roleFeatures && !roleFeatures[item.feature]) return false
             if (item.permission && !hasUiPermission(normalizedRole, item.permission, !!item.owner)) return false
             if (!item.roles) return true
             return item.roles.includes(normalizedRole)
