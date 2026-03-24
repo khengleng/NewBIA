@@ -12,6 +12,8 @@ import {
     UserRole
 } from '../lib/permissions';
 import { prisma } from '../database';
+import { resolveRolePermissions } from '../services/role-permissions';
+import { resolveUserCustomPermissions } from '../services/custom-roles';
 
 // Extended request interface
 export interface AuthenticatedRequest extends Request {
@@ -24,6 +26,8 @@ export interface AuthenticatedRequest extends Request {
     };
     tenantId?: string;
     permissionContext?: PermissionContext;
+    customPermissions?: string[];
+    rolePermissions?: string[];
 }
 
 /**
@@ -146,16 +150,27 @@ export function authorize(
         const resourceId = req.params.id || req.body?.id;
 
         // Build permission context
+        const rolePermissions = await resolveRolePermissions(tenantId, userRole);
+        const customPermissions = await resolveUserCustomPermissions({
+            tenantId,
+            userId,
+            userRole
+        });
+
         const ctx: PermissionContext = {
             userId,
             userRole,
             tenantId,
             resourceOwnerId,
             resourceId,
+            rolePermissions,
+            customPermissions
         };
 
         // Store context for later use in request handlers
         req.permissionContext = ctx;
+        req.customPermissions = customPermissions;
+        req.rolePermissions = rolePermissions;
 
         // Perform detailed permission check
         const checkResult = checkPermissionDetailed(ctx, permission);
@@ -256,10 +271,19 @@ export function authorizeAny(permissions: string[]) {
             });
         }
 
+        const rolePermissions = await resolveRolePermissions(req.user.tenantId, req.user.role);
+        const customPermissions = await resolveUserCustomPermissions({
+            tenantId: req.user.tenantId,
+            userId: req.user.id,
+            userRole: req.user.role
+        });
+
         const ctx: PermissionContext = {
             userId: req.user.id,
             userRole: req.user.role,
             tenantId: req.user.tenantId,
+            rolePermissions,
+            customPermissions,
         };
 
         // Check if any permission is granted
@@ -290,10 +314,19 @@ export function authorizeAll(permissions: string[]) {
             });
         }
 
+        const rolePermissions = await resolveRolePermissions(req.user.tenantId, req.user.role);
+        const customPermissions = await resolveUserCustomPermissions({
+            tenantId: req.user.tenantId,
+            userId: req.user.id,
+            userRole: req.user.role
+        });
+
         const ctx: PermissionContext = {
             userId: req.user.id,
             userRole: req.user.role,
             tenantId: req.user.tenantId,
+            rolePermissions,
+            customPermissions,
         };
 
         // Check if all permissions are granted

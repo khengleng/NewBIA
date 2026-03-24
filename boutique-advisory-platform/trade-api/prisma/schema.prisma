@@ -50,6 +50,9 @@ model Tenant {
   reconciliationRuns       ReconciliationRun[]
   reconciliationExceptions ReconciliationException[]
   activityLogs             ActivityLog[]
+  rolePermissionConfigs    RolePermissionConfig[]
+  customRoleConfigs        CustomRoleConfig[]
+  userCustomRoleAssignments UserCustomRoleAssignment[]
   wallets                  Wallet[]
   walletTransactions       WalletTransaction[]
   LaunchpadOffering        LaunchpadOffering[]
@@ -123,6 +126,10 @@ model User {
   createdReconciliationRuns        ReconciliationRun[]          @relation("ReconciliationRunCreator")
   assignedReconciliationExceptions ReconciliationException[]    @relation("ReconciliationExceptionAssignee")
   invoices                         Invoice[]                    @relation("InvoiceCustomer")
+  rolePermissionConfigsUpdated     RolePermissionConfig[]       @relation("RolePermissionConfigUpdatedBy")
+  customRoleConfigsUpdated         CustomRoleConfig[]           @relation("CustomRoleConfigUpdatedBy")
+  customRoleAssignments            UserCustomRoleAssignment[]   @relation("CustomRoleAssignmentUser")
+  customRoleAssignmentsUpdated     UserCustomRoleAssignment[]   @relation("CustomRoleAssignmentUpdatedBy")
 
   wallet        Wallet?
   refreshTokens RefreshToken[]
@@ -1822,6 +1829,64 @@ model ActivityLog {
   user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("activity_logs")
+}
+
+// Role permission configuration (encrypted at rest)
+model RolePermissionConfig {
+  id              String   @id @default(cuid())
+  tenantId        String
+  role            String
+  encryptedConfig String
+  configHash      String
+  updatedBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser User?  @relation("RolePermissionConfigUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, role])
+  @@index([tenantId, role])
+  @@map("role_permission_configs")
+}
+
+// Custom roles (encrypted at rest)
+model CustomRoleConfig {
+  id              String   @id @default(cuid())
+  tenantId        String
+  code            String
+  encryptedConfig String
+  configHash      String
+  updatedBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser User?  @relation("CustomRoleConfigUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, code])
+  @@index([tenantId, code])
+  @@map("custom_role_configs")
+}
+
+// User custom role assignments (encrypted at rest)
+model UserCustomRoleAssignment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  userId          String
+  encryptedConfig String
+  configHash      String
+  updatedBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant       Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user         User   @relation("CustomRoleAssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
+  updatedByUser User?  @relation("CustomRoleAssignmentUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, userId])
+  @@index([tenantId, userId])
+  @@map("user_custom_role_assignments")
 }
 
 enum AccessLevel {

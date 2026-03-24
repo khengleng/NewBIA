@@ -39,6 +39,23 @@ interface RoleFeatureConfig {
     };
 }
 
+interface RolePermissionConfig {
+    role: string;
+    config: {
+        mode: 'extend' | 'replace';
+        permissions: string[];
+    };
+}
+
+interface CustomRoleConfig {
+    code: string;
+    name: string;
+    baseRole: string;
+    description?: string;
+    permissions: string[];
+    enabled: boolean;
+}
+
 export default function UserManagementPage() {
     const { addToast } = useToast()
     const [users, setUsers] = useState<UserRecord[]>([])
@@ -63,14 +80,75 @@ export default function UserManagementPage() {
     const [recentDenials, setRecentDenials] = useState<Array<{ userRole: string; permission: string; reason: string; timestamp: string }>>([])
     const [roleFeatureConfigs, setRoleFeatureConfigs] = useState<RoleFeatureConfig[]>([])
     const [isSavingRoleFeatures, setIsSavingRoleFeatures] = useState(false)
+    const [permissionCatalog, setPermissionCatalog] = useState<string[]>([])
+    const [rolePermissionConfigs, setRolePermissionConfigs] = useState<RolePermissionConfig[]>([])
+    const [rolePermissionRole, setRolePermissionRole] = useState('SME')
+    const [rolePermissionMode, setRolePermissionMode] = useState<'extend' | 'replace'>('replace')
+    const [rolePermissionSelection, setRolePermissionSelection] = useState<string[]>([])
+    const [rolePermissionSearch, setRolePermissionSearch] = useState('')
+    const [isSavingRolePermissions, setIsSavingRolePermissions] = useState(false)
+    const [customRoles, setCustomRoles] = useState<CustomRoleConfig[]>([])
+    const [selectedCustomRoleCode, setSelectedCustomRoleCode] = useState('')
+    const [customRoleDraft, setCustomRoleDraft] = useState<CustomRoleConfig>({
+        code: '',
+        name: '',
+        baseRole: 'INVESTOR',
+        description: '',
+        permissions: [],
+        enabled: true
+    })
+    const [customRoleSearch, setCustomRoleSearch] = useState('')
+    const [isSavingCustomRole, setIsSavingCustomRole] = useState(false)
+    const [selectedUserForCustomRoles, setSelectedUserForCustomRoles] = useState('')
+    const [selectedUserCustomRoles, setSelectedUserCustomRoles] = useState<string[]>([])
+    const [isSavingUserCustomRoles, setIsSavingUserCustomRoles] = useState(false)
 
     useEffect(() => {
         fetchUsers()
         fetchRbacOverview()
         fetchRecentDenials()
         fetchRoleFeatures()
+        fetchRolePermissions()
+        fetchCustomRoles()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [statusFilter])
+
+    useEffect(() => {
+        const config = rolePermissionConfigs.find((item) => item.role === rolePermissionRole)
+        if (config) {
+            setRolePermissionMode(config.config.mode)
+            setRolePermissionSelection(config.config.permissions || [])
+        } else {
+            setRolePermissionMode('replace')
+            setRolePermissionSelection([])
+        }
+    }, [rolePermissionConfigs, rolePermissionRole])
+
+    useEffect(() => {
+        if (!selectedCustomRoleCode) return
+        const role = customRoles.find((item) => item.code === selectedCustomRoleCode)
+        if (role) {
+            setCustomRoleDraft(role)
+        }
+    }, [customRoles, selectedCustomRoleCode])
+
+    useEffect(() => {
+        if (selectedCustomRoleCode) return
+        setCustomRoleDraft({
+            code: '',
+            name: '',
+            baseRole: 'INVESTOR',
+            description: '',
+            permissions: [],
+            enabled: true
+        })
+    }, [selectedCustomRoleCode])
+
+    useEffect(() => {
+        if (!selectedUserForCustomRoles) return
+        loadUserCustomRoles(selectedUserForCustomRoles)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedUserForCustomRoles])
 
     const fetchUsers = async () => {
         setIsLoading(true)
@@ -97,6 +175,11 @@ export default function UserManagementPage() {
             if (!response.ok) return
             const data = await response.json()
             setRbacOverview(data)
+            if (Array.isArray(data.permissionKeys)) {
+                const baseKeys = data.permissionKeys as string[]
+                const ownerKeys = baseKeys.map((key) => `${key}:owner`)
+                setPermissionCatalog([...baseKeys, ...ownerKeys])
+            }
             if (Array.isArray(data.roles) && data.roles.length > 0) {
                 setRbacRole(data.roles.includes(rbacRole) ? rbacRole : data.roles[0])
             }
@@ -132,6 +215,39 @@ export default function UserManagementPage() {
         }
     }
 
+    const fetchRolePermissions = async () => {
+        try {
+            const response = await authorizedRequest('/api/admin/role-permissions')
+            if (!response.ok) return
+            const data = await response.json()
+            if (Array.isArray(data.configs)) {
+                setRolePermissionConfigs(data.configs)
+            }
+            if (Array.isArray(data.roles) && data.roles.length > 0) {
+                setRolePermissionRole(data.roles.includes(rolePermissionRole) ? rolePermissionRole : data.roles[0])
+            }
+        } catch (error) {
+            console.error('Error loading role permissions:', error)
+        }
+    }
+
+    const fetchCustomRoles = async () => {
+        try {
+            const response = await authorizedRequest('/api/admin/custom-roles')
+            if (!response.ok) return
+            const data = await response.json()
+            if (Array.isArray(data.roles)) {
+                setCustomRoles(data.roles)
+                if (data.roles.length > 0 && !selectedCustomRoleCode) {
+                    setSelectedCustomRoleCode(data.roles[0].code)
+                    setCustomRoleDraft(data.roles[0])
+                }
+            }
+        } catch (error) {
+            console.error('Error loading custom roles:', error)
+        }
+    }
+
     const updateRoleFeature = async (role: string, patch: Partial<RoleFeatureConfig['config']>) => {
         setIsSavingRoleFeatures(true)
         try {
@@ -160,6 +276,107 @@ export default function UserManagementPage() {
             addToast('error', 'Failed to update role features')
         } finally {
             setIsSavingRoleFeatures(false)
+        }
+    }
+
+    const saveRolePermissions = async () => {
+        setIsSavingRolePermissions(true)
+        try {
+            const response = await authorizedRequest(`/api/admin/role-permissions/${rolePermissionRole}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    mode: rolePermissionMode,
+                    permissions: rolePermissionSelection
+                })
+            })
+            if (response.ok) {
+                const data = await response.json()
+                setRolePermissionConfigs((prev) =>
+                    prev.map((item) => (item.role === rolePermissionRole ? { role: rolePermissionRole, config: data.config } : item))
+                )
+                addToast('success', 'Role permissions updated')
+            } else {
+                const payload = await response.json().catch(() => ({}))
+                addToast('error', payload?.error || 'Failed to update role permissions')
+            }
+        } catch (error) {
+            console.error('Error updating role permissions:', error)
+            addToast('error', 'Failed to update role permissions')
+        } finally {
+            setIsSavingRolePermissions(false)
+        }
+    }
+
+    const handleCustomRoleSave = async () => {
+        setIsSavingCustomRole(true)
+        try {
+            const method = selectedCustomRoleCode ? 'PUT' : 'POST'
+            const endpoint = selectedCustomRoleCode
+                ? `/api/admin/custom-roles/${selectedCustomRoleCode}`
+                : '/api/admin/custom-roles'
+            const response = await authorizedRequest(endpoint, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(customRoleDraft)
+            })
+            if (response.ok) {
+                const data = await response.json()
+                const role = data.role || customRoleDraft
+                setCustomRoles((prev) => {
+                    const existing = prev.find((item) => item.code === role.code)
+                    if (existing) {
+                        return prev.map((item) => (item.code === role.code ? role : item))
+                    }
+                    return [...prev, role]
+                })
+                setSelectedCustomRoleCode(role.code)
+                setCustomRoleDraft(role)
+                addToast('success', 'Custom role saved')
+            } else {
+                const payload = await response.json().catch(() => ({}))
+                addToast('error', payload?.error || 'Failed to save custom role')
+            }
+        } catch (error) {
+            console.error('Error saving custom role:', error)
+            addToast('error', 'Failed to save custom role')
+        } finally {
+            setIsSavingCustomRole(false)
+        }
+    }
+
+    const loadUserCustomRoles = async (userId: string) => {
+        if (!userId) return
+        try {
+            const response = await authorizedRequest(`/api/admin/users/${userId}/custom-roles`)
+            if (!response.ok) return
+            const data = await response.json()
+            setSelectedUserCustomRoles(Array.isArray(data.roleCodes) ? data.roleCodes : [])
+        } catch (error) {
+            console.error('Error loading user custom roles:', error)
+        }
+    }
+
+    const saveUserCustomRoles = async () => {
+        if (!selectedUserForCustomRoles) return
+        setIsSavingUserCustomRoles(true)
+        try {
+            const response = await authorizedRequest(`/api/admin/users/${selectedUserForCustomRoles}/custom-roles`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roleCodes: selectedUserCustomRoles })
+            })
+            if (response.ok) {
+                addToast('success', 'User custom roles updated')
+            } else {
+                const payload = await response.json().catch(() => ({}))
+                addToast('error', payload?.error || 'Failed to update user custom roles')
+            }
+        } catch (error) {
+            console.error('Error updating user custom roles:', error)
+            addToast('error', 'Failed to update user custom roles')
+        } finally {
+            setIsSavingUserCustomRoles(false)
         }
     }
 
@@ -371,6 +588,218 @@ export default function UserManagementPage() {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5 space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <Shield className="w-5 h-5 text-cyan-400" />
+                            <h2 className="text-white font-semibold">Role Permission Overrides</h2>
+                        </div>
+                        <span className="text-xs text-gray-400">Encrypted config + audit trail</span>
+                    </div>
+                    <p className="text-xs text-gray-400">
+                        Override or extend base role permissions. Use replace to fully control access or extend to add new permissions on top of defaults.
+                    </p>
+                    <div className="grid md:grid-cols-4 gap-3">
+                        <select
+                            className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2"
+                            value={rolePermissionRole}
+                            onChange={(e) => setRolePermissionRole(e.target.value)}
+                        >
+                            {(rbacOverview?.roles || []).map((role) => (
+                                <option key={role} value={role}>{role}</option>
+                            ))}
+                        </select>
+                        <select
+                            className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2"
+                            value={rolePermissionMode}
+                            onChange={(e) => setRolePermissionMode(e.target.value as 'extend' | 'replace')}
+                        >
+                            <option value="replace">Replace</option>
+                            <option value="extend">Extend</option>
+                        </select>
+                        <input
+                            className="bg-gray-900 border border-gray-700 rounded-xl text-white px-3 py-2 md:col-span-2"
+                            placeholder="Filter permissions"
+                            value={rolePermissionSearch}
+                            onChange={(e) => setRolePermissionSearch(e.target.value)}
+                        />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-2 max-h-64 overflow-y-auto border border-gray-700 rounded-xl p-3 bg-gray-900/60">
+                        {(permissionCatalog.filter((permission) =>
+                            permission.toLowerCase().includes(rolePermissionSearch.toLowerCase())
+                        )).map((permission) => (
+                            <label key={permission} className="flex items-center gap-2 text-sm text-gray-300">
+                                <input
+                                    type="checkbox"
+                                    checked={rolePermissionSelection.includes(permission)}
+                                    onChange={(e) => {
+                                        setRolePermissionSelection((prev) => {
+                                            if (e.target.checked) return [...prev, permission]
+                                            return prev.filter((item) => item !== permission)
+                                        })
+                                    }}
+                                />
+                                <span>{permission}</span>
+                            </label>
+                        ))}
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-400">Selected: {rolePermissionSelection.length}</div>
+                        <button
+                            onClick={saveRolePermissions}
+                            disabled={isSavingRolePermissions}
+                            className="bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+                        >
+                            {isSavingRolePermissions ? 'Saving...' : 'Save Role Permissions'}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5 space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <Shield className="w-5 h-5 text-purple-400" />
+                            <h2 className="text-white font-semibold">Custom Roles (Sub-Roles)</h2>
+                        </div>
+                        <span className="text-xs text-gray-400">Extend base roles without code changes</span>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-3">
+                        <select
+                            className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2"
+                            value={selectedCustomRoleCode}
+                            onChange={(e) => setSelectedCustomRoleCode(e.target.value)}
+                        >
+                            <option value="">New Custom Role</option>
+                            {customRoles.map((role) => (
+                                <option key={role.code} value={role.code}>{role.code}</option>
+                            ))}
+                        </select>
+                        <input
+                            className="bg-gray-900 border border-gray-700 rounded-xl text-white px-3 py-2"
+                            placeholder="Role code"
+                            value={customRoleDraft.code}
+                            disabled={Boolean(selectedCustomRoleCode)}
+                            onChange={(e) => setCustomRoleDraft({ ...customRoleDraft, code: e.target.value })}
+                        />
+                        <input
+                            className="bg-gray-900 border border-gray-700 rounded-xl text-white px-3 py-2"
+                            placeholder="Role name"
+                            value={customRoleDraft.name}
+                            onChange={(e) => setCustomRoleDraft({ ...customRoleDraft, name: e.target.value })}
+                        />
+                        <select
+                            className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2"
+                            value={customRoleDraft.baseRole}
+                            onChange={(e) => setCustomRoleDraft({ ...customRoleDraft, baseRole: e.target.value })}
+                        >
+                            {(rbacOverview?.roles || []).map((role) => (
+                                <option key={role} value={role}>{role}</option>
+                            ))}
+                            <option value="ANY">ANY</option>
+                        </select>
+                        <input
+                            className="bg-gray-900 border border-gray-700 rounded-xl text-white px-3 py-2 md:col-span-2"
+                            placeholder="Description"
+                            value={customRoleDraft.description || ''}
+                            onChange={(e) => setCustomRoleDraft({ ...customRoleDraft, description: e.target.value })}
+                        />
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <label className="inline-flex items-center gap-2 text-sm text-gray-300">
+                            <input
+                                type="checkbox"
+                                checked={customRoleDraft.enabled}
+                                onChange={(e) => setCustomRoleDraft({ ...customRoleDraft, enabled: e.target.checked })}
+                            />
+                            Enabled
+                        </label>
+                        <input
+                            className="bg-gray-900 border border-gray-700 rounded-xl text-white px-3 py-2 flex-1"
+                            placeholder="Filter permissions"
+                            value={customRoleSearch}
+                            onChange={(e) => setCustomRoleSearch(e.target.value)}
+                        />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-2 max-h-64 overflow-y-auto border border-gray-700 rounded-xl p-3 bg-gray-900/60">
+                        {(permissionCatalog.filter((permission) =>
+                            permission.toLowerCase().includes(customRoleSearch.toLowerCase())
+                        )).map((permission) => (
+                            <label key={permission} className="flex items-center gap-2 text-sm text-gray-300">
+                                <input
+                                    type="checkbox"
+                                    checked={customRoleDraft.permissions.includes(permission)}
+                                    onChange={(e) => {
+                                        setCustomRoleDraft((prev) => {
+                                            if (e.target.checked) {
+                                                return { ...prev, permissions: [...prev.permissions, permission] }
+                                            }
+                                            return { ...prev, permissions: prev.permissions.filter((item) => item !== permission) }
+                                        })
+                                    }}
+                                />
+                                <span>{permission}</span>
+                            </label>
+                        ))}
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div className="text-xs text-gray-400">Selected: {customRoleDraft.permissions.length}</div>
+                        <button
+                            onClick={handleCustomRoleSave}
+                            disabled={isSavingCustomRole}
+                            className="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+                        >
+                            {isSavingCustomRole ? 'Saving...' : 'Save Custom Role'}
+                        </button>
+                    </div>
+                </div>
+
+                <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5 space-y-4">
+                    <div className="flex items-center gap-2">
+                        <Shield className="w-5 h-5 text-orange-400" />
+                        <h2 className="text-white font-semibold">Assign Custom Roles to Users</h2>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-3">
+                        <select
+                            className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2 md:col-span-2"
+                            value={selectedUserForCustomRoles}
+                            onChange={(e) => setSelectedUserForCustomRoles(e.target.value)}
+                        >
+                            <option value="">Select a user</option>
+                            {users.map((user) => (
+                                <option key={user.id} value={user.id}>
+                                    {user.firstName} {user.lastName} ({user.email})
+                                </option>
+                            ))}
+                        </select>
+                        <button
+                            onClick={saveUserCustomRoles}
+                            disabled={isSavingUserCustomRoles || !selectedUserForCustomRoles}
+                            className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+                        >
+                            {isSavingUserCustomRoles ? 'Saving...' : 'Save Assignments'}
+                        </button>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-2 max-h-64 overflow-y-auto border border-gray-700 rounded-xl p-3 bg-gray-900/60">
+                        {customRoles.length === 0 ? (
+                            <div className="text-sm text-gray-500">No custom roles configured yet.</div>
+                        ) : customRoles.map((role) => (
+                            <label key={role.code} className="flex items-center gap-2 text-sm text-gray-300">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedUserCustomRoles.includes(role.code)}
+                                    onChange={(e) => {
+                                        setSelectedUserCustomRoles((prev) => {
+                                            if (e.target.checked) return [...prev, role.code]
+                                            return prev.filter((item) => item !== role.code)
+                                        })
+                                    }}
+                                />
+                                <span>{role.code}</span>
+                            </label>
+                        ))}
                     </div>
                 </div>
 

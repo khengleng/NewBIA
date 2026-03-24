@@ -6,13 +6,35 @@ import { canModifyAcrossTenant, isAllowedStatusTransition } from '../utils/admin
 import { checkPermissionDetailed, getPermissionsForRole, PERMISSIONS, UserRole } from '../lib/permissions';
 import { clearFailedAttempts, sanitizeEmail } from '../utils/security';
 import { normalizeRole } from '../lib/roles';
+import { listRolePermissionConfigs, resolveRolePermissions, setRolePermissionConfig } from '../services/role-permissions';
+import { getUserCustomRoleAssignments, listCustomRoles, normalizeCustomRoleCode, setUserCustomRoleAssignments, upsertCustomRole } from '../services/custom-roles';
 
 const router = Router();
 
 const RBAC_ROLES: UserRole[] = ['SUPER_ADMIN', 'ADMIN', 'FINOPS', 'CX', 'AUDITOR', 'COMPLIANCE', 'ADVISOR', 'SUPPORT', 'INVESTOR', 'SME'];
+const PERMISSION_KEYS = new Set(Object.keys(PERMISSIONS));
 
 function isSuperAdminRole(role: string | null | undefined): boolean {
     return normalizeRole(role) === 'SUPER_ADMIN';
+}
+
+function normalizePermissionList(values: unknown): string[] {
+    if (!Array.isArray(values)) return [];
+    const cleaned = values
+        .map((entry) => String(entry || '').trim())
+        .filter((entry) => entry.length > 0);
+    return Array.from(new Set(cleaned));
+}
+
+function validatePermissionTokens(permissions: string[]): { valid: boolean; invalid: string[] } {
+    const invalid: string[] = [];
+    for (const entry of permissions) {
+        const token = entry.endsWith(':owner') ? entry.slice(0, -6) : entry;
+        if (!PERMISSION_KEYS.has(token)) {
+            invalid.push(entry);
+        }
+    }
+    return { valid: invalid.length === 0, invalid };
 }
 
 // ==================== User Management ====================
@@ -251,12 +273,13 @@ router.post('/users', authorize('admin.user_manage'), async (req: AuthenticatedR
 
 // ==================== RBAC Diagnostics ====================
 
-router.get('/rbac/overview', authorize('admin.read'), async (_req: AuthenticatedRequest, res: Response) => {
+router.get('/rbac/overview', authorize('admin.read'), async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const matrix = RBAC_ROLES.map((role) => ({
+        const tenantId = req.user?.tenantId || 'default';
+        const matrix = await Promise.all(RBAC_ROLES.map(async (role) => ({
             role,
-            permissions: getPermissionsForRole(role)
-        }));
+            permissions: await resolveRolePermissions(tenantId, role)
+        })));
 
         return res.json({
             roles: RBAC_ROLES,
@@ -279,9 +302,11 @@ router.post('/rbac/check', authorize('admin.read'), async (req: AuthenticatedReq
             return res.status(400).json({ error: 'Permission is required' });
         }
 
+        const rolePermissions = await resolveRolePermissions(req.user?.tenantId || 'default', role);
         const result = checkPermissionDetailed({
             userId: 'diagnostic-user',
             userRole: role,
+            rolePermissions,
             resourceOwnerId: isOwner ? 'diagnostic-user' : undefined
         }, permission);
 
@@ -313,6 +338,236 @@ router.get('/rbac/denials', authorize('admin.read'), async (req: AuthenticatedRe
     } catch (error) {
         console.error('Error fetching RBAC denials:', error);
         return res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// ==================== Role Permission Configuration ====================
+
+router.get('/role-permissions', authorize('admin.user_manage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tenantId = req.user?.tenantId || 'default';
+        const roles = RBAC_ROLES;
+        const configs = await listRolePermissionConfigs(tenantId, roles);
+        return res.json({ roles, configs });
+    } catch (error) {
+        console.error('Error fetching role permission configs:', error);
+        return res.status(500).json({ error: 'Failed to load role permission configs' });
+    }
+});
+
+router.put('/role-permissions/:role', authorize('admin.user_manage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tenantId = req.user?.tenantId || 'default';
+        const roleParam = req.params.role;
+        const targetRole = normalizeRole(roleParam);
+        const { mode, permissions } = req.body || {};
+
+        if (!targetRole || !RBAC_ROLES.includes(targetRole as UserRole)) {
+            return res.status(400).json({ error: 'Invalid role' });
+        }
+
+        const normalizedPermissions = normalizePermissionList(permissions);
+        const validation = validatePermissionTokens(normalizedPermissions);
+        if (!validation.valid) {
+            return res.status(400).json({ error: 'Invalid permissions', invalid: validation.invalid });
+        }
+
+        const config = {
+            mode: mode === 'extend' ? 'extend' : 'replace',
+            permissions: normalizedPermissions
+        };
+
+        const result = await setRolePermissionConfig({
+            tenantId,
+            role: targetRole,
+            config,
+            updatedBy: req.user?.id || null
+        });
+
+        await prisma.activityLog.create({
+            data: {
+                tenantId,
+                userId: req.user?.id,
+                action: 'ROLE_PERMISSION_UPDATE',
+                entityId: targetRole,
+                entityType: 'ROLE_PERMISSION',
+                metadata: {
+                    mode: config.mode,
+                    permissions: normalizedPermissions
+                }
+            }
+        });
+
+        return res.json({
+            message: 'Role permission configuration updated',
+            role: targetRole,
+            config: result.config
+        });
+    } catch (error) {
+        console.error('Error updating role permission config:', error);
+        return res.status(500).json({ error: 'Failed to update role permission config' });
+    }
+});
+
+// ==================== Custom Role Configuration ====================
+
+router.get('/custom-roles', authorize('admin.user_manage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tenantId = req.user?.tenantId || 'default';
+        const roles = await listCustomRoles(tenantId);
+        return res.json({ roles: roles.map((item) => item.config) });
+    } catch (error) {
+        console.error('Error fetching custom roles:', error);
+        return res.status(500).json({ error: 'Failed to load custom roles' });
+    }
+});
+
+router.post('/custom-roles', authorize('admin.user_manage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tenantId = req.user?.tenantId || 'default';
+        const { code, name, baseRole, description, permissions, enabled } = req.body || {};
+        if (!code || !name || !baseRole) {
+            return res.status(400).json({ error: 'code, name, and baseRole are required' });
+        }
+
+        const normalizedBaseRole = String(baseRole).toUpperCase();
+        if (normalizedBaseRole !== 'ANY' && !RBAC_ROLES.includes(normalizeRole(normalizedBaseRole) as UserRole)) {
+            return res.status(400).json({ error: 'Invalid baseRole' });
+        }
+
+        const normalizedPermissions = normalizePermissionList(permissions);
+        const validation = validatePermissionTokens(normalizedPermissions);
+        if (!validation.valid) {
+            return res.status(400).json({ error: 'Invalid permissions', invalid: validation.invalid });
+        }
+
+        const result = await upsertCustomRole({
+            tenantId,
+            config: {
+                code: normalizeCustomRoleCode(code),
+                name: String(name),
+                baseRole: normalizedBaseRole,
+                description: description ? String(description) : undefined,
+                permissions: normalizedPermissions,
+                enabled: enabled !== false
+            },
+            updatedBy: req.user?.id || null
+        });
+
+        await prisma.activityLog.create({
+            data: {
+                tenantId,
+                userId: req.user?.id,
+                action: 'CUSTOM_ROLE_UPSERT',
+                entityId: result.config.code,
+                entityType: 'CUSTOM_ROLE',
+                metadata: result.config
+            }
+        });
+
+        return res.status(201).json({ role: result.config });
+    } catch (error) {
+        console.error('Error creating custom role:', error);
+        return res.status(500).json({ error: 'Failed to create custom role' });
+    }
+});
+
+router.put('/custom-roles/:code', authorize('admin.user_manage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tenantId = req.user?.tenantId || 'default';
+        const codeParam = normalizeCustomRoleCode(req.params.code);
+        const { name, baseRole, description, permissions, enabled } = req.body || {};
+
+        if (!codeParam) {
+            return res.status(400).json({ error: 'Invalid role code' });
+        }
+
+        const normalizedBaseRole = baseRole ? String(baseRole).toUpperCase() : 'ANY';
+        if (normalizedBaseRole !== 'ANY' && !RBAC_ROLES.includes(normalizeRole(normalizedBaseRole) as UserRole)) {
+            return res.status(400).json({ error: 'Invalid baseRole' });
+        }
+
+        const normalizedPermissions = normalizePermissionList(permissions);
+        const validation = validatePermissionTokens(normalizedPermissions);
+        if (!validation.valid) {
+            return res.status(400).json({ error: 'Invalid permissions', invalid: validation.invalid });
+        }
+
+        const result = await upsertCustomRole({
+            tenantId,
+            config: {
+                code: codeParam,
+                name: String(name || codeParam),
+                baseRole: normalizedBaseRole,
+                description: description ? String(description) : undefined,
+                permissions: normalizedPermissions,
+                enabled: enabled !== false
+            },
+            updatedBy: req.user?.id || null
+        });
+
+        await prisma.activityLog.create({
+            data: {
+                tenantId,
+                userId: req.user?.id,
+                action: 'CUSTOM_ROLE_UPDATE',
+                entityId: result.config.code,
+                entityType: 'CUSTOM_ROLE',
+                metadata: result.config
+            }
+        });
+
+        return res.json({ role: result.config });
+    } catch (error) {
+        console.error('Error updating custom role:', error);
+        return res.status(500).json({ error: 'Failed to update custom role' });
+    }
+});
+
+router.get('/users/:userId/custom-roles', authorize('admin.user_manage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tenantId = req.user?.tenantId || 'default';
+        const { userId } = req.params;
+
+        const assignments = await getUserCustomRoleAssignments(tenantId, userId);
+        return res.json({ userId, roleCodes: assignments.roleCodes });
+    } catch (error) {
+        console.error('Error fetching user custom roles:', error);
+        return res.status(500).json({ error: 'Failed to load user custom roles' });
+    }
+});
+
+router.put('/users/:userId/custom-roles', authorize('admin.user_manage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tenantId = req.user?.tenantId || 'default';
+        const { userId } = req.params;
+        const { roleCodes } = req.body || {};
+
+        const normalizedRoles = Array.isArray(roleCodes)
+            ? Array.from(new Set(roleCodes.map((entry: string) => normalizeCustomRoleCode(entry))))
+            : [];
+        const result = await setUserCustomRoleAssignments({
+            tenantId,
+            userId,
+            roleCodes: normalizedRoles,
+            updatedBy: req.user?.id || null
+        });
+
+        await prisma.activityLog.create({
+            data: {
+                tenantId,
+                userId: req.user?.id,
+                action: 'CUSTOM_ROLE_ASSIGNMENT_UPDATE',
+                entityId: userId,
+                entityType: 'USER_CUSTOM_ROLE',
+                metadata: { roleCodes: result.roleCodes }
+            }
+        });
+
+        return res.json({ userId, roleCodes: result.roleCodes });
+    } catch (error) {
+        console.error('Error updating user custom roles:', error);
+        return res.status(500).json({ error: 'Failed to update user custom roles' });
     }
 });
 

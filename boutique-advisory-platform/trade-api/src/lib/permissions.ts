@@ -339,6 +339,8 @@ export interface PermissionContext {
     tenantId?: string;
     resourceOwnerId?: string;
     resourceId?: string;
+    rolePermissions?: string[];
+    customPermissions?: string[];
 }
 
 /**
@@ -349,9 +351,27 @@ export interface PermissionContext {
  * @returns boolean indicating if user has permission
  */
 export function hasPermission(ctx: PermissionContext, permission: string): boolean {
-    const { userId, userRole, resourceOwnerId } = ctx;
+    const { userId, userRole, resourceOwnerId, rolePermissions, customPermissions } = ctx;
     const normalizedUserRole = normalizeRole(userRole) as UserRole;
     if (!normalizedUserRole) {
+        return false;
+    }
+
+    const isOwner = Boolean(resourceOwnerId && resourceOwnerId === userId);
+
+    if (Array.isArray(rolePermissions)) {
+        if (permissionListAllows(rolePermissions, permission, isOwner)) {
+            return true;
+        }
+    }
+
+    if (Array.isArray(customPermissions)) {
+        if (permissionListAllows(customPermissions, permission, isOwner)) {
+            return true;
+        }
+    }
+
+    if (Array.isArray(rolePermissions)) {
         return false;
     }
 
@@ -460,7 +480,7 @@ export function getPermissionsForRole(role: UserRole): string[] {
 export interface PermissionCheckResult {
     allowed: boolean;
     permission: string;
-    reason: 'direct' | 'inherited' | 'owner' | 'denied';
+    reason: 'direct' | 'inherited' | 'owner' | 'denied' | 'override' | 'override_owner' | 'custom' | 'custom_owner';
     checkedAt: Date;
 }
 
@@ -471,7 +491,7 @@ export function checkPermissionDetailed(
     ctx: PermissionContext,
     permission: string
 ): PermissionCheckResult {
-    const { userId, userRole, resourceOwnerId } = ctx;
+    const { userId, userRole, resourceOwnerId, rolePermissions, customPermissions } = ctx;
     const normalizedUserRole = normalizeRole(userRole) as UserRole;
     if (!normalizedUserRole) {
         return {
@@ -481,6 +501,41 @@ export function checkPermissionDetailed(
             checkedAt: new Date(),
         };
     }
+
+    const isOwner = Boolean(resourceOwnerId && resourceOwnerId === userId);
+    if (Array.isArray(rolePermissions)) {
+        const overrideResult = permissionListAllowsDetailed(rolePermissions, permission, isOwner);
+        if (overrideResult.allowed) {
+            return {
+                allowed: true,
+                permission,
+                reason: overrideResult.ownerOnly ? 'override_owner' : 'override',
+                checkedAt: new Date(),
+            };
+        }
+    }
+
+    if (Array.isArray(customPermissions)) {
+        const customResult = permissionListAllowsDetailed(customPermissions, permission, isOwner);
+        if (customResult.allowed) {
+            return {
+                allowed: true,
+                permission,
+                reason: customResult.ownerOnly ? 'custom_owner' : 'custom',
+                checkedAt: new Date(),
+            };
+        }
+    }
+
+    if (Array.isArray(rolePermissions)) {
+        return {
+            allowed: false,
+            permission,
+            reason: 'denied',
+            checkedAt: new Date(),
+        };
+    }
+
     const allowedRoles = PERMISSIONS[permission] || [];
 
     // Direct role check
@@ -527,6 +582,60 @@ export function checkPermissionDetailed(
     };
 }
 
+function normalizePermissionToken(token: string): string {
+    return String(token || '').trim();
+}
+
+function permissionListAllows(list: string[], permission: string, isOwner: boolean): boolean {
+    const ownerToken = `${permission}${OWNER_SUFFIX}`;
+    return list.some((entry) => {
+        const normalized = normalizePermissionToken(entry);
+        if (normalized === permission) return true;
+        if (normalized === ownerToken && isOwner) return true;
+        return false;
+    });
+}
+
+function permissionListAllowsDetailed(list: string[], permission: string, isOwner: boolean): { allowed: boolean; ownerOnly: boolean } {
+    const ownerToken = `${permission}${OWNER_SUFFIX}`;
+    for (const entry of list) {
+        const normalized = normalizePermissionToken(entry);
+        if (normalized === permission) {
+            return { allowed: true, ownerOnly: false };
+        }
+        if (normalized === ownerToken && isOwner) {
+            return { allowed: true, ownerOnly: true };
+        }
+    }
+    return { allowed: false, ownerOnly: false };
+}
+
+export function getStaticPermissionsForRole(role: UserRole): string[] {
+    const normalizedRole = normalizeRole(role) as UserRole;
+    if (!normalizedRole) return [];
+
+    const permissions: string[] = [];
+    const inherited = getInheritedRoles(normalizedRole);
+
+    for (const [permission, allowedRoles] of Object.entries(PERMISSIONS)) {
+        if (allowedRoles.includes(normalizedRole)) {
+            permissions.push(permission);
+            continue;
+        }
+
+        if (inherited.some(r => allowedRoles.includes(r))) {
+            permissions.push(permission);
+            continue;
+        }
+
+        if (allowedRoles.includes(`${normalizedRole}${OWNER_SUFFIX}`)) {
+            permissions.push(`${permission}${OWNER_SUFFIX}`);
+        }
+    }
+
+    return [...new Set(permissions)];
+}
+
 /**
  * Export permission groups for UI
  */
@@ -548,6 +657,7 @@ export default {
     hasPermission,
     canPerformAction,
     getPermissionsForRole,
+    getStaticPermissionsForRole,
     checkPermissionDetailed,
     getInheritedRoles,
 };

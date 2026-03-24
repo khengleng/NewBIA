@@ -14,6 +14,11 @@ export default function TradingOperatorRoleLifecyclePage() {
           description: 'Open the operator account registry to review active identities.',
         },
         {
+          href: '/trading/operator/rbac',
+          title: 'RBAC Configuration',
+          description: 'Tune operator permissions and manage sub-roles.',
+        },
+        {
           href: '/trading/operator/security',
           title: 'Security Guardrails',
           description: 'Apply MFA and session controls for privileged users.',
