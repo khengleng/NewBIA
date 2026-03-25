@@ -7,6 +7,7 @@ import { checkPermissionDetailed, getPermissionsForRole, PERMISSIONS, UserRole }
 import { clearFailedAttempts, sanitizeEmail } from '../utils/security';
 import { normalizeRole } from '../lib/roles';
 import { listRoleFeatureConfigs, setRoleFeatureConfig } from '../services/role-features';
+import type { RolePermissionConfig } from '../services/role-permissions';
 import { listRolePermissionConfigs, resolveRolePermissions, setRolePermissionConfig } from '../services/role-permissions';
 import { getUserCustomRoleAssignments, listCustomRoles, normalizeCustomRoleCode, setUserCustomRoleAssignments, upsertCustomRole } from '../services/custom-roles';
 import { listAbacPolicies, upsertAbacPolicy } from '../services/abac-policies';
@@ -436,7 +437,7 @@ router.put('/role-permissions/:role', authorize('admin.user_manage'), async (req
             return res.status(400).json({ error: 'Invalid permissions', invalid: validation.invalid });
         }
 
-        const config = {
+        const config: RolePermissionConfig = {
             mode: mode === 'extend' ? 'extend' : 'replace',
             permissions: normalizedPermissions
         };

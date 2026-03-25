@@ -168,7 +168,11 @@ export async function getUserCustomRoleAssignments(tenantId: string, userId: str
   }
 
   const payload = JSON.parse(decrypted || '{}');
-  const roleCodes = Array.isArray(payload.roleCodes) ? payload.roleCodes.map(normalizeCustomRoleCode) : [];
+  const roleCodes = Array.isArray(payload.roleCodes)
+    ? payload.roleCodes
+        .filter((entry: unknown) => typeof entry === 'string')
+        .map((entry: string) => normalizeCustomRoleCode(entry))
+    : [];
 
   return { roleCodes: Array.from(new Set(roleCodes)), record };
 }
