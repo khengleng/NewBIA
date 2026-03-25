@@ -665,12 +665,12 @@ export default function UserManagementPage() {
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                             <Shield className="w-5 h-5 text-emerald-400" />
-                            <h2 className="text-white font-semibold">Role Feature Configuration</h2>
+                            <h2 className="text-white font-semibold">Role Feature Overrides</h2>
                         </div>
-                        <span className="text-xs text-gray-400">Changes are encrypted and audited</span>
+                        <span className="text-xs text-gray-400">Encrypted config + audit trail</span>
                     </div>
                     <p className="text-xs text-gray-400">
-                        Configure which roles can access Wallet and Payments. These settings are stored in the database and enforced in the UI and API.
+                        Control access to Wallet and Payments. These are feature gates stored in the database and enforced in both the UI and API.
                     </p>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
