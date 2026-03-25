@@ -53,6 +53,7 @@ model Tenant {
   rolePermissionConfigs    RolePermissionConfig[]
   customRoleConfigs        CustomRoleConfig[]
   userCustomRoleAssignments UserCustomRoleAssignment[]
+  abacPolicies             AbacPolicy[]
   wallets                  Wallet[]
   walletTransactions       WalletTransaction[]
   LaunchpadOffering        LaunchpadOffering[]
@@ -130,6 +131,7 @@ model User {
   customRoleConfigsUpdated         CustomRoleConfig[]           @relation("CustomRoleConfigUpdatedBy")
   customRoleAssignments            UserCustomRoleAssignment[]   @relation("CustomRoleAssignmentUser")
   customRoleAssignmentsUpdated     UserCustomRoleAssignment[]   @relation("CustomRoleAssignmentUpdatedBy")
+  abacPoliciesUpdated              AbacPolicy[]                 @relation("AbacPolicyUpdatedBy")
 
   wallet        Wallet?
   refreshTokens RefreshToken[]
@@ -1887,6 +1889,29 @@ model UserCustomRoleAssignment {
   @@unique([tenantId, userId])
   @@index([tenantId, userId])
   @@map("user_custom_role_assignments")
+}
+
+// ABAC policy configuration (encrypted at rest)
+model AbacPolicy {
+  id              String   @id @default(cuid())
+  tenantId        String
+  name            String
+  resource        String
+  action          String
+  effect          String
+  priority        Int      @default(0)
+  enabled         Boolean  @default(true)
+  encryptedConfig String
+  configHash      String
+  updatedBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  tenant        Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser User?  @relation("AbacPolicyUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, resource, action])
+  @@map("abac_policies")
 }
 
 enum AccessLevel {

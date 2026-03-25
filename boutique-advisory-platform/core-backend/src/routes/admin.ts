@@ -9,6 +9,7 @@ import { normalizeRole } from '../lib/roles';
 import { listRoleFeatureConfigs, setRoleFeatureConfig } from '../services/role-features';
 import { listRolePermissionConfigs, resolveRolePermissions, setRolePermissionConfig } from '../services/role-permissions';
 import { getUserCustomRoleAssignments, listCustomRoles, normalizeCustomRoleCode, setUserCustomRoleAssignments, upsertCustomRole } from '../services/custom-roles';
+import { listAbacPolicies, upsertAbacPolicy } from '../services/abac-policies';
 
 const router = Router();
 
@@ -631,6 +632,144 @@ router.put('/users/:userId/custom-roles', authorize('admin.user_manage'), async 
     } catch (error) {
         console.error('Error updating user custom roles:', error);
         return res.status(500).json({ error: 'Failed to update user custom roles' });
+    }
+});
+
+// ==================== ABAC Policy Configuration ====================
+
+router.get('/abac-policies', authorize('admin.user_manage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tenantId = req.user?.tenantId || 'default';
+        const policies = await listAbacPolicies(tenantId);
+        return res.json({
+            policies: policies.map((item) => ({
+                id: item.policy.id,
+                name: item.policy.name,
+                resource: item.policy.resource,
+                action: item.policy.action,
+                effect: item.policy.effect,
+                priority: item.policy.priority,
+                enabled: item.policy.enabled,
+                config: item.config
+            }))
+        });
+    } catch (error) {
+        console.error('Error fetching ABAC policies:', error);
+        return res.status(500).json({ error: 'Failed to load ABAC policies' });
+    }
+});
+
+router.post('/abac-policies', authorize('admin.user_manage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tenantId = req.user?.tenantId || 'default';
+        const { name, resource, action, effect, priority, enabled, config } = req.body || {};
+
+        if (!name || !resource || !action || !effect) {
+            return res.status(400).json({ error: 'name, resource, action, and effect are required' });
+        }
+
+        const result = await upsertAbacPolicy({
+            tenantId,
+            input: {
+                name: String(name),
+                resource: String(resource),
+                action: String(action),
+                effect: effect === 'DENY' ? 'DENY' : 'ALLOW',
+                priority: Number(priority || 0),
+                enabled: enabled !== false,
+                config: config || { conditions: [] }
+            },
+            updatedBy: req.user?.id || null
+        });
+
+        await prisma.activityLog.create({
+            data: {
+                tenantId,
+                userId: req.user?.id,
+                action: 'ABAC_POLICY_CREATE',
+                entityId: result.policy.id,
+                entityType: 'ABAC_POLICY',
+                metadata: {
+                    name: result.policy.name,
+                    resource: result.policy.resource,
+                    action: result.policy.action
+                }
+            }
+        });
+
+        return res.status(201).json({
+            policy: {
+                id: result.policy.id,
+                name: result.policy.name,
+                resource: result.policy.resource,
+                action: result.policy.action,
+                effect: result.policy.effect,
+                priority: result.policy.priority,
+                enabled: result.policy.enabled,
+                config: result.config
+            }
+        });
+    } catch (error) {
+        console.error('Error creating ABAC policy:', error);
+        return res.status(500).json({ error: 'Failed to create ABAC policy' });
+    }
+});
+
+router.put('/abac-policies/:id', authorize('admin.user_manage'), async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const tenantId = req.user?.tenantId || 'default';
+        const { id } = req.params;
+        const { name, resource, action, effect, priority, enabled, config } = req.body || {};
+
+        if (!name || !resource || !action || !effect) {
+            return res.status(400).json({ error: 'name, resource, action, and effect are required' });
+        }
+
+        const result = await upsertAbacPolicy({
+            tenantId,
+            id,
+            input: {
+                name: String(name),
+                resource: String(resource),
+                action: String(action),
+                effect: effect === 'DENY' ? 'DENY' : 'ALLOW',
+                priority: Number(priority || 0),
+                enabled: enabled !== false,
+                config: config || { conditions: [] }
+            },
+            updatedBy: req.user?.id || null
+        });
+
+        await prisma.activityLog.create({
+            data: {
+                tenantId,
+                userId: req.user?.id,
+                action: 'ABAC_POLICY_UPDATE',
+                entityId: result.policy.id,
+                entityType: 'ABAC_POLICY',
+                metadata: {
+                    name: result.policy.name,
+                    resource: result.policy.resource,
+                    action: result.policy.action
+                }
+            }
+        });
+
+        return res.json({
+            policy: {
+                id: result.policy.id,
+                name: result.policy.name,
+                resource: result.policy.resource,
+                action: result.policy.action,
+                effect: result.policy.effect,
+                priority: result.policy.priority,
+                enabled: result.policy.enabled,
+                config: result.config
+            }
+        });
+    } catch (error) {
+        console.error('Error updating ABAC policy:', error);
+        return res.status(500).json({ error: 'Failed to update ABAC policy' });
     }
 });
 

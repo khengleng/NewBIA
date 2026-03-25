@@ -29,6 +29,20 @@ interface CustomRoleConfig {
   enabled: boolean
 }
 
+interface AbacPolicy {
+  id?: string
+  name: string
+  resource: string
+  action: string
+  effect: 'ALLOW' | 'DENY'
+  priority: number
+  enabled: boolean
+  config: {
+    conditions: Array<{ field: string; op: string; value?: any }>
+    description?: string
+  }
+}
+
 export default function TradingOperatorRbacPage() {
   const [roles, setRoles] = useState<string[]>([])
   const [permissionCatalog, setPermissionCatalog] = useState<string[]>([])
@@ -52,6 +66,18 @@ export default function TradingOperatorRbacPage() {
   const [selectedUserForCustomRoles, setSelectedUserForCustomRoles] = useState('')
   const [selectedUserCustomRoles, setSelectedUserCustomRoles] = useState<string[]>([])
   const [isSaving, setIsSaving] = useState(false)
+  const [abacPolicies, setAbacPolicies] = useState<AbacPolicy[]>([])
+  const [selectedAbacPolicyId, setSelectedAbacPolicyId] = useState('')
+  const [abacDraft, setAbacDraft] = useState<AbacPolicy>({
+    name: '',
+    resource: '',
+    action: '',
+    effect: 'ALLOW',
+    priority: 0,
+    enabled: true,
+    config: { conditions: [] }
+  })
+  const [abacConditionsJson, setAbacConditionsJson] = useState('[]')
 
   useEffect(() => {
     const loadRbac = async () => {
@@ -88,10 +114,25 @@ export default function TradingOperatorRbacPage() {
       setUsers(payload.users || [])
     }
 
+    const loadAbacPolicies = async () => {
+      const response = await authorizedRequest('/api/admin/abac-policies')
+      if (!response.ok) return
+      const payload = await response.json()
+      if (Array.isArray(payload.policies)) {
+        setAbacPolicies(payload.policies)
+        if (payload.policies.length > 0 && !selectedAbacPolicyId) {
+          setSelectedAbacPolicyId(payload.policies[0].id)
+          setAbacDraft(payload.policies[0])
+          setAbacConditionsJson(JSON.stringify(payload.policies[0].config?.conditions || [], null, 2))
+        }
+      }
+    }
+
     void loadRbac()
     void loadRolePermissions()
     void loadCustomRoles()
     void loadUsers()
+    void loadAbacPolicies()
   }, [])
 
   useEffect(() => {
@@ -119,6 +160,29 @@ export default function TradingOperatorRbacPage() {
       enabled: true
     })
   }, [selectedCustomRoleCode])
+
+  useEffect(() => {
+    if (!selectedAbacPolicyId) return
+    const policy = abacPolicies.find((item) => item.id === selectedAbacPolicyId)
+    if (policy) {
+      setAbacDraft(policy)
+      setAbacConditionsJson(JSON.stringify(policy.config?.conditions || [], null, 2))
+    }
+  }, [abacPolicies, selectedAbacPolicyId])
+
+  useEffect(() => {
+    if (selectedAbacPolicyId) return
+    setAbacDraft({
+      name: '',
+      resource: '',
+      action: '',
+      effect: 'ALLOW',
+      priority: 0,
+      enabled: true,
+      config: { conditions: [] }
+    })
+    setAbacConditionsJson('[]')
+  }, [selectedAbacPolicyId])
 
   useEffect(() => {
     if (!selectedUserForCustomRoles) return
@@ -175,6 +239,50 @@ export default function TradingOperatorRbacPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ roleCodes: selectedUserCustomRoles })
     })
+    setIsSaving(false)
+  }
+
+  const saveAbacPolicy = async () => {
+    setIsSaving(true)
+    let conditions: Array<{ field: string; op: string; value?: any }> = []
+    try {
+      const parsed = JSON.parse(abacConditionsJson || '[]')
+      if (Array.isArray(parsed)) {
+        conditions = parsed
+      }
+    } catch (error) {
+      setIsSaving(false)
+      return
+    }
+
+    const payload = {
+      ...abacDraft,
+      config: {
+        conditions,
+        description: abacDraft.config?.description
+      }
+    }
+    const endpoint = selectedAbacPolicyId
+      ? `/api/admin/abac-policies/${selectedAbacPolicyId}`
+      : '/api/admin/abac-policies'
+    const method = selectedAbacPolicyId ? 'PUT' : 'POST'
+    const response = await authorizedRequest(endpoint, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    if (response.ok) {
+      const data = await response.json()
+      const policy = data.policy || payload
+      setAbacPolicies((prev) => {
+        const existing = prev.find((item) => item.id === policy.id)
+        if (existing) return prev.map((item) => (item.id === policy.id ? policy : item))
+        return [...prev, policy]
+      })
+      setSelectedAbacPolicyId(policy.id || '')
+      setAbacDraft(policy)
+      setAbacConditionsJson(JSON.stringify(policy.config?.conditions || [], null, 2))
+    }
     setIsSaving(false)
   }
 
@@ -369,6 +477,83 @@ export default function TradingOperatorRbacPage() {
                 <span>{role.code}</span>
               </label>
             ))}
+          </div>
+        </div>
+
+        <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-4">
+          <h2 className="text-xl text-white font-semibold">ABAC Policy Editor</h2>
+          <div className="grid md:grid-cols-3 gap-3">
+            <select
+              className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2"
+              value={selectedAbacPolicyId}
+              onChange={(e) => setSelectedAbacPolicyId(e.target.value)}
+            >
+              <option value="">New Policy</option>
+              {abacPolicies.map((policy) => (
+                <option key={policy.id} value={policy.id}>{policy.name}</option>
+              ))}
+            </select>
+            <input
+              className="bg-gray-900 border border-gray-700 rounded-xl text-white px-3 py-2"
+              placeholder="Policy name"
+              value={abacDraft.name}
+              onChange={(e) => setAbacDraft({ ...abacDraft, name: e.target.value })}
+            />
+            <select
+              className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2"
+              value={abacDraft.effect}
+              onChange={(e) => setAbacDraft({ ...abacDraft, effect: e.target.value as 'ALLOW' | 'DENY' })}
+            >
+              <option value="ALLOW">ALLOW</option>
+              <option value="DENY">DENY</option>
+            </select>
+            <input
+              className="bg-gray-900 border border-gray-700 rounded-xl text-white px-3 py-2"
+              placeholder="Resource (e.g., secondary_trading)"
+              value={abacDraft.resource}
+              onChange={(e) => setAbacDraft({ ...abacDraft, resource: e.target.value })}
+            />
+            <input
+              className="bg-gray-900 border border-gray-700 rounded-xl text-white px-3 py-2"
+              placeholder="Action (e.g., create_listing)"
+              value={abacDraft.action}
+              onChange={(e) => setAbacDraft({ ...abacDraft, action: e.target.value })}
+            />
+            <input
+              className="bg-gray-900 border border-gray-700 rounded-xl text-white px-3 py-2"
+              placeholder="Priority"
+              type="number"
+              value={abacDraft.priority}
+              onChange={(e) => setAbacDraft({ ...abacDraft, priority: Number(e.target.value || 0) })}
+            />
+          </div>
+          <label className="inline-flex items-center gap-2 text-sm text-gray-300">
+            <input
+              type="checkbox"
+              checked={abacDraft.enabled}
+              onChange={(e) => setAbacDraft({ ...abacDraft, enabled: e.target.checked })}
+            />
+            Enabled
+          </label>
+          <div className="bg-gray-900/60 border border-gray-700 rounded-xl p-3 space-y-2">
+            <div className="text-xs text-gray-400">Conditions JSON (array)</div>
+            <textarea
+              className="w-full min-h-[140px] bg-gray-900 border border-gray-700 rounded-lg text-xs text-gray-200 p-2"
+              value={abacConditionsJson}
+              onChange={(e) => setAbacConditionsJson(e.target.value)}
+            />
+            <div className="text-xs text-gray-500">
+              Available attributes: `user.id`, `user.role`, `user.tenantId`, `tenantId`, `resource.id`, `resource.ownerId`, `resource.isOwner`.
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={saveAbacPolicy}
+              disabled={isSaving}
+              className="bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+            >
+              {isSaving ? 'Saving...' : 'Save ABAC Policy'}
+            </button>
           </div>
         </div>
       </div>

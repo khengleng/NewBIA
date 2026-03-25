@@ -56,6 +56,20 @@ interface CustomRoleConfig {
     enabled: boolean;
 }
 
+interface AbacPolicy {
+    id?: string;
+    name: string;
+    resource: string;
+    action: string;
+    effect: 'ALLOW' | 'DENY';
+    priority: number;
+    enabled: boolean;
+    config: {
+        conditions: Array<{ field: string; op: string; value?: any }>;
+        description?: string;
+    };
+}
+
 export default function UserManagementPage() {
     const { addToast } = useToast()
     const [users, setUsers] = useState<UserRecord[]>([])
@@ -102,6 +116,19 @@ export default function UserManagementPage() {
     const [selectedUserForCustomRoles, setSelectedUserForCustomRoles] = useState('')
     const [selectedUserCustomRoles, setSelectedUserCustomRoles] = useState<string[]>([])
     const [isSavingUserCustomRoles, setIsSavingUserCustomRoles] = useState(false)
+    const [abacPolicies, setAbacPolicies] = useState<AbacPolicy[]>([])
+    const [selectedAbacPolicyId, setSelectedAbacPolicyId] = useState('')
+    const [abacDraft, setAbacDraft] = useState<AbacPolicy>({
+        name: '',
+        resource: '',
+        action: '',
+        effect: 'ALLOW',
+        priority: 0,
+        enabled: true,
+        config: { conditions: [] }
+    })
+    const [abacConditionsJson, setAbacConditionsJson] = useState('[]')
+    const [isSavingAbac, setIsSavingAbac] = useState(false)
 
     useEffect(() => {
         fetchUsers()
@@ -110,6 +137,7 @@ export default function UserManagementPage() {
         fetchRoleFeatures()
         fetchRolePermissions()
         fetchCustomRoles()
+        fetchAbacPolicies()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [statusFilter])
 
@@ -143,6 +171,29 @@ export default function UserManagementPage() {
             enabled: true
         })
     }, [selectedCustomRoleCode])
+
+    useEffect(() => {
+        if (!selectedAbacPolicyId) return
+        const policy = abacPolicies.find((item) => item.id === selectedAbacPolicyId)
+        if (policy) {
+            setAbacDraft(policy)
+            setAbacConditionsJson(JSON.stringify(policy.config?.conditions || [], null, 2))
+        }
+    }, [abacPolicies, selectedAbacPolicyId])
+
+    useEffect(() => {
+        if (selectedAbacPolicyId) return
+        setAbacDraft({
+            name: '',
+            resource: '',
+            action: '',
+            effect: 'ALLOW',
+            priority: 0,
+            enabled: true,
+            config: { conditions: [] }
+        })
+        setAbacConditionsJson('[]')
+    }, [selectedAbacPolicyId])
 
     useEffect(() => {
         if (!selectedUserForCustomRoles) return
@@ -245,6 +296,24 @@ export default function UserManagementPage() {
             }
         } catch (error) {
             console.error('Error loading custom roles:', error)
+        }
+    }
+
+    const fetchAbacPolicies = async () => {
+        try {
+            const response = await authorizedRequest('/api/admin/abac-policies')
+            if (!response.ok) return
+            const data = await response.json()
+            if (Array.isArray(data.policies)) {
+                setAbacPolicies(data.policies)
+                if (data.policies.length > 0 && !selectedAbacPolicyId) {
+                    setSelectedAbacPolicyId(data.policies[0].id)
+                    setAbacDraft(data.policies[0])
+                    setAbacConditionsJson(JSON.stringify(data.policies[0].config?.conditions || [], null, 2))
+                }
+            }
+        } catch (error) {
+            console.error('Error loading ABAC policies:', error)
         }
     }
 
@@ -377,6 +446,64 @@ export default function UserManagementPage() {
             addToast('error', 'Failed to update user custom roles')
         } finally {
             setIsSavingUserCustomRoles(false)
+        }
+    }
+
+    const saveAbacPolicy = async () => {
+        setIsSavingAbac(true)
+        try {
+            let conditions: Array<{ field: string; op: string; value?: any }> = []
+            try {
+                const parsed = JSON.parse(abacConditionsJson || '[]')
+                if (Array.isArray(parsed)) {
+                    conditions = parsed
+                }
+            } catch (error) {
+                addToast('error', 'Conditions must be valid JSON array')
+                setIsSavingAbac(false)
+                return
+            }
+
+            const payload = {
+                ...abacDraft,
+                config: {
+                    conditions,
+                    description: abacDraft.config?.description
+                }
+            }
+
+            const endpoint = selectedAbacPolicyId
+                ? `/api/admin/abac-policies/${selectedAbacPolicyId}`
+                : '/api/admin/abac-policies'
+            const method = selectedAbacPolicyId ? 'PUT' : 'POST'
+            const response = await authorizedRequest(endpoint, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            if (response.ok) {
+                const data = await response.json()
+                const policy = data.policy || payload
+                setAbacPolicies((prev) => {
+                    const existing = prev.find((item) => item.id === policy.id)
+                    if (existing) {
+                        return prev.map((item) => (item.id === policy.id ? policy : item))
+                    }
+                    return [...prev, policy]
+                })
+                setSelectedAbacPolicyId(policy.id || '')
+                setAbacDraft(policy)
+                setAbacConditionsJson(JSON.stringify(policy.config?.conditions || [], null, 2))
+                addToast('success', 'ABAC policy saved')
+            } else {
+                const data = await response.json().catch(() => ({}))
+                addToast('error', data.error || 'Failed to save ABAC policy')
+            }
+        } catch (error) {
+            console.error('Error saving ABAC policy:', error)
+            addToast('error', 'Failed to save ABAC policy')
+        } finally {
+            setIsSavingAbac(false)
         }
     }
 
@@ -800,6 +927,95 @@ export default function UserManagementPage() {
                                 <span>{role.code}</span>
                             </label>
                         ))}
+                    </div>
+                </div>
+
+                <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5 space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <Shield className="w-5 h-5 text-rose-400" />
+                            <h2 className="text-white font-semibold">ABAC Policy Editor</h2>
+                        </div>
+                        <span className="text-xs text-gray-400">Policy evaluation: RBAC AND ABAC</span>
+                    </div>
+                    <p className="text-xs text-gray-400">
+                        Policies apply only when RBAC allows. Use conditions to restrict access by attributes like user role, tenant, and ownership.
+                    </p>
+                    <div className="grid md:grid-cols-3 gap-3">
+                        <select
+                            className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2"
+                            value={selectedAbacPolicyId}
+                            onChange={(e) => setSelectedAbacPolicyId(e.target.value)}
+                        >
+                            <option value="">New Policy</option>
+                            {abacPolicies.map((policy) => (
+                                <option key={policy.id} value={policy.id}>{policy.name}</option>
+                            ))}
+                        </select>
+                        <input
+                            className="bg-gray-900 border border-gray-700 rounded-xl text-white px-3 py-2"
+                            placeholder="Policy name"
+                            value={abacDraft.name}
+                            onChange={(e) => setAbacDraft({ ...abacDraft, name: e.target.value })}
+                        />
+                        <select
+                            className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2"
+                            value={abacDraft.effect}
+                            onChange={(e) => setAbacDraft({ ...abacDraft, effect: e.target.value as 'ALLOW' | 'DENY' })}
+                        >
+                            <option value="ALLOW">ALLOW</option>
+                            <option value="DENY">DENY</option>
+                        </select>
+                        <input
+                            className="bg-gray-900 border border-gray-700 rounded-xl text-white px-3 py-2"
+                            placeholder="Resource (e.g., deal)"
+                            value={abacDraft.resource}
+                            onChange={(e) => setAbacDraft({ ...abacDraft, resource: e.target.value })}
+                        />
+                        <input
+                            className="bg-gray-900 border border-gray-700 rounded-xl text-white px-3 py-2"
+                            placeholder="Action (e.g., read)"
+                            value={abacDraft.action}
+                            onChange={(e) => setAbacDraft({ ...abacDraft, action: e.target.value })}
+                        />
+                        <input
+                            className="bg-gray-900 border border-gray-700 rounded-xl text-white px-3 py-2"
+                            placeholder="Priority (higher wins)"
+                            type="number"
+                            value={abacDraft.priority}
+                            onChange={(e) => setAbacDraft({ ...abacDraft, priority: Number(e.target.value || 0) })}
+                        />
+                    </div>
+                    <label className="inline-flex items-center gap-2 text-sm text-gray-300">
+                        <input
+                            type="checkbox"
+                            checked={abacDraft.enabled}
+                            onChange={(e) => setAbacDraft({ ...abacDraft, enabled: e.target.checked })}
+                        />
+                        Enabled
+                    </label>
+                    <div className="bg-gray-900/60 border border-gray-700 rounded-xl p-3 space-y-2">
+                        <div className="text-xs text-gray-400">Conditions JSON (array)</div>
+                        <textarea
+                            className="w-full min-h-[140px] bg-gray-900 border border-gray-700 rounded-lg text-xs text-gray-200 p-2"
+                            value={abacConditionsJson}
+                            onChange={(e) => setAbacConditionsJson(e.target.value)}
+                        />
+                        <div className="text-xs text-gray-500">
+                            Available attributes: `user.id`, `user.role`, `user.tenantId`, `tenantId`, `resource.id`, `resource.ownerId`, `resource.isOwner`.
+                        </div>
+                        <div className="text-xs text-gray-500">
+                            Example: `[{{\"field\":\"user.role\",\"op\":\"equals\",\"value\":\"INVESTOR\"}},{{\"field\":\"resource.isOwner\",\"op\":\"equals\",\"value\":true}}]`
+                        </div>
+                    </div>
+                    <div className="flex justify-end">
+                        <button
+                            onClick={saveAbacPolicy}
+                            disabled={isSavingAbac}
+                            className="bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+                        >
+                            {isSavingAbac ? 'Saving...' : 'Save ABAC Policy'}
+                        </button>
                     </div>
                 </div>
 

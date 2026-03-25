@@ -14,6 +14,7 @@ import {
 import { prisma } from '../database';
 import { resolveRolePermissions } from '../services/role-permissions';
 import { resolveUserCustomPermissions } from '../services/custom-roles';
+import { evaluateAbacPolicies, resolveAbacPoliciesForPermission } from '../services/abac-policies';
 
 // Extended request interface
 export interface AuthenticatedRequest extends Request {
@@ -122,6 +123,8 @@ export function authorize(
         getOwnerId?: (req: AuthenticatedRequest) => string | undefined | Promise<string | undefined>;
         /** Log all permission checks (not just denials) */
         logAllChecks?: boolean;
+        /** Provide resource attributes for ABAC (optional). */
+        getResourceAttributes?: (req: AuthenticatedRequest) => Record<string, any> | Promise<Record<string, any>>;
     } = {}
 ) {
     return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
@@ -250,6 +253,37 @@ export function authorize(
                     ...auditEntry,
                     result: 'allowed',
                     reason: `temporary_grant:${grantedRole || 'unknown'}`
+                });
+            }
+        }
+
+        const [resource, action] = permission.split('.');
+        if (resource && action) {
+            const abacAttributes = {
+                user: {
+                    id: userId,
+                    role: userRole,
+                    tenantId
+                },
+                tenantId,
+                resource: {
+                    id: resourceId,
+                    ownerId: resourceOwnerId,
+                    isOwner: Boolean(resourceOwnerId && resourceOwnerId === userId)
+                }
+            };
+            if (options.getResourceAttributes) {
+                const extra = await options.getResourceAttributes(req);
+                abacAttributes.resource = { ...abacAttributes.resource, ...extra };
+            }
+
+            const policies = await resolveAbacPoliciesForPermission({ tenantId, resource, action });
+            const abacResult = evaluateAbacPolicies(policies, abacAttributes);
+            if (abacResult.hasPolicies && !abacResult.allowed) {
+                return res.status(403).json({
+                    error: 'ABAC policy denied',
+                    code: 'ABAC_DENIED',
+                    required: permission,
                 });
             }
         }
