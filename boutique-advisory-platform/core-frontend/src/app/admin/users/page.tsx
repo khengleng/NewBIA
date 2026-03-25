@@ -791,8 +791,9 @@ export default function UserManagementPage() {
                             <Shield className="w-5 h-5 text-purple-400" />
                             <h2 className="text-white font-semibold">Custom Roles (Sub-Roles)</h2>
                         </div>
-                        <span className="text-xs text-gray-400">Extend base roles without code changes</span>
+                        <span className="text-xs text-gray-400">Encrypted config + audit trail</span>
                     </div>
+                    <p className="text-xs text-gray-400">Extend base roles without code changes.</p>
                     <div className="grid md:grid-cols-3 gap-3">
                         <select
                             className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2"
@@ -884,9 +885,12 @@ export default function UserManagementPage() {
                 </div>
 
                 <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5 space-y-4">
-                    <div className="flex items-center gap-2">
-                        <Shield className="w-5 h-5 text-orange-400" />
-                        <h2 className="text-white font-semibold">Assign Custom Roles to Users</h2>
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <Shield className="w-5 h-5 text-orange-400" />
+                            <h2 className="text-white font-semibold">Assign Custom Roles to Users</h2>
+                        </div>
+                        <span className="text-xs text-gray-400">Encrypted config + audit trail</span>
                     </div>
                     <div className="grid md:grid-cols-3 gap-3">
                         <select
@@ -936,10 +940,10 @@ export default function UserManagementPage() {
                             <Shield className="w-5 h-5 text-rose-400" />
                             <h2 className="text-white font-semibold">ABAC Policy Editor</h2>
                         </div>
-                        <span className="text-xs text-gray-400">Policy evaluation: RBAC AND ABAC</span>
+                        <span className="text-xs text-gray-400">Encrypted config + audit trail</span>
                     </div>
                     <p className="text-xs text-gray-400">
-                        Policies apply only when RBAC allows. Use conditions to restrict access by attributes like user role, tenant, and ownership.
+                        Policy evaluation: RBAC AND ABAC. Use conditions to restrict access by attributes like user role, tenant, and ownership.
                     </p>
                     <div className="grid md:grid-cols-3 gap-3">
                         <select

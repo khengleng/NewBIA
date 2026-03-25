@@ -295,7 +295,13 @@ export default function TradingOperatorRbacPage() {
         </div>
 
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-4">
-          <h2 className="text-xl text-white font-semibold">Role Permission Overrides</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-xl text-white font-semibold">Role Permission Overrides</h2>
+            <span className="text-xs text-gray-400">Encrypted config + audit trail</span>
+          </div>
+          <p className="text-xs text-gray-400">
+            Override or extend base role permissions for trading operators.
+          </p>
           <div className="grid md:grid-cols-4 gap-3">
             <select
               className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2"
@@ -350,7 +356,11 @@ export default function TradingOperatorRbacPage() {
         </div>
 
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-4">
-          <h2 className="text-xl text-white font-semibold">Custom Roles</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-xl text-white font-semibold">Custom Roles</h2>
+            <span className="text-xs text-gray-400">Encrypted config + audit trail</span>
+          </div>
+          <p className="text-xs text-gray-400">Create sub-roles without code changes.</p>
           <div className="grid md:grid-cols-3 gap-3">
             <select
               className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2"
@@ -437,7 +447,10 @@ export default function TradingOperatorRbacPage() {
         </div>
 
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-4">
-          <h2 className="text-xl text-white font-semibold">Assign Custom Roles</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-xl text-white font-semibold">Assign Custom Roles</h2>
+            <span className="text-xs text-gray-400">Encrypted config + audit trail</span>
+          </div>
           <div className="grid md:grid-cols-3 gap-3">
             <select
               className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2 md:col-span-2"
@@ -481,7 +494,11 @@ export default function TradingOperatorRbacPage() {
         </div>
 
         <div className="bg-gray-800 border border-gray-700 rounded-xl p-6 space-y-4">
-          <h2 className="text-xl text-white font-semibold">ABAC Policy Editor</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-xl text-white font-semibold">ABAC Policy Editor</h2>
+            <span className="text-xs text-gray-400">Encrypted config + audit trail</span>
+          </div>
+          <p className="text-xs text-gray-400">Policy evaluation: RBAC AND ABAC.</p>
           <div className="grid md:grid-cols-3 gap-3">
             <select
               className="bg-gray-900 border-gray-700 rounded-xl text-white px-3 py-2"
