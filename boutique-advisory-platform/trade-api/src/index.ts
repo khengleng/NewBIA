@@ -191,8 +191,8 @@ import {
 } from './middleware/securityMiddleware';
 
 
-const DEFAULT_CORE_SUPERADMIN_EMAIL = 'contact@cambobia.com';
-const DEFAULT_TRADING_SUPERADMIN_EMAIL = 'trading-admin@cambobia.com';
+const DEFAULT_CORE_SUPERADMIN_EMAIL = 'contact@bia.cambobia.com';
+const DEFAULT_TRADING_SUPERADMIN_EMAIL = 'trading-admin@bia.cambobia.com';
 
 // Helper to ensure admin account is synced with .env
 async function ensureAdminAccount() {
@@ -283,7 +283,7 @@ async function ensurePlatformTenants() {
   const tradingTenantId = process.env.TRADING_TENANT_ID || 'trade';
   const activeTenantId = isTradingService ? tradingTenantId : coreTenantId;
   const activeTenantName = isTradingService ? 'CamboBia Trading' : 'Boutique Advisory';
-  const activeTenantDomain = isTradingService ? 'trade.cambobia.com' : 'cambobia.com';
+  const activeTenantDomain = isTradingService ? 'trade.bia.cambobia.com' : 'cambobia.com';
 
   try {
     await prisma.tenant.upsert({
@@ -375,7 +375,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "https://fonts.googleapis.com"], // SECURITY: Removed 'unsafe-inline' for better posture
       imgSrc: ["'self'", "data:", "blob:", "https://storage.googleapis.com", "https://*.stripe.com", "https://*.sumsub.com"],
-      connectSrc: ["'self'", process.env.FRONTEND_URL || "https://www.cambobia.com", "https://storage.googleapis.com", "https://*.stripe.com", "https://*.sumsub.com"],
+      connectSrc: ["'self'", process.env.FRONTEND_URL || "https://bia.cambobia.com", "https://storage.googleapis.com", "https://*.stripe.com", "https://*.sumsub.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
@@ -477,8 +477,8 @@ app.use((req, res, next) => {
       const allowedOrigins = new Set<string>();
       const allowedHostnames = new Set<string>([
         'cambobia.com',
-        'www.cambobia.com',
-        'trade.cambobia.com'
+        'bia.cambobia.com',
+        'trade.bia.cambobia.com'
       ]);
       if (!isProduction) {
         allowedHostnames.add('localhost');
@@ -546,6 +546,10 @@ app.use((req, res, next) => {
       }
 
       if (allowedOrigins.has(parsedOrigin.origin) || allowedHostnames.has(parsedOrigin.hostname)) {
+        return callback(null, true);
+      }
+
+      if (parsedOrigin.hostname === 'cambobia.com' || parsedOrigin.hostname.endsWith('.cambobia.com')) {
         return callback(null, true);
       }
 
