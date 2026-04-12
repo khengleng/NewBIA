@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { prisma } from '../database';
+import type { UserCustomRoleAssignment } from '@prisma/client';
 import { normalizeRole } from '../lib/roles';
 import { encrypt, decrypt } from '../utils/encryption';
 
@@ -154,7 +155,10 @@ export async function setUserCustomRoleAssignments(params: {
   return { roleCodes: normalizedRoles, record };
 }
 
-export async function getUserCustomRoleAssignments(tenantId: string, userId: string) {
+export async function getUserCustomRoleAssignments(
+  tenantId: string,
+  userId: string
+): Promise<{ roleCodes: string[]; record: UserCustomRoleAssignment | null }> {
   const record = await prisma.userCustomRoleAssignment.findUnique({
     where: { tenantId_userId: { tenantId, userId } }
   });
