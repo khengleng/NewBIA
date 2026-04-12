@@ -1009,7 +1009,7 @@ export default function UserManagementPage() {
                             Available attributes: `user.id`, `user.role`, `user.tenantId`, `tenantId`, `resource.id`, `resource.ownerId`, `resource.isOwner`.
                         </div>
                         <div className="text-xs text-gray-500">
-                            Example: `[{{\"field\":\"user.role\",\"op\":\"equals\",\"value\":\"INVESTOR\"}},{{\"field\":\"resource.isOwner\",\"op\":\"equals\",\"value\":true}}]`
+                            Example: <code>[{{"field":"user.role","op":"equals","value":"INVESTOR"}},{{"field":"resource.isOwner","op":"equals","value":true}}]</code>
                         </div>
                     </div>
                     <div className="flex justify-end">
