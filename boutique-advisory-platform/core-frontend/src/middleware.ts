@@ -48,12 +48,6 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith('/api-proxy/socket.io')) {
-    const url = req.nextUrl.clone();
-    url.pathname = pathname.replace('/api-proxy/socket.io', '/api-proxy/socket-io');
-    return NextResponse.rewrite(url);
-  }
-
   const isAuthenticated = hasCoreSessionCookie(req);
 
   // Root redirect logic
@@ -64,7 +58,7 @@ export function middleware(req: NextRequest) {
   }
 
   if (redirectToTradingPrefixes.some((prefix) => pathname.startsWith(prefix))) {
-    const tradingUrl = new URL(process.env.NEXT_PUBLIC_TRADING_FRONTEND_URL || 'https://trade.cambobia.com');
+    const tradingUrl = new URL(process.env.NEXT_PUBLIC_TRADING_FRONTEND_URL || 'https://trade.bia.cambobia.com');
     const redirectUrl = new URL(pathname, tradingUrl.origin);
     redirectUrl.search = req.nextUrl.search;
     return NextResponse.redirect(redirectUrl);

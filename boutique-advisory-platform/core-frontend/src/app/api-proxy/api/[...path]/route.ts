@@ -45,9 +45,9 @@ function inferServiceUrl(hostOrUrl: string | undefined, fallback: string): strin
 
 function isTradingHost(hostname: string): boolean {
   const host = String(hostname || '').trim().toLowerCase();
-  return host === 'trade.cambobia.com'
-    || host.endsWith('.trade.cambobia.com')
-    || host.includes('trade.cambobia.com')
+  return host === 'trade.bia.cambobia.com'
+    || host.endsWith('.trade.bia.cambobia.com')
+    || host.includes('trade.bia.cambobia.com')
     || host.includes('trading.railway')
     || host.includes('trade-');
 }
@@ -56,7 +56,7 @@ function looksLikeTradingServiceTarget(candidate: string): boolean {
   const value = String(candidate || '').trim().toLowerCase();
   if (!value) return false;
   // Match known trading backend/service patterns so core runtime never proxies there.
-  return value.includes('trade.cambobia.com')
+  return value.includes('trade.bia.cambobia.com')
     || value.includes('trading.railway')
     || value.includes('trade-')
     || value.includes('trading-backend')

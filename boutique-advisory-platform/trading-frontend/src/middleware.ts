@@ -8,9 +8,9 @@ import {
 const mode = process.env.NEXT_PUBLIC_PLATFORM_MODE === 'trading' ? 'trading' : 'core';
 const isTradingHost = (hostname: string) => {
   const host = String(hostname || '').toLowerCase().trim();
-  return host === 'trade.cambobia.com'
-    || host.endsWith('.trade.cambobia.com')
-    || host.includes('trade.cambobia.com')
+  return host === 'trade.bia.cambobia.com'
+    || host.endsWith('.trade.bia.cambobia.com')
+    || host.includes('trade.bia.cambobia.com')
     || host.includes('trading.railway')
     || host.includes('trade-');
 };
@@ -71,12 +71,6 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith('/api-proxy/socket.io')) {
-    const url = req.nextUrl.clone();
-    url.pathname = pathname.replace('/api-proxy/socket.io', '/api-proxy/socket-io');
-    return NextResponse.rewrite(url);
-  }
-
   const runtimeTradingMode = mode === 'trading' || isTradingHost(req.nextUrl.hostname);
 
   const isAuthenticated = hasTradingSessionCookie(req);
@@ -103,7 +97,7 @@ export function middleware(req: NextRequest) {
       && !pathname.startsWith('/trading')
       && !pathname.startsWith('/secondary-trading');
     if (shouldRedirectToCore) {
-      const coreUrl = new URL(process.env.NEXT_PUBLIC_CORE_FRONTEND_URL || 'https://www.cambobia.com');
+      const coreUrl = new URL(process.env.NEXT_PUBLIC_CORE_FRONTEND_URL || 'https://bia.cambobia.com');
       const redirectUrl = new URL(pathname, coreUrl.origin);
       redirectUrl.search = req.nextUrl.search;
       return NextResponse.redirect(redirectUrl);
